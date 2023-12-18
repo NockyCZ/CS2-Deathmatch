@@ -54,5 +54,9 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 `css_dm_removespawn` - Remove a nearest spawn
 
 ### Creating Custom Modes
+```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/custom_modes.json```
+- The default mode is always [ID 0](https://i.imgur.com/mbmiOF6.png), so even if you have custom_modes turned off in the config, the game will follow the data set for the mode with [ID 0](https://i.imgur.com/mbmiOF6.png).
+- When creating a custom mode, pay attention to the mode ID. Modes must be consecutive starting from 0, and no numbers should be skipped; otherwise, an error will occur.
 
 ### Blocked Weapons List
+```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/blocked_weapons.json```
