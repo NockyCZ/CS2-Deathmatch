@@ -4,9 +4,9 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 
 ### Main features
 - [Weapon selection](#how-weapon-selection-works)
-- (Spawns editor)[#spawns-editor]
-- (Creating custom modes (multicfg))[#creating-custom-modes]
-- (Weapon restrict for custom modes)[#blocked-weapons-list]
+- [Spawns editor](#spawns-editor)
+- [Creating custom modes (multicfg)](#creating-custom-modes)
+- [Weapon restrict for custom modes](#blocked-weapons-list)
 - Free For All (FFA)
 - Spawn protection
 - Refill ammo or health per kill/headshot/killstreak
