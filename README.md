@@ -20,6 +20,7 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 1. Unzip into your servers `csgo/addons/counterstrikesharp/plugins/` dir
 2. Restart server
 3. Configure config files and custom modes
+<h1></h1>
 
 ### Configuration
 ```/game/csgo/addons/counterstrikesharp/configs/plugins/Deathmatch/Deathmatch.json```
@@ -36,11 +37,13 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 | `reffil_ammo_headshot` | Refill ammo when a player eliminates someone with headshot? - `true` or `false` |
 | `refill_health_kill` | How much health does a player regenerate when they eliminate someone? - `number` |
 | `refill_health_headshot` | How much health does a player regenerate when they eliminate someone with headshot? - `number` |
+<h1></h1>
 
 ### How Weapon Selection works
 - Players can set their primary and secondary weapons using the buy menu.
 - They just need to purchase a weapon once, and it will be saved.
 - If the saved weapon is in the blocked weapons, the player will not receive it upon spawning.
+<h1></h1>
 
 ### Spawns Editor
 - Spawn points must be added more than originally present on the map, because the plugin overwrite the default spawns.
@@ -52,11 +55,13 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 `css_dm_addspawn_ct` - Add a new spawn for CT team<br>
 `css_dm_addspawn_t` - Add a new spawn for T team<br>
 `css_dm_removespawn` - Remove a nearest spawn
+<h1></h1>
 
 ### Creating Custom Modes
 ```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/custom_modes.json```
 - The default mode is always [ID 0](https://i.imgur.com/mbmiOF6.png), so even if you have custom_modes turned off in the config, the game will follow the data set for the mode with [ID 0](https://i.imgur.com/mbmiOF6.png).
 - When creating a custom mode, pay attention to the mode ID. Modes must be consecutive starting from 0, and no numbers should be skipped; otherwise, an error will occur.
+<h1></h1>
 
 ### Blocked Weapons List
 ```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/blocked_weapons.json```
