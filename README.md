@@ -3,7 +3,7 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selection, spawn protection, etc).
 
 ### Main features
-- [Weapon selection](#How Weapon Selection works)
+- [Weapon selection](#how-weapon-selection-works)
 - Spawns editor
 - Creating custom modes (multicfg)
 - Weapon restrict for custom modes
