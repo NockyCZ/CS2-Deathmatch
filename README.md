@@ -72,7 +72,7 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 8. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
 9. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
 10. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://google.cz)
-11. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank
+11. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank. If weapons_type is set, it will automatically block all other weapons that are not related to the specified weapon type.
 
 - <b>Some examples:</b> [Only Pistols but deagle is disabled](https://github.com/NockyCZ/) , [Only AK47 & Headshot](https://github.com/NockyCZ/) , [Only AWP](https://github.com/NockyCZ/) , [Only Rifles but AK,M4,M1,AUG,SG553 is disabled](https://github.com/NockyCZ/) , [Only Deagle](https://github.com/NockyCZ/) , [Only Shotguns](https://github.com/NockyCZ/)
 <h1></h1>
