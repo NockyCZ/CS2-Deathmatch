@@ -52,8 +52,8 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 
 - Commands (permission: @css/root): <br>
 `css_dm_editor` - Enable/disabled editor mode<br>
-`css_dm_addspawn_ct` - Add a new spawn for CT team<br>
-`css_dm_addspawn_t` - Add a new spawn for T team<br>
+`css_dm_addspawn_ct` - Add a new CT spawn at your curent position <br>
+`css_dm_addspawn_t` - Add a new T spawn at your curent position<br>
 `css_dm_removespawn` - Remove a nearest spawn
 <h1></h1>
 
@@ -80,3 +80,16 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 
 ### Blocked Weapons List
 ```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/blocked_weapons.json```
+- Create a list of blocked weapons for specific modes
+```
+{
+  "blocked_weapons": {
+    "LIST NAME": [
+      "WEAPON NAME",
+      "WEAPON NAME",
+      "weapon_ak47",
+      "weapon_deagle"
+    ]
+}
+```
+- <b>LIST NAME</b> is the name of the list that will be written in `custom_modes.json` as the value in `"blocked_weapons"`.
