@@ -66,14 +66,14 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 1. `mode_name` - What will the mode be named?
 2. `armor` - What type of armor will players receive at spawn? <b>0</b> - None | <b>1</b> - Armor Only | <b>2</b> - Armor and Helmet
 3. `only_hs` - Will this mode be only headshots? <b>true</b> or <b>false</b>
-4. `primary_weapon` - 
-5. `seconday_weapon`
-6. `allow_select_weapons`
-7. `weapons_type`
-8. `allow_knife_damage`
-9. `allow_center_message`
-10. `center_message_text`
-11. `blocked_weapons`
+4. `primary_weapon` - Which weapon will be the primary? If none, leave blank
+5. `seconday_weapon` - Which weapon will be the secondary? If none, leave blank
+6. `allow_select_weapons` - Allow select the weapons throung the buy menu ? <b>true</b> or <b>false</b>
+7. `weapons_type` - Which type of weapons can be set through the buy menu? Avaible values: <b>all</b>, <b>pistols</b>, <b>smgs</b>, <b>snipers</b>, <b>heavy</b>, <b>shotguns</b>. If primary_weapon or secondary_wepon is set leave blank or if allow_select_weapons is false leave also blank!
+8. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
+9. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
+10. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://google.cz)
+11. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank
 <h1></h1>
 
 ### Blocked Weapons List
