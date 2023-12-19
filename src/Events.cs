@@ -31,19 +31,6 @@ namespace Deathmatch
             return HookResult.Continue;
         }
 
-        /*[GameEventHandler]
-        public HookResult OnPlayerDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
-        {
-            CCSPlayerController player = @event.Userid;
-            if(IsPlayerValid(player, false))
-            {
-                if (!playerData.ContainsPlayer(player)){
-
-                }
-            }
-            return HookResult.Continue;
-        }*/
-
         [GameEventHandler(HookMode.Post)]
         public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
         {
