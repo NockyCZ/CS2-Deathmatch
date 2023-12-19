@@ -67,13 +67,12 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 3. `only_hs` - Will this mode be only headshots? <b>true</b> or <b>false</b>
 4. `primary_weapon` - Which weapon will be the primary? If none, leave blank
 5. `seconday_weapon` - Which weapon will be the secondary? If none, leave blank
-6. `allow_saved_weapons` - Disallowing saved weapons is useful in cases where, for example, a new mode like 'Only Rifles' started, and a players saved weapon is a Shotgun. This serves as protection to prevent the player from equip a Shotgun weapon in such cases. So if primary_weapon/secondary_weapon or is allowed all weapons set it true. Avaible values <b>true</b> or <b>false</b>
-7. `allow_select_weapons` - Allow select the weapons throung the buy menu ? <b>true</b> or <b>false</b>
-8. `weapons_type` - Which type of weapons can be set through the buy menu? Avaible values: <b>all</b>, <b>rifles</b>, <b>pistols</b>, <b>smgs</b>, <b>snipers</b>, <b>heavy</b>, <b>shotguns</b>. If primary_weapon or secondary_wepon is set leave blank or if allow_select_weapons is false leave also blank!
-9. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
-10. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
-11. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://google.cz)
-12. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank
+6. `allow_select_weapons` - Allow select the weapons throung the buy menu ? <b>true</b> or <b>false</b>
+7. `weapons_type` - Which type of weapons can be set through the buy menu? Avaible values: <b>all</b>, <b>rifles</b>, <b>pistols</b>, <b>smgs</b>, <b>snipers</b>, <b>heavy</b>, <b>shotguns</b>. If primary_weapon or secondary_wepon is set leave blank or if allow_select_weapons is false leave also blank!
+8. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
+9. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
+10. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://google.cz)
+11. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank
 
 - <b>Some examples:</b> [Only Pistols but deagle is disabled](https://github.com/NockyCZ/) , [Only AK47 & Headshot](https://github.com/NockyCZ/) , [Only AWP](https://github.com/NockyCZ/) , [Only Rifles but AK,M4,M1,AUG,SG553 is disabled](https://github.com/NockyCZ/) , [Only Deagle](https://github.com/NockyCZ/) , [Only Shotguns](https://github.com/NockyCZ/)
 <h1></h1>
