@@ -61,6 +61,19 @@ Custom Deathmatch CS2 plugin (Includes custom spawnpoints, multicfg, gun selecti
 ```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/custom_modes.json```
 - The default mode is always [ID 0](https://i.imgur.com/mbmiOF6.png), so even if you have custom_modes turned off in the config, the game will follow the data set for the mode with [ID 0](https://i.imgur.com/mbmiOF6.png).
 - When creating a custom mode, pay attention to the mode ID. Modes must be consecutive starting from 0, and no numbers should be skipped; otherwise, an error will occur.
+
+- <b>Parameters for custom modes</b>
+1. `mode_name` - What will the mode be named?
+2. `armor` - What type of armor will players receive at spawn? <b>0</b> - None | <b>1</b> - Armor Only | <b>2</b> - Armor and Helmet
+3. `only_hs` - Will this mode be only headshots? <b>true</b> or <b>false</b>
+4. `primary_weapon` - 
+5. `seconday_weapon`
+6. `allow_select_weapons`
+7. `weapons_type`
+8. `allow_knife_damage`
+9. `allow_center_message`
+10. `center_message_text`
+11. `blocked_weapons`
 <h1></h1>
 
 ### Blocked Weapons List
