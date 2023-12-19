@@ -1,5 +1,5 @@
 # CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).
+CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 128
 
 ### Main features
 - [Weapon selection](#how-weapon-selection-works)
