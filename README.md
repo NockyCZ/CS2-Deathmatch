@@ -38,6 +38,11 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 | `refill_health_headshot` | How much health does a player regenerate when they eliminate someone with headshot? - `number` |
 <h1></h1>
 
+### Admin Commands (permission: @css/root):
+`css_dm_startmode <ID>` - Start a custom mode<br>
+`css_dm_blockedweapons` - Show the list of blocked weapons for the current mode
+<h1></h1>
+
 ### How Weapon Selection works
 - Players can set their primary and secondary weapons using the buy menu.
 - They just need to purchase a weapon once, and it will be saved.
