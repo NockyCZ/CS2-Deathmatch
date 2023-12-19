@@ -3,9 +3,9 @@
   	"Knife_damage_disabled": "Knife damage is disabled in this mode!",
   	"New_mode": "Starting a new mode type {green}{0}{default}!",
   	"PrimaryWeapon_Set": "Your primary weapon has been set to {green}{0}",
-    "PrimaryWeapon_Disabled": "Your primary weapon {green}{0}{default} is disabled in this mode! Set another one.",
+  	"PrimaryWeapon_Disabled": "Your primary weapon {green}{0}{default} is disabled in this mode! Set another one.",
   	"SecondaryWeapon_Set": "Your secondary weapon has been set to {green}{0}",
-    "SecondaryWeapon_Disabled": "Your secondary weapon {green}{0}{default} is disabled in this mode! Set another one.",
+  	"SecondaryWeapon_Disabled": "Your secondary weapon {green}{0}{default} is disabled in this mode! Set another one.",
   	"Weapon_Disabled": "Weapon {green}{0}{default} is disabled in this mode!",
     
   	"weapon_mag7": "MAG-7",
