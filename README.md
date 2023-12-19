@@ -51,8 +51,8 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 
 - Commands (permission: @css/root): <br>
 `css_dm_editor` - Enable/disabled editor mode<br>
-`css_dm_addspawn_ct` - Add a new CT spawn at your curent position <br>
-`css_dm_addspawn_t` - Add a new T spawn at your curent position<br>
+`css_dm_addspawn_ct` - Add a new CT spawn at your current position <br>
+`css_dm_addspawn_t` - Add a new T spawn at your current position<br>
 `css_dm_removespawn` - Remove a nearest spawn
 <h1></h1>
 
