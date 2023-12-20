@@ -19,7 +19,7 @@
 - Add this in your blocked_weapons file
 ```
   "rifles_list": [
-      "weapon_galiar",
+      "weapon_galilar",
       "weapon_famas"
     ]
 ```
