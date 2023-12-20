@@ -6,7 +6,7 @@
   "PrimaryWeapon_Disabled": "Ваша основна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
   "SecondaryWeapon_Set": "Ваша другорядна зброя встановлена на {green}{0}",
   "SecondaryWeapon_Disabled": "Ваша другорядна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
-  "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!"
+  "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!",
   
   "weapon_mag7": "MAG-7",
   "weapon_nova": "Nova",
