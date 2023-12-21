@@ -9,12 +9,14 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("free_for_all")] public bool g_bFFA { get; set; } = true;
     [JsonPropertyName("custom_modes")] public bool g_bCustomModes { get; set; } = true;
     [JsonPropertyName("custom_modes_interval")] public int g_iCustomModesInterval { get; set; } = 5;
+    [JsonPropertyName("random_selection_of_modes")] public bool g_bRandomSelectionOfModes { get; set; } = true;
     [JsonPropertyName("map_start_custom_mode")] public int g_iMapStartMode { get; set; } = 0;
-    //[JsonPropertyName("respawn_time")] public int g_iRespawnTime { get; set; } = 1;
+    [JsonPropertyName("max_weapon_buys")] public int g_iMaxWeaponBuys { get; set; } = 3;
     [JsonPropertyName("spawn_protection_time")] public int g_iProtectionTime { get; set; } = 1;
     [JsonPropertyName("round_restart_time")] public int g_iRoundRestartTime { get; set; } = 1;
     [JsonPropertyName("hide_round_seconds")] public bool g_bHideRoundSeconds { get; set; } = true;
-    //[JsonPropertyName("unlimited_ammo")] public bool g_bUnlimitedAmmo { get; set; } = false;
+    [JsonPropertyName("block_radio_messages")] public bool g_bBlockRadioMessage { get; set; } = true;
+    [JsonPropertyName("remove_breakable_entities")] public bool g_bRemoveBreakableEntities { get; set; } = true;
     [JsonPropertyName("reffil_ammo_kill")] public bool g_bRefillAmmoKill { get; set; } = false;
     [JsonPropertyName("reffil_ammo_headshot")] public bool g_bRefillAmmoHeadshot { get; set; } = true;
     [JsonPropertyName("refill_health_kill")] public int g_iKillHealth { get; set; } = 25;
@@ -25,6 +27,7 @@ public static class Configuration
 {
     public static JObject? JsonCustomModes { get; private set; }
     public static JObject? JsonBlockedWeapons { get; private set; }
+    public static JObject? JsonBotSettings { get; private set; }
     public static List<string> CustomCvarsList = new List<string>();
     public static void CreateOrLoadCvars(string filepath)
     {
@@ -32,7 +35,7 @@ public static class Configuration
         {
             using (StreamWriter writer = new StreamWriter(filepath))
             {
-                writer.Write("mp_buy_anywhere 1\nmp_buytime 6000\ncash_player_respawn_amount 16000\nmp_respawn_on_death_t 1\nmp_respawn_on_death_ct 1\nsv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_startmoney 16000\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 0\nmp_weapons_allow_typecount -1");
+                writer.Write("mp_buy_anywhere 1\nmp_buytime 6000\nmp_respawn_on_death_t 1\nmp_respawn_on_death_ct 1\nsv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 0\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
             }
             CustomCvarsList = new List<string>(File.ReadLines(filepath));
         }
@@ -42,6 +45,46 @@ public static class Configuration
         }
     }
 
+    public static void CreateOrLoadBotSettings(string filepath)
+    {
+        if (!File.Exists(filepath))
+        {
+            JObject exampleData = new JObject
+            {
+                ["bot_settings"] = new JObject
+                {
+                    ["DefaultBOTS"] = new JObject
+                    {
+                        ["primary weapons"] = new JArray{ "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_mp5sd", "weapon_p90" },
+                        ["secondary weapons"] = new JArray{ "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven" }
+                    },
+                    ["OnlyPistolsBOTS"] = new JObject
+                    {
+                        ["primary weapons"] = new JArray{ },
+                        ["secondary weapons"] = new JArray{ "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_cz75a", "weapon_elite", "weapon_fiveseven", "weapon_tec9" }
+                    },
+                    ["OnlyHeadshotBOTS"] = new JObject
+                    {
+                        ["primary weapons"] = new JArray{ "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_aug" },
+                        ["secondary weapons"] = new JArray{ "weapon_deagle", "weapon_glock", "weapon_p250" }
+                    },
+                    ["OnlySMGBOTS"] = new JObject
+                    {
+                        ["primary weapons"] = new JArray{ "weapon_p90", "weapon_bizon", "weapon_mp5sd", "weapon_mp7", "weapon_mp9", "weapon_mac10", "weapon_ump45" },
+                        ["secondary weapons"] = new JArray{ }
+                    }
+                }
+            };
+            File.WriteAllText(filepath, exampleData.ToString());
+            var jsonData = File.ReadAllText(filepath);
+            JsonBotSettings = JObject.Parse(jsonData);
+        }
+        else
+        {
+            var jsonData = File.ReadAllText(filepath);
+            JsonBotSettings = JObject.Parse(jsonData);
+        }
+    }
     public static void CreateOrLoadBlockedWeapons(string filepath)
     {
         if (!File.Exists(filepath))
@@ -86,7 +129,8 @@ public static class Configuration
                         ["allow_knife_damage"] = true,
                         ["allow_center_message"] = false,
                         ["center_message_text"] = "",
-                        ["blocked_weapons"] = ""
+                        ["blocked_weapons"] = "",
+                        ["bot_settings"] = "DefaultBOTS"
                     },
                     ["1"] = new JObject
                     {
@@ -100,7 +144,8 @@ public static class Configuration
                         ["allow_knife_damage"] = false,
                         ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
-                        ["blocked_weapons"] = "snipers_list"
+                        ["blocked_weapons"] = "snipers_list",
+                        ["bot_settings"] = "OnlyHeadshotBOTS"
                     },
                     ["2"] = new JObject
                     {
@@ -114,7 +159,8 @@ public static class Configuration
                         ["allow_knife_damage"] = true,
                         ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='green'>Only Deagle</font>",
-                        ["blocked_weapons"] = ""
+                        ["blocked_weapons"] = "",
+                        ["bot_settings"] = ""
                     },
                     ["3"] = new JObject
                     {
@@ -128,7 +174,8 @@ public static class Configuration
                         ["allow_knife_damage"] = true,
                         ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='blue'>Only Pistols</font>",
-                        ["blocked_weapons"] = "deagle_list"
+                        ["blocked_weapons"] = "deagle_list",
+                        ["bot_settings"] = "OnlyPistolsBOTS"
                     },
                     ["4"] = new JObject
                     {
@@ -142,7 +189,8 @@ public static class Configuration
                         ["allow_knife_damage"] = true,
                         ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='yellow'>Only SMG</font>",
-                        ["blocked_weapons"] = ""
+                        ["blocked_weapons"] = "",
+                        ["bot_settings"] = "OnlySMGBOTS"
                     }
                 }
             };

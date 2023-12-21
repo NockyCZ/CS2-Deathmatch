@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Timers;
+using CounterStrikeSharp.API.Modules.Commands;
 
 namespace Deathmatch
 {
@@ -21,6 +22,7 @@ namespace Deathmatch
                         primaryWeapon = "",
                         secondaryWeapon = "",
                         killStreak = 0,
+                        weaponBuys = 0,
                         onlyHS = false,
                         killFeed = false,
                         spawnProtection = false
@@ -42,7 +44,8 @@ namespace Deathmatch
                     player.InGameMoneyServices!.Account = 10000;
                     if (playerData.ContainsPlayer(player))
                     {
-                        playerData[player].spawnProtection = true;
+                        playerData[player].weaponBuys = 0;
+                        playerData[player].spawnProtection = false;
                         AddTimer((float)Config.g_iProtectionTime, () =>
                         {
                             playerData[player].spawnProtection = false;
@@ -57,8 +60,11 @@ namespace Deathmatch
                                 }
                                 else
                                 {
-                                    string replacedweaponName = Localizer[playerData[player].primaryWeapon];
-                                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Disabled", replacedweaponName]}");
+                                    if (!g_bIsSecondarySet)
+                                    {
+                                        string replacedweaponName = Localizer[playerData[player].primaryWeapon];
+                                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Disabled", replacedweaponName]}");
+                                    }
                                 }
                             }
                             if (!string.IsNullOrEmpty(playerData[player].secondaryWeapon))
@@ -69,12 +75,40 @@ namespace Deathmatch
                                 }
                                 else
                                 {
-                                    string replacedweaponName = Localizer[playerData[player].secondaryWeapon];
-                                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Disabled", replacedweaponName]}");
+                                    if (!g_bIsPrimarySet)
+                                    {
+                                        string replacedweaponName = Localizer[playerData[player].secondaryWeapon];
+                                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Disabled", replacedweaponName]}");
+                                    }
                                 }
                             }
                         }
                     }
+                }
+                else if (player.IsValid && player.IsBot && !player.IsHLTV)
+                {
+                    player.InGameMoneyServices!.Account = 10000;
+                    /*Random random = new Random();
+                    int iPrimary = random.Next(0, BOTsPrimaryWeaponsList.Count);
+                    int iSecondary = random.Next(0, BOTsSecondaryWeaponsList.Count);*/
+                    if (BOTsPrimaryWeaponsList.Count != 0 && !g_bIsOnlyWeaponSet)
+                    {
+                        string weapon = GetRandomWeaponFromList(BOTsPrimaryWeaponsList);
+                        player.GiveNamedItem(weapon);
+                        //Console.WriteLine($"{player.PlayerName} primary: {weapon}");
+                    }
+                    /*else{
+                        Console.WriteLine($" primary: {g_bIsOnlyWeaponSet} {BOTsPrimaryWeaponsList.Count}");
+                    }*/
+                    if (BOTsSecondaryWeaponsList.Count != 0 && !g_bIsOnlyWeaponSet)
+                    {
+                        string weapon = GetRandomWeaponFromList(BOTsSecondaryWeaponsList);
+                        player.GiveNamedItem(weapon);
+                        //Console.WriteLine($"{player.PlayerName} secondary: {weapon}");
+                    }
+                    /*else{
+                        Console.WriteLine($" secondary: {g_bIsOnlyWeaponSet} {BOTsSecondaryWeaponsList.Count}");
+                    }*/
                 }
             });
             return HookResult.Continue;
@@ -89,6 +123,7 @@ namespace Deathmatch
                 if (playerData.ContainsPlayer(player))
                 {
                     player.InGameMoneyServices!.Account = 10000;
+                    playerData[player].weaponBuys++;
                     string weaponName = @event.Weapon;
                     if (PrimaryWeaponsList.Contains(weaponName) && !BlockedWeaponsList.Contains(weaponName))
                     {
@@ -120,7 +155,7 @@ namespace Deathmatch
                     player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Disabled", replacedweaponName]}");
                     AddTimer(0.2f, () =>
                     {
-                        int slot = IsHaveWeapon(player);
+                        int slot = IsHaveWeaponFromSlot(player, 0);
                         player.ExecuteClientCommand($"slot{slot}");
                     });
                 }
@@ -207,13 +242,23 @@ namespace Deathmatch
                 @event.FireEventToClient(player);
                 @event.FireEventToClient(attacker);
 
-                foreach (var p in Utilities.GetPlayers().Where(x => x is { IsBot: false, IsHLTV: false, IsValid: true }))
+                foreach (var p in Utilities.GetPlayers().Where(p => p is { IsBot: false, IsHLTV: false }))
                 {
-                    if (playerData.ContainsPlayer(p) && playerData[p].killFeed && (attacker != p || player != p))
+                    if (p.IsValid && playerData.ContainsPlayer(p) && playerData[p].killFeed && (attacker != p || player != p))
                     {
                         @event.FireEventToClient(p);
                     }
                 }
+            }
+            return HookResult.Continue;
+        }
+
+        [GameEventHandler]
+        public HookResult OnRoundStart(EventRoundStart @event, GameEventInfo info)
+        {
+            if (Config.g_bRemoveBreakableEntities)
+            {
+                RemoveBreakableEntities();
             }
             return HookResult.Continue;
         }
@@ -227,7 +272,7 @@ namespace Deathmatch
                 return HookResult.Continue;
             }
 
-            var mode = GetRandomModeType().ToString();
+            var mode = GetModeType().ToString();
             SetupCustomMode(mode);
 
             Utilities.GetPlayers().ForEach(player =>
@@ -239,6 +284,24 @@ namespace Deathmatch
             });
             return HookResult.Continue;
         }
+        private HookResult OnPlayerBuy(CCSPlayerController? player, CommandInfo info)
+        {
+            if (IsPlayerValid(player!) && playerData.ContainsPlayer(player!)){
+                if(playerData[player!].weaponBuys >= Config.g_iMaxWeaponBuys){
+                    player!.PrintToChat($"{Localizer["Prefix"]} {Localizer["Maximum_Weapons_Buys", Config.g_iMaxWeaponBuys]}");
+                    return HookResult.Handled;
+                }
+            }
+            return HookResult.Continue;
+        }
+        private HookResult OnPlayerRadioMessage(CCSPlayerController? player, CommandInfo info)
+        {
+            if (Config.g_bBlockRadioMessage)
+            {
+                return HookResult.Handled;
+            }
+            return HookResult.Continue;
+        }
         private HookResult OnTakeDamage(DynamicHook hook)
         {
             var entindex = hook.GetParam<CEntityInstance>(0).Index;
@@ -248,7 +311,6 @@ namespace Deathmatch
             }
 
             var pawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)entindex);
-
             if (pawn.OriginalController.Value is not { } player)
             {
                 return HookResult.Continue;

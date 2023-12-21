@@ -13,6 +13,19 @@
     "allow_knife_damage": false,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='purple'>Only Shotguns</font>",
-    "blocked_weapons": ""
+    "blocked_weapons": "",
+    "bot_settings": "OnlyShotgunsBOTS"
 }
+```
+- Add this in your `bot_settings.json` file
+```
+    "OnlyShotgunsBOTS": {
+      "primary weapons": [
+        "weapon_mag7",
+        "weapon_sawedoff",
+        "weapon_nova",
+        "weapon_xm1014"
+      ],
+      "secondary weapons": []
+    }
 ```

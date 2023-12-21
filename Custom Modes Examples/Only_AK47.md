@@ -1,6 +1,6 @@
 <h1>IN THIS MODE, PLAYERS CAN USE ONLY AK47 AND CAN SHOOT ONLY HEADSHOT</h1>
 
-- Add this in your custom_modes.json file and edit YOUR MODE ID for valid value
+- Add this in your `custom_modes.json` file and edit YOUR MODE ID for valid value
 ```
 "YOUR MODE ID": {
     "mode_name": "Only AK47 & Headshot",
@@ -13,6 +13,9 @@
     "allow_knife_damage": false,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='orange'>Only AK47 & Headshot</font>",
-    "blocked_weapons": ""
+    "blocked_weapons": "",
+    "bot_settings": ""
 }
 ```
+ 
+`blocked_weapons` and `bot_settings` do not need to be filled in because we have set the primary_weapon.

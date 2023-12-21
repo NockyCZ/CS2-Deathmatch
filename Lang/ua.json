@@ -6,7 +6,7 @@
   "PrimaryWeapon_Disabled": "Ваша основна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
   "SecondaryWeapon_Set": "Ваша другорядна зброя встановлена на {green}{0}",
   "SecondaryWeapon_Disabled": "Ваша другорядна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
-  "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!"
+  "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!",
   
   "weapon_mag7": "MAG-7",
   "weapon_nova": "Nova",
@@ -14,7 +14,7 @@
   "weapon_xm1014": "XM1014",
   "weapon_m249": "M249",
   "weapon_negev": "Negev",
-  "weapon_mac_10": "MAC-10",
+  "weapon_mac10": "MAC-10",
   "weapon_mp5sd": "MP5-SD",
   "weapon_mp7": "MP7",
   "weapon_mp9": "MP9",

@@ -232,7 +232,7 @@ namespace Deathmatch
             }
             return true;
         }
-        public int IsHaveWeapon(CCSPlayerController player)
+        public int IsHaveWeaponFromSlot(CCSPlayerController player, int slot)
         {
             if (player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null)
                 return 3;
@@ -241,13 +241,30 @@ namespace Deathmatch
             {
                 if (weapon != null && weapon.IsValid)
                 {
-                    if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                    if (slot == 0)
                     {
-                        return 2;
+                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return 2;
+                        }
+                        else if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return 1;
+                        }
                     }
-                    else if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                    else if (slot == 1)
                     {
-                        return 1;
+                        if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return 1;
+                        }
+                    }
+                    else if (slot == 2)
+                    {
+                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return 2;
+                        }
                     }
                 }
             }
@@ -269,6 +286,17 @@ namespace Deathmatch
                 if (zone.IsValid)
                 {
                     zone.Remove();
+                }
+            }
+        }
+        public void RemoveBreakableEntities()
+        {
+            var entities = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_breakable");
+            foreach (var func in entities)
+            {
+                if (func.IsValid)
+                {
+                    func.Remove();
                 }
             }
         }
@@ -342,7 +370,6 @@ namespace Deathmatch
             {
                 for (int i = g_iDefaultTSpawnsTeleported; i < g_iTotalTSpawns; i++)
                 {
-                    Console.WriteLine($" full new spawn t - {i}");
                     Vector position = ParseVector(spawnPositionsT[i].Item1);
                     QAngle angle = ParseQAngle(spawnPositionsT[i].Item2);
                     var entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>("info_player_terrorist");
@@ -371,19 +398,38 @@ namespace Deathmatch
                 }
             }
         }
-        public int GetRandomModeType()
+        public int GetModeType()
         {
             if (Config.g_bCustomModes)
             {
-                Random random = new Random();
-                int iRandomMode;
-                do
+                if (Config.g_bRandomSelectionOfModes)
                 {
-                    iRandomMode = random.Next(0, g_iTotalModes);
-                } while (iRandomMode == g_iActiveMode);
-                return iRandomMode;
+                    Random random = new Random();
+                    int iRandomMode;
+                    do
+                    {
+                        iRandomMode = random.Next(0, g_iTotalModes);
+                    } while (iRandomMode == g_iActiveMode);
+                    return iRandomMode;
+                }
+                else
+                {
+                    if (g_iActiveMode + 1 != g_iTotalModes && g_iActiveMode + 1 < g_iTotalModes)
+                    {
+                        return g_iActiveMode + 1;
+                    }
+                    return 0;
+                }
             }
             return 0;
+        }
+        static T GetRandomWeaponFromList<T>(HashSet<T> hashSet)
+        {
+            T[] array = new T[hashSet.Count];
+            hashSet.CopyTo(array);
+            Random random = new Random();
+            T randomWeapon = array[random.Next(array.Length)];
+            return randomWeapon;
         }
         public static void SendConsoleMessage(string text, ConsoleColor color)
         {

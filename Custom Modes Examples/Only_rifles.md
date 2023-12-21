@@ -13,13 +13,27 @@
     "allow_knife_damage": true,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='orange'>Only Rifles</font>",
-    "blocked_weapons": "rifles_list"
+    "blocked_weapons": "rifles_list",
+    "bot_settings": "OnlyRiflesBOTS"
 }
 ```
-- Add this in your blocked_weapons file
+- Add this in your `blocked_weapons.json` file
 ```
   "rifles_list": [
       "weapon_galilar",
       "weapon_famas"
     ]
+```
+- Add this in your `bot_settings.json` file
+```
+    "OnlyRiflesBOTS": {
+      "primary weapons": [
+        "weapon_ak47",
+        "weapon_m4a1",
+        "weapon_m4a1_silencer",
+        "weapon_aug",
+        "weapon_sg556"
+      ],
+      "secondary weapons": []
+    }
 ```
