@@ -44,7 +44,7 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 | `refill_health_headshot` | How much health does a player regenerate when they eliminate someone with headshot? - `number` |
 <h1></h1>
 
-### Player Commands (permission: @css/root):
+### Player Commands:
 `css_gun <WEAPON_NAME>` - Setup a weapon (alias /guns; /weapons; /weapon).
 
 ### Admin Commands (permission: @css/root):
