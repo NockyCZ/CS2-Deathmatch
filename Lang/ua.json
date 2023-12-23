@@ -7,6 +7,8 @@
   "SecondaryWeapon_Set": "Ваша другорядна зброя встановлена на {green}{0}",
   "SecondaryWeapon_Disabled": "Ваша другорядна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
   "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!",
+  "Weapon_Is_Already_Set": "Зброя {green}{0}{default} вже встановлена.",
+  "Maximum_Weapons_Buys": "Досягнуто максимальну кількість покупок ({green}{0}{default})! Ви можете купити знову при наступному відновленні.",
   
   "weapon_mag7": "MAG-7",
   "weapon_nova": "Nova",
