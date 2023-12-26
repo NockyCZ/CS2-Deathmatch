@@ -1,14 +1,17 @@
 {
   "Prefix": "{darkred}[Deathmatch]{default}",
-  "Knife_damage_disabled": "Вимкнено пошкодження ножа в цьому режимі!",
+  "Knife_damage_disabled": "Пошкодження ножа вимкнено в цьому режимі!",
   "New_mode": "Починається новий тип режиму {green}{0}{default}!",
   "PrimaryWeapon_Set": "Ваша основна зброя встановлена на {green}{0}",
   "PrimaryWeapon_Disabled": "Ваша основна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
   "SecondaryWeapon_Set": "Ваша другорядна зброя встановлена на {green}{0}",
   "SecondaryWeapon_Disabled": "Ваша другорядна зброя {green}{0}{default} вимкнена в цьому режимі! Встановте іншу.",
   "Weapon_Disabled": "Зброя {green}{0}{default} вимкнена в цьому режимі!",
-  "Weapon_Is_Already_Set": "Зброя {green}{0}{default} вже встановлена.",
-  "Maximum_Weapons_Buys": "Досягнуто максимальну кількість покупок ({green}{0}{default})! Ви можете купити знову при наступному відновленні.",
+  "Multiple_Weapon_Select": "Знайдено кілька відповідностей для цього імені зброї.",
+  "Weapon_Name_Not_Found": "Зброя з іменем '{green}{0}{default}' не знайдена.",
+  "Weapon_Select_Is_Disabled": "Під час цього режиму ви не можете встановлювати свої зброї.",
+  "Weapon_Is_Already_Set": "Зброя '{green}{0}{default}' вже встановлена.",
+  "Maximum_Weapons_Buys": "Досягнуто максимальну кількість покупок ({green}{0}{default})! Ви зможете купити знову при наступному відновленні."
   
   "weapon_mag7": "MAG-7",
   "weapon_nova": "Nova",
