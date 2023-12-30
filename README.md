@@ -2,17 +2,15 @@
 CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 142
 
 ### Main features
-- [CS2 Deathmatch plugin](#cs2-deathmatch-plugin)
-    - [Main features](#main-features)
-    - [To-do list](#to-do-list)
-    - [Installation](#installation)
-    - [Configuration](#configuration)
-    - [Player Commands:](#player-commands)
-    - [Admin Commands (permission: @css/root):](#admin-commands-permission-cssroot)
-    - [How Weapon Selection works](#how-weapon-selection-works)
-    - [Spawns Editor](#spawns-editor)
-    - [Creating Custom Modes](#creating-custom-modes)
-    - [Deathmatch Cvars](#deathmatch-cvars)
+1. [Weapon Selection](#how-weapon-selection-works)
+2. [Spawns Editor](#spawns-editor)
+3. [Creating Custom Modes](#creating-custom-modes)
+4. [Deathmatch Cvars](#deathmatch-cvars)
+5. [Admin](#admin-commands-permission-cssroot) & [Player](#player-commands) Commands
+6. Free For All (FFA)
+7. Spawn protection
+8. Refill ammo or health per kill/headshot
+etc...
 
 ### To-do list
 - Client preferences
