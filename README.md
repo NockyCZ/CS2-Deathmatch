@@ -47,8 +47,8 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 <h1></h1>
 
 ### Player Commands:
-`css_gun <WEAPON_NAME>` - Setup a weapon (alias /w; /weapon).<br>
-`css_gun` - Show the list of allowed weapons for the current mode (alias /w; /weapon).
+`css_gun <WEAPON_NAME>` - Setup a weapon (alias /w; /weapons; /guns).<br>
+`css_gun` - Show the list of allowed weapons for the current mode (alias /w; /weapon; /guns).
 
 ### Admin Commands (permission: @css/root):
 `css_dm_startmode <ID>` - Start a custom mode<br>
