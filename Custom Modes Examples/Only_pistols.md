@@ -6,36 +6,21 @@
     "mode_name": "Only Pistols",
     "armor": 1,
     "only_hs": false,
-    "primary_weapon": "",
-    "secondary_weapon": "",
-    "allow_select_weapons": true,
-    "weapons_type": "pistols",
     "allow_knife_damage": true,
+    "random_weapons": false,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='green'>Only Pistols</font>",
-    "blocked_weapons": "deagle_list",
-    "bot_settings": "OnlyPistolsBOTS"
-}
-```
-- Add this in your `blocked_weapons.json` file
-```
-  "deagle_list": [
-      "weapon_deagle"
-    ]
-```
-
-- Add this in your `bot_settings.json` file
-```
-    "OnlyPistolsBOTS": {
-      "primary weapons": [],
-      "secondary weapons": [
+    "primary_weapons": [],
+    "secondary_weapons": [
         "weapon_usp_silencer",
         "weapon_p250",
         "weapon_glock",
         "weapon_cz75a",
         "weapon_elite",
         "weapon_fiveseven",
+        "weapon_hkp2000",
         "weapon_tec9"
-      ]
-    }
+    ]
+}
 ```
+

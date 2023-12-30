@@ -6,15 +6,13 @@
     "mode_name": "Only AWP",
     "armor": 1,
     "only_hs": false,
-    "primary_weapon": "weapon_awp",
-    "secondary_weapon": "",
-    "allow_select_weapons": false,
-    "weapons_type": "",
     "allow_knife_damage": false,
+    "random_weapons": false,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='red'>Only AWP</font>",
-    "blocked_weapons": "",
-    "bot_settings": ""
+    "primary_weapons": [
+        "weapon_awp"
+    ],
+    "secondary_weapons": []
 }
 ```
-`blocked_weapons` and `bot_settings` do not need to be filled in because we have set the primary_weapon.

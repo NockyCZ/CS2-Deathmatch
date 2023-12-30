@@ -11,8 +11,9 @@
   "Weapon_Name_Not_Found": "Weapon with the name '{green}{0}{default}' was not found.",
   "Weapon_Select_Is_Disabled": "During this mode, you cannot setup your weapons.",
   "Weapon_Is_Already_Set": "Weapon '{green}{0}{default}' is already set.",
-  "Maximum_Weapons_Buys": "Maximum purchases reached ({green}{0}{default})! You can buy again upon the next respawn.",
-
+  "Allowed_Primary_Weapons": "ALLOWED PRIMARY WEAPONS:",
+  "Allowed_Secondary_Weapons": "ALLOWED SECONDARY WEAPONS:",
+  "Setup_Weapons_By_Command": "You can set weapons using the command {green}/gun",
   "weapon_mag7": "MAG-7",
   "weapon_nova": "Nova",
   "weapon_sawedoff": "Sawed-Off",

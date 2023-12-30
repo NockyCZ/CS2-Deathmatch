@@ -6,16 +6,14 @@
     "mode_name": "Only AK47 & Headshot",
     "armor": 1,
     "only_hs": true,
-    "primary_weapon": "weapon_ak47",
-    "secondary_weapon": "",
-    "allow_select_weapons": false,
-    "weapons_type": "",
     "allow_knife_damage": false,
+    "random_weapons": false,
     "allow_center_message": true,
     "center_message_text": "<font class='fontSize-l' color='orange'>Only AK47 & Headshot</font>",
-    "blocked_weapons": "",
-    "bot_settings": ""
+    "primary_weapons": [
+        "weapon_ak47"
+    ],
+    "secondary_weapons": []
 }
 ```
  
-`blocked_weapons` and `bot_settings` do not need to be filled in because we have set the primary_weapon.

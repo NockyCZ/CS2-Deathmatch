@@ -1,15 +1,18 @@
 # CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 128
+CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 142
 
 ### Main features
-- [Weapon selection](#how-weapon-selection-works)
-- [Spawns editor](#spawns-editor)
-- [Creating custom modes (multicfg)](#creating-custom-modes)
-- [Weapon restrict for custom modes](#blocked-weapons-list)
-- [Bot settings](#bot-settings)
-- Free For All (FFA)
-- Spawn protection
-- Refill ammo or health per kill/headshot/killstreak
+- [CS2 Deathmatch plugin](#cs2-deathmatch-plugin)
+    - [Main features](#main-features)
+    - [To-do list](#to-do-list)
+    - [Installation](#installation)
+    - [Configuration](#configuration)
+    - [Player Commands:](#player-commands)
+    - [Admin Commands (permission: @css/root):](#admin-commands-permission-cssroot)
+    - [How Weapon Selection works](#how-weapon-selection-works)
+    - [Spawns Editor](#spawns-editor)
+    - [Creating Custom Modes](#creating-custom-modes)
+    - [Deathmatch Cvars](#deathmatch-cvars)
 
 ### To-do list
 - Client preferences
@@ -25,38 +28,38 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 
 ### Configuration
 ```/game/csgo/addons/counterstrikesharp/configs/plugins/Deathmatch/Deathmatch.json```
-|   | What it does |
-| ------------- | ------------- |
-| `free_for_all`  | If the game will be FFA or Team. - `true` or `false` |
-| `custom_modes`  | Allow the custom modes (multicfg)? - `true` or `false` |
-| `custom_modes_interval` | Works only if custom modes is enabled - `minutes` |
-| `random_selection_of_modes` | Will the modes be selected randomly? - `true` or `false` |
-| `map_start_custom_mode` | Which custom mode will the map start with? - `ID of mode from custom_modes.json` |
-| `max_weapon_buys` | How many times can players buy weapons through the buy menu during one respawn? - `number` |
-| `spawn_protection_time` | How long will the spawn protection be? - `seconds` |
-| `round_restart_time` | How long will it take for the round to restart when a new mode is selected - `seconds` |
-| `hide_round_seconds` | Display the round timer? - `true` or `false` |
-| `block_radio_messages` | Block radio messages? - `true` or `false` |
-| `remove_breakable_entities` | Remove breakable entities at the round start? - `true` or `false` |
-| `reffil_ammo_kill` | Refill ammo when a player eliminates someone? - `true` or `false` |
-| `reffil_ammo_headshot` | Refill ammo when a player eliminates someone with headshot? - `true` or `false` |
-| `refill_health_kill` | How much health does a player regenerate when they eliminate someone? - `number` |
-| `refill_health_headshot` | How much health does a player regenerate when they eliminate someone with headshot? - `number` |
+|                             | What it does                                                                                   |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `free_for_all`              | If the game will be FFA or Team. - `true` or `false`                                           |
+| `custom_modes`              | Allow the custom modes (multicfg)? - `true` or `false`                                         |
+| `custom_modes_interval`     | Works only if custom modes is enabled - `minutes`                                              |
+| `random_selection_of_modes` | Will the modes be selected randomly? - `true` or `false`                                       |
+| `map_start_custom_mode`     | Which custom mode will the map start with? - `ID of mode from custom_modes.json`               |
+| `spawn_protection_time`     | How long will the spawn protection be? - `seconds`                                             |
+| `round_restart_time`        | How long will it take for the round to restart when a new mode is selected - `seconds`         |
+| `hide_round_seconds`        | Display the round timer? - `true` or `false`                                                   |
+| `block_radio_messages`      | Block radio messages? - `true` or `false`                                                      |
+| `remove_breakable_entities` | Remove breakable entities at the round start? - `true` or `false`                              |
+| `reffil_ammo_kill`          | Refill ammo when a player eliminates someone? - `true` or `false`                              |
+| `reffil_ammo_headshot`      | Refill ammo when a player eliminates someone with headshot? - `true` or `false`                |
+| `refill_health_kill`        | How much health does a player regenerate when they eliminate someone? - `number`               |
+| `refill_health_headshot`    | How much health does a player regenerate when they eliminate someone with headshot? - `number` |
 <h1></h1>
 
-### Player Commands (permission: @css/root):
-`css_gun <WEAPON_NAME>` - Setup a weapon (alias /guns; /weapons; /weapon).
+### Player Commands:
+`css_gun <WEAPON_NAME>` - Setup a weapon (alias /w; /weapon).<br>
+`css_gun` - Show the list of allowed weapons for the current mode (alias /w; /weapon).
 
 ### Admin Commands (permission: @css/root):
 `css_dm_startmode <ID>` - Start a custom mode<br>
-`css_dm_blockedweapons` - Show the list of blocked weapons for the current mode
 <h1></h1>
 
 ### How Weapon Selection works
-1. First option is a players can set their primary and secondary weapons using the buy menu. They just need to purchase a weapon once, and it will be saved.
-2. Second option is a players can set their primary and secondary weapons using the `/gun <WEAPON_NAME>` command.
+1. Players can set their primary and secondary weapons using the `/gun <WEAPON_NAME>` command. 
+- The weapon name doesn't have to be complete. For example, to set the 'AK47', you only need to type 'ak'. 
+- To display the list of allowed weapons for the current mode, simply type /gun without specifying a weapon name.
 - If a player tries to set a blocked weapon, it will not be assigned to them.
-- If a saved weapon is in a blocked weapons list, a player will not receive it upon spawning.
+- If a saved weapon is not in a allowed weapons list, a player will not receive it upon spawning.
 <h1></h1>
 
 ### Spawns Editor
@@ -80,61 +83,16 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 1. `mode_name` - What will the mode be named?
 2. `armor` - What type of armor will players receive at spawn? <b>0</b> - None | <b>1</b> - Armor Only | <b>2</b> - Armor and Helmet
 3. `only_hs` - Will this mode be only headshots? <b>true</b> or <b>false</b>
-4. `primary_weapon` - Which weapon will be the primary? If none, leave blank
-5. `seconday_weapon` - Which weapon will be the secondary? If none, leave blank
-6. `allow_select_weapons` - Allow select the weapons throung the buy menu ? <b>true</b> or <b>false</b>
-7. `weapons_type` - Which type of weapons can be set through the buy menu? Avaible values: <b>all</b>, <b>rifles</b>, <b>pistols</b>, <b>smgs</b>, <b>snipers</b>, <b>heavy</b>, <b>shotguns</b>. If primary_weapon or secondary_wepon is set leave blank or if allow_select_weapons is false leave also blank!
-8. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
-9. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
-10. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://i.imgur.com/rNNGcpa.png)
-11. `blocked_weapons` - Which weapons from <b>blocked_weapons.json</b> will be disabled in this mode. Leave blank for enable all weapons or if primary_weapon/secondary_weapon is set leave also blank. If weapons_type is set, it will automatically block all other weapons that are not related to the specified weapon type.
-12. `bot_settings` - Weapon settings for bots from <b>bot_settings.json</b>. Leave blank if primary_weapon/secondary_weapon is set.
+4. `allow_knife_damage` - Will knife damage be enabled? <b>true</b> or <b>false</b>
+5. `random_weapons` - If you set this value to true, players won't be able to customize their weapons for this custom mode, and upon each spawn, they will receive a random weapon from primary/secondary_weapons. <b>true</b> or <b>false</b>
+6. `allow_center_message` - Allow center message? <b>true</b> or <b>false</b>
+7. `center_message_text` - What message will be displayed in the center message during the mode if allow_center_message is true? [Preview](https://i.imgur.com/rNNGcpa.png)
+8. `primary_weapons` - List of available primary weapons for the custom mode
+9. `secondary_weapons` - List of available secondary weapons for the custom mode
 
-- <b>Some examples:</b> [Only Pistols but deagle is disabled](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_pistols.md) , [Only AK47 & Headshot](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_AK47.md) , [Only AWP](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_awp.md) , [Only Rifles but FAMAS and GALILAR is disabled](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_rifles.md) , [Only Shotguns](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_shotguns.md)
+- <b>Some examples:</b> [Only Pistols but deagle is disabled](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_pistols.md) , [Only AK47 & Headshot](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_AK47.md) , [Only AWP](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_awp.md) , [Only Rifles but FAMAS and GALILAR is disabled](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_rifles.md) , [Only Shotguns with random weapons](https://github.com/NockyCZ/CS2-Deathmatch/blob/main/Custom%20Modes%20Examples/Only_shotguns.md)
 <h1></h1>
 
-### Blocked Weapons List
-```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/blocked_weapons.json```
-- Create a list of blocked weapons for specific modes
-- Do not fill in blocked_weapons in custom_modes.json if you have set a primary_weapon or secondary_weapon for specific custom mode
-```
-{
-  "blocked_weapons": {
-    "LIST NAME": [
-      "WEAPON NAME",
-      "WEAPON NAME",
-      "weapon_ak47",
-      "weapon_deagle"
-    ]
-  }
-}
-```
-- <b>LIST NAME</b> is the name of the list that will be written in `custom_modes.json` as the value in `"blocked_weapons"`.
-<h1></h1>
-
-### Bot settings
-```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/bot_settings.json```
-- Bot settings are used to configure weapons for bots in specific custom modes
-- If multiple weapons are set as primary or secondary, the bot will receive a random weapon from the list
-- Do not fill in bot_settings in custom_modes.json if you have set a primary_weapon or secondary_weapon for specific custom mode
-```
-{
-  "bot_settings": {
-    "BOT SETTINGS NAME": {
-      "primary weapons": [
-        "weapon_aug",
-        "weapon_sg556",
-        "weapon_xm1014",
-        "weapon_ak47"
-      ],
-      "secondary weapons": [
-        "weapon_usp_silencer",
-        "weapon_p250",
-        "weapon_glock",
-        "weapon_hkp2000"
-      ]
-    }
-  }
-}
-```
-- <b>BOT SETTINGS NAME</b> is the name of the list that will be written in `custom_modes.json` as the value in `"bot_settings"`.
+### Deathmatch Cvars
+```/game/csgo/addons/counterstrikesharp/plugins/Deathmatch/deathmatch_cvars.txt```
+- The plugin automatically creates a `deathmatch_cvars.txt` file with pre-configured basic cvars for the proper functioning of your DM server. You can edit and set your own cvars in this file

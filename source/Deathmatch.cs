@@ -6,6 +6,7 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Memory;
+using CounterStrikeSharp.API.Modules.Cvars;
 using Newtonsoft.Json.Linq;
 
 namespace Deathmatch;
@@ -15,22 +16,17 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0";
+    public override string ModuleVersion => "1.2";
 
     public class ModeInfo
     {
         public string Name { get; set; } = "";
         public int Armor { get; set; } = 1;
         public bool OnlyHS { get; set; } = false;
-        public string PrimaryWeapon { get; set; } = "";
-        public string SecondaryWeapon { get; set; } = "";
-        public bool SelectWeapons { get; set; } = true;
-        public string WeaponsType { get; set; } = "all";
         public bool KnifeDamage { get; set; } = true;
+        public bool RandomWeapons { get; set; } = true;
         public bool CenterMessage { get; set; } = false;
         public string CenterMessageText { get; set; } = "";
-        public string BlockedWeapons { get; set; } = "";
-        public string BotSettings { get; set; } = "";
     }
 
     public class deathmatchPlayerData
@@ -39,7 +35,6 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         public required string secondaryWeapon { get; set; }
         public required bool spawnProtection { get; set; }
         public required int killStreak { get; set; }
-        public required int weaponBuys { get; set; }
         public required bool onlyHS { get; set; }
         public required bool killFeed { get; set; }
         //public required bool showHud { get; set; }
@@ -54,21 +49,9 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     public static int g_iTotalCTSpawns = 0;
     public static int g_iTotalTSpawns = 0;
     public static int g_iActiveMode = 0;
-    public static bool g_bIsOnlyWeaponSet = false;
     public static bool g_bIsPrimarySet = false;
     public static bool g_bIsSecondarySet = false;
     public static bool g_bIsActiveEditor = false;
-    Dictionary<string, int> WeaponsTypeMapping = new Dictionary<string, int>
-    {
-        { "all", 255 },
-        { "pistols", 1 },
-        { "smgs", 2 },
-        { "rifles", 4 },
-        { "shotguns", 8 },
-        { "snipers", 16 },
-        { "heavy", 32 }
-    };
-    List<string> WeaponsTypesList = new List<string> { "all", "pistols", "smgs", "rifles", "shotguns", "snipers", "heavy" };
 
     HashSet<string> SecondaryWeaponsList = new HashSet<string> {
         "weapon_hkp2000", "weapon_cz75a", "weapon_deagle", "weapon_elite",
@@ -84,16 +67,16 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         "weapon_awp", "weapon_g3sg1", "weapon_scar20", "weapon_ssg08" };
 
     HashSet<string> AllWeaponsList = new HashSet<string> {
-        "rifles_weapon_ak47", "rifles_weapon_m4a1_silencer", "rifles_weapon_m4a1", "rifles_weapon_sg556",
-        "rifles_weapon_aug", "rifles_weapon_galilar", "rifles_weapon_famas",
-        "pistols_weapon_deagle", "pistols_weapon_usp_silencer", "pistols_weapon_glock", "pistols_weapon_p250",
-        "pistols_weapon_fiveseven", "pistols_weapon_cz75a", "pistols_weapon_elite",
-        "pistols_weapon_revolver", "pistols_weapon_tec9", "pistols_weapon_hkp2000",
-        "snipers_weapon_awp", "snipers_weapon_g3sg1", "snipers_weapon_scar20", "snipers_weapon_ssg08",
-        "smgs_weapon_mac10", "smgs_weapon_mp5sd", "smgs_weapon_mp7", "smgs_weapon_mp9",
-        "smgs_weapon_p90", "smgs_weapon_bizon", "smgs_weapon_ump45",
-        "shotguns_weapon_mag7", "shotguns_weapon_nova", "shotguns_weapon_sawedoff", "shotguns_weapon_xm1014",
-        "heavy_weapon_m249", "heavy_weapon_negev" };
+        "weapon_ak47", "weapon_m4a1_silencer", "weapon_m4a1", "weapon_sg556",
+        "weapon_aug", "weapon_galilar", "weapon_famas",
+        "weapon_deagle", "weapon_usp_silencer", "weapon_glock", "weapon_p250",
+        "weapon_fiveseven", "weapon_cz75a", "weapon_elite",
+        "weapon_revolver", "weapon_tec9", "weapon_hkp2000",
+        "weapon_awp", "weapon_g3sg1", "weapon_scar20", "weapon_ssg08",
+        "weapon_mac10", "weapon_mp5sd", "weapon_mp7", "weapon_mp9",
+        "weapon_p90", "weapon_bizon", "weapon_ump45",
+        "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
+        "weapon_m249", "weapon_negev" };
 
     HashSet<string> RadioMessagesList = new HashSet<string> {
         "coverme", "takepoint", "holdpos", "followme",
@@ -103,9 +86,8 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         "needbackup", "sectorclear", "inposition", "negative",
         "report", "getout" };
 
-    HashSet<string> BlockedWeaponsList = new HashSet<string>();
-    HashSet<string> BOTsPrimaryWeaponsList = new HashSet<string>();
-    HashSet<string> BOTsSecondaryWeaponsList = new HashSet<string>();
+    HashSet<string> AllowedPrimaryWeaponsList = new HashSet<string>();
+    HashSet<string> AllowedSecondaryWeaponsList = new HashSet<string>();
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -115,12 +97,11 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     {
         VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
         Configuration.CreateOrLoadCustomModes(ModuleDirectory + "/custom_modes.json");
-        Configuration.CreateOrLoadBlockedWeapons(ModuleDirectory + "/blocked_weapons.json");
-        Configuration.CreateOrLoadBotSettings(ModuleDirectory + "/bot_settings.json");
         Configuration.CreateOrLoadCvars(ModuleDirectory + "/deathmatch_cvars.txt");
 
         AddCommandListener("buy", OnPlayerBuy);
         AddCommandListener("autobuy", OnPlayerBuy);
+        AddCommandListener("buymenu", OnPlayerBuy);
         foreach (string radioName in RadioMessagesList)
         {
             AddCommandListener(radioName, OnPlayerRadioMessage);
@@ -163,45 +144,14 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     {
         VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
         playerData.Clear();
-        BlockedWeaponsList.Clear();
-    }
-    public void SetupBotSettings(string type)
-    {
-        JObject? botSettingsData = Configuration.JsonBotSettings!["bot_settings"]?[type] as JObject;
-        if (botSettingsData == null)
-        {
-            SendConsoleMessage($"[Deathmatch] Invalid bot_settings! (Mode ID: {g_iActiveMode})", ConsoleColor.Red);
-            throw new Exception($"[Deathmatch] Invalid bot_settings! (Mode ID: {g_iActiveMode})");
-        }
-
-        JArray? primaryWeaponsArray = (JArray)botSettingsData!["primary weapons"]!;
-        JArray? secondaryWeaponsArray = (JArray)botSettingsData!["secondary weapons"]!;
-        if (primaryWeaponsArray != null && primaryWeaponsArray.Count > 0)
-        {
-            foreach (string? weapon in primaryWeaponsArray)
-            {
-                BOTsPrimaryWeaponsList.Add(weapon!);
-            }
-        }
-        else
-        {
-            BOTsPrimaryWeaponsList.Clear();
-        }
-        if (secondaryWeaponsArray != null && secondaryWeaponsArray.Count > 0)
-        {
-            foreach (string? weapon in secondaryWeaponsArray)
-            {
-                BOTsSecondaryWeaponsList.Add(weapon!);
-            }
-        }
-        else
-        {
-            BOTsSecondaryWeaponsList.Clear();
-        }
+        AllowedPrimaryWeaponsList.Clear();
+        AllowedSecondaryWeaponsList.Clear();
     }
     public void SetupCustomMode(string modetype)
     {
         bool bNewmode = true;
+        AllowedSecondaryWeaponsList.Clear();
+        AllowedPrimaryWeaponsList.Clear();
         if (modetype == g_iActiveMode.ToString())
         {
             bNewmode = false;
@@ -213,43 +163,12 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                 ModeData.Name = modeValue?["mode_name"]?.ToString() ?? $"{modetype}";
                 string armor = modeValue?["armor"]?.ToString() ?? "1";
                 ModeData.OnlyHS = modeValue?["only_hs"]?.Value<bool>() ?? false;
-                ModeData.PrimaryWeapon = modeValue?["primary_weapon"]?.ToString() ?? "";
-                ModeData.SecondaryWeapon = modeValue?["secondary_weapon"]?.ToString() ?? "";
-                ModeData.SelectWeapons = modeValue?["allow_select_weapons"]?.Value<bool>() ?? true;
-                ModeData.WeaponsType = modeValue?["weapons_type"]?.ToString() ?? "all";
                 ModeData.KnifeDamage = modeValue?["allow_knife_damage"]?.Value<bool>() ?? true;
+                ModeData.RandomWeapons = modeValue?["random_weapons"]?.Value<bool>() ?? false;
                 ModeData.CenterMessage = modeValue?["allow_center_message"]?.Value<bool>() ?? false;
                 ModeData.CenterMessageText = modeValue?["center_message_text"]?.ToString() ?? "";
-                ModeData.BlockedWeapons = modeValue?["blocked_weapons"]?.ToString() ?? "";
-                ModeData.BotSettings = modeValue?["bot_settings"]?.ToString() ?? "";
-                g_iActiveMode = int.Parse(modetype); ;
+                g_iActiveMode = int.Parse(modetype);
 
-                if (string.IsNullOrEmpty(ModeData.BotSettings))
-                {
-                    BOTsSecondaryWeaponsList.Clear();
-                    BOTsPrimaryWeaponsList.Clear();
-                }
-                else
-                {
-                    SetupBotSettings(ModeData.BotSettings);
-                }
-                if (string.IsNullOrEmpty(ModeData.BlockedWeapons))
-                {
-                    BlockedWeaponsList.Clear();
-                }
-                else
-                {
-                    if (Configuration.JsonBlockedWeapons!["blocked_weapons"]?[ModeData.BlockedWeapons] != null)
-                    {
-                        JArray blockedWeaponsArray = (JArray)Configuration.JsonBlockedWeapons!["blocked_weapons"]![ModeData.BlockedWeapons]!;
-                        BlockedWeaponsList = blockedWeaponsArray.ToObject<HashSet<string>>()!;
-                    }
-                    else
-                    {
-                        SendConsoleMessage($"[Deathmatch] Invalid blocked_weapons list! (Mode ID: {modetype})", ConsoleColor.Red);
-                        throw new Exception($"[Deathmatch] Invalid blocked_weapons list! (Mode ID: {modetype})");
-                    }
-                }
                 if (int.TryParse(armor, out int armorValue))
                 {
                     if (armorValue >= 0 && armorValue <= 2)
@@ -267,20 +186,24 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                     SendConsoleMessage($"[Deathmatch] Wrong value in Armor! (Mode ID: {modetype}) | Allowed options: 0 , 1 , 2", ConsoleColor.Red);
                     throw new Exception($"[Deathmatch] Wrong value in Armor! (Mode ID: {modetype}) | Allowed options: 0 , 1 , 2");
                 }
-                if ((!string.IsNullOrEmpty(ModeData.PrimaryWeapon) || !string.IsNullOrEmpty(ModeData.SecondaryWeapon)) && !WeaponsTypesList.Contains(ModeData.WeaponsType))
+
+                JArray primaryWeaponsArray = (JArray)modeValue!["primary_weapons"]!;
+                JArray secondaryWeaponsArray = (JArray)modeValue["secondary_weapons"]!;
+                if (primaryWeaponsArray != null && primaryWeaponsArray.Count > 0)
                 {
-                    SendConsoleMessage($"[Deathmatch] Wrong value in Weapons Type! (Mode ID: {modetype})", ConsoleColor.Red);
-                    throw new Exception($"[Deathmatch] Wrong value in Weapons Type! (Mode ID: {modetype})");
+                    foreach (string? weapon in primaryWeaponsArray)
+                    {
+                        AllowedPrimaryWeaponsList.Add(weapon!);
+                    }
+                    CheckIsValidWeaponsInList(AllowedPrimaryWeaponsList, AllWeaponsList);
                 }
-                if (!string.IsNullOrEmpty(ModeData.PrimaryWeapon) && !PrimaryWeaponsList.Contains(ModeData.PrimaryWeapon))
+                if (secondaryWeaponsArray != null && secondaryWeaponsArray.Count > 0)
                 {
-                    SendConsoleMessage($"[Deathmatch] Wrong primary weapon name! (Mode ID: {modetype})", ConsoleColor.Red);
-                    throw new Exception($"[Deathmatch] Wrong primary weapon name! (Mode ID: {modetype})");
-                }
-                if (!string.IsNullOrEmpty(ModeData.SecondaryWeapon) && !SecondaryWeaponsList.Contains(ModeData.SecondaryWeapon))
-                {
-                    SendConsoleMessage($"[Deathmatch] Wrong secondary weapon name! (Mode ID: {modetype})", ConsoleColor.Red);
-                    throw new Exception($"[Deathmatch] Wrong secondary weapon name! (Mode ID: {modetype})");
+                    foreach (string? weapon in secondaryWeaponsArray)
+                    {
+                        AllowedSecondaryWeaponsList.Add(weapon!);
+                    }
+                    CheckIsValidWeaponsInList(AllowedSecondaryWeaponsList, AllWeaponsList);
                 }
                 SetupDeathmatchConfiguration(bNewmode);
                 return;
@@ -297,23 +220,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             throw new Exception($"[Deathmatch] Wrong code in custom_modes.json!");
         }
     }
-    public void SetupBlockedWeapons(string type)
-    {
-        string[] weaponsListToReplace = { "pistols_", "smgs_", "rifles_", "shotguns_", "snipers_", "heavy_" };
-        foreach (string weaponName in AllWeaponsList)
-        {
-            string weapon = weaponName;
-            if (!weapon.Contains(type))
-            {
-                foreach (string str in weaponsListToReplace)
-                {
-                    weapon = weapon.Replace(str, string.Empty);
-                }
-                BlockedWeaponsList.Add(weapon);
-                //Console.WriteLine($"{weapon} added to blocked list");
-            }
-        }
-    }
+
     public void SetupDeathmatchConfiguration(bool isNewMode)
     {
         if (isNewMode)
@@ -322,49 +229,11 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         }
         g_bIsPrimarySet = false;
         g_bIsSecondarySet = false;
-        g_bIsOnlyWeaponSet = false;
-        Server.ExecuteCommand($"mp_free_armor {ModeData.Armor};mp_damage_headshot_only {ModeData.OnlyHS}");
-        if (!string.IsNullOrEmpty(ModeData.WeaponsType) && ModeData.WeaponsType != "all")
+        Server.ExecuteCommand($"mp_free_armor {ModeData.Armor};mp_damage_headshot_only {ModeData.OnlyHS};mp_ct_default_primary \"\";mp_t_default_primary \"\";mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
+        foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, PawnIsAlive: true }))
         {
-            SetupBlockedWeapons(ModeData.WeaponsType);
-        }
-        if (ModeData.SelectWeapons)
-        {
-            Server.ExecuteCommand("mp_buy_anywhere 1;mp_buytime 6000");
-        }
-        else
-        {
-            Server.ExecuteCommand("mp_buy_anywhere 0;mp_buytime 0");
-        }
-        if (string.IsNullOrEmpty(ModeData.PrimaryWeapon))
-        {
-            Server.ExecuteCommand("mp_ct_default_primary \"\";mp_t_default_primary \"\"");
-        }
-        else
-        {
-            Server.ExecuteCommand($"mp_ct_default_primary {ModeData.PrimaryWeapon};mp_t_default_primary {ModeData.PrimaryWeapon}");
-            g_bIsPrimarySet = true;
-        }
-        if (string.IsNullOrEmpty(ModeData.SecondaryWeapon))
-        {
-            Server.ExecuteCommand("mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
-        }
-        else
-        {
-            Server.ExecuteCommand($"mp_ct_default_secondary {ModeData.SecondaryWeapon};mp_t_default_secondary {ModeData.SecondaryWeapon}");
-            g_bIsSecondarySet = true;
-        }
-        if (g_bIsSecondarySet || g_bIsPrimarySet)
-        {
-            g_bIsOnlyWeaponSet = true;
-        }
-        if (WeaponsTypeMapping.TryGetValue(ModeData.WeaponsType, out int type))
-        {
-            Server.ExecuteCommand($"mp_buy_allow_guns {type}");
-        }
-        else
-        {
-            Server.ExecuteCommand($"mp_buy_allow_guns 255");
+            p.RemoveWeapons();
+            SetupPlayerWeapons(p, true);
         }
     }
     public void SetupDeathMatchConfigValues()
@@ -377,7 +246,8 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         }
         else
         {
-            Server.ExecuteCommand($"mp_roundtime_defuse 60;mp_roundtime 60;mp_roundtime_deployment 60;mp_roundtime_hostage 60");
+            var time = ConVar.Find("mp_timelimit");
+            Server.ExecuteCommand($"mp_roundtime_defuse {time};mp_roundtime {time};mp_roundtime_deployment {time};mp_roundtime_hostage {time}");
         }
         //var iAmmo = Config.g_bUnlimitedAmmo ? 1 : 2;
         var iFFA = Config.g_bFFA ? 1 : 0;
@@ -407,24 +277,64 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         info.ReplyToCommand($"Blocked weapons: {ModeData.BlockedWeapons}");
         info.ReplyToCommand("===============================");
     }*/
-    [ConsoleCommand("css_gun", "Select a weapons")]
-    [ConsoleCommand("css_weapon", "Select a weapons")]
-    [ConsoleCommand("css_weapons", "Select a weapons")]
-    [ConsoleCommand("css_guns", "Select a weapons")]
+    [ConsoleCommand("css_gun", "Select a weapon")]
+    [ConsoleCommand("css_guns", "Select a weapon")]
+    [ConsoleCommand("css_weapons", "Select a weapon")]
+    [ConsoleCommand("css_weapon", "Select a weapon")]
+    [ConsoleCommand("css_w", "Select a weapon")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
-    public void OnGuns_CMD(CCSPlayerController? player, CommandInfo info)
+    public void OnSelectGun_CMD(CCSPlayerController? player, CommandInfo info)
     {
         string weaponName = info.GetArg(1).ToLower();
-        if (string.IsNullOrEmpty(weaponName))
-        {
-            info.ReplyToCommand($"{Localizer["Prefix"]} /gun <weapon name>");
-            return;
-        }
         if (!IsPlayerValid(player!, false) || !playerData.ContainsPlayer(player!))
         {
             return;
         }
-        if (!g_bIsOnlyWeaponSet || ModeData.SelectWeapons)
+        if (ModeData.RandomWeapons)
+        {
+            info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+            return;
+        }
+        if (string.IsNullOrEmpty(weaponName))
+        {
+            string primaryWeapons = "";
+            string secondaryWeapons = "";
+            if (AllowedPrimaryWeaponsList.Count != 0)
+            {
+                foreach (string weapon in AllowedPrimaryWeaponsList)
+                {
+                    if (string.IsNullOrEmpty(primaryWeapons))
+                    {
+                        primaryWeapons = $"{ChatColors.Green} {weapon.Replace("weapon_", "")}";
+                    }
+                    else
+                    {
+                        primaryWeapons = $"{primaryWeapons}{ChatColors.Default}, {ChatColors.Green}{weapon.Replace("weapon_", "")}";
+                    }
+                }
+                info.ReplyToCommand($"{Localizer["Allowed_Primary_Weapons"]}");
+                info.ReplyToCommand($"{ChatColors.Darkred}• {primaryWeapons}");
+            }
+            if (AllowedSecondaryWeaponsList.Count != 0)
+            {
+                foreach (string weapon in AllowedSecondaryWeaponsList)
+                {
+                    if (string.IsNullOrEmpty(secondaryWeapons))
+                    {
+                        secondaryWeapons = $"{ChatColors.Green} {weapon.Replace("weapon_", "")}";
+                    }
+                    else
+                    {
+                        secondaryWeapons = $"{secondaryWeapons}{ChatColors.Default}, {ChatColors.Green}{weapon.Replace("weapon_", "")}";
+                    }
+                }
+                info.ReplyToCommand($"{Localizer["Allowed_Secondary_Weapons"]}");
+                info.ReplyToCommand($"{ChatColors.Darkred}• {secondaryWeapons}");
+            }
+            info.ReplyToCommand($"{Localizer["Prefix"]} /gun <weapon name>");
+            return;
+        }
+        if (!g_bIsPrimarySet && !g_bIsSecondarySet)
         {
             string replacedweaponName = "";
             string matchingValues = "";
@@ -446,11 +356,6 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                     if (weapon.Contains(weaponName))
                     {
                         replacedweaponName = weapon;
-                        string[] weaponsListToReplace = { "pistols_", "smgs_", "rifles_", "shotguns_", "snipers_", "heavy_" };
-                        foreach (string str in weaponsListToReplace)
-                        {
-                            replacedweaponName = replacedweaponName.Replace(str, string.Empty);
-                        }
                         matchingCount++;
                         string localizerWeaponName = Localizer[replacedweaponName];
                         if (matchingCount == 1)
@@ -484,46 +389,37 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                 return;
             }
 
-            if (!BlockedWeaponsList.Contains(weaponName))
+            if (AllowedPrimaryWeaponsList.Contains(weaponName))
             {
-                if (PrimaryWeaponsList.Contains(weaponName))
+                string localizerWeaponName = Localizer[weaponName];
+                if (weaponName == playerData[player!].primaryWeapon)
                 {
-                    string localizerWeaponName = Localizer[weaponName];
-                    if (weaponName == playerData[player!].primaryWeapon)
-                    {
-                        info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
-                        return;
-                    }
-                    playerData[player!].primaryWeapon = weaponName;
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
-                    if (IsHaveWeaponFromSlot(player!, 1) != 1)
-                    {
-                        player!.GiveNamedItem(weaponName);
-                    }
+                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
                     return;
                 }
-                else if (SecondaryWeaponsList.Contains(weaponName))
+                playerData[player!].primaryWeapon = weaponName;
+                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
+                if (IsHaveWeaponFromSlot(player!, 1) != 1)
                 {
-                    string localizerWeaponName = Localizer[weaponName];
-                    if (weaponName == playerData[player!].secondaryWeapon)
-                    {
-                        info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
-                        return;
-                    }
-                    playerData[player!].secondaryWeapon = weaponName;
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
-                    if (IsHaveWeaponFromSlot(player!, 2) != 2)
-                    {
-                        player!.GiveNamedItem(weaponName);
-                    }
+                    player!.GiveNamedItem(weaponName);
+                }
+                return;
+            }
+            else if (AllowedSecondaryWeaponsList.Contains(weaponName))
+            {
+                string localizerWeaponName = Localizer[weaponName];
+                if (weaponName == playerData[player!].secondaryWeapon)
+                {
+                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
                     return;
                 }
-                else
+                playerData[player!].secondaryWeapon = weaponName;
+                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
+                if (IsHaveWeaponFromSlot(player!, 2) != 2)
                 {
-                    string localizerWeaponName = Localizer[weaponName];
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Name_Not_Found", localizerWeaponName]}");
-                    return;
+                    player!.GiveNamedItem(weaponName);
                 }
+                return;
             }
             else
             {
@@ -538,26 +434,42 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         }
     }
 
-    [ConsoleCommand("css_dm_blockedweapons", "Show all blocked weapons for current mod")]
+    [ConsoleCommand("css_dm_allowedweapons", "Show all allowed weapons for current mod")]
     [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
     [RequiresPermissions("@css/root")]
     public void OnBlockedList_CMD(CCSPlayerController? player, CommandInfo info)
     {
-        string blockedWeapons = "";
-        if (BlockedWeaponsList.Count != 0)
+        string primary = "";
+        if (AllowedPrimaryWeaponsList.Count != 0)
         {
-            foreach (string weaponName in BlockedWeaponsList)
+            foreach (string weaponName in AllowedPrimaryWeaponsList)
             {
-                blockedWeapons = $"{blockedWeapons}{weaponName} | ";
+                primary = $"{primary}{weaponName} | ";
             }
         }
         else
         {
-            blockedWeapons = "None blocked weapons...";
+            primary = "None allowed weapons...";
         }
-        info.ReplyToCommand($"{Localizer["Prefix"]} {ChatColors.Green}BLOCKED WEAPONS FOR {ModeData.Name} (ID: {g_iActiveMode})");
-        info.ReplyToCommand(blockedWeapons);
+        info.ReplyToCommand($"{Localizer["Prefix"]} {ChatColors.Green}PRIMARY ALLOWED WEAPONS {ModeData.Name} (ID: {g_iActiveMode})");
+        info.ReplyToCommand(primary);
+
+        string secondary = "";
+        if (AllowedSecondaryWeaponsList.Count != 0)
+        {
+            foreach (string weaponName in AllowedSecondaryWeaponsList)
+            {
+                secondary = $"{secondary}{weaponName} | ";
+            }
+        }
+        else
+        {
+            secondary = "None allowed weapons...";
+        }
+        info.ReplyToCommand($"{Localizer["Prefix"]} {ChatColors.Green}SECONDARY ALLOWED WEAPONS {ModeData.Name} (ID: {g_iActiveMode})");
+        info.ReplyToCommand(secondary);
     }
+
     [ConsoleCommand("css_dm_startmode", "Start Custom Mode")]
     [CommandHelper(1, "<mode id>")]
     [RequiresPermissions("@css/root")]

@@ -3,6 +3,7 @@ using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 using QAngle = CounterStrikeSharp.API.Modules.Utils.QAngle;
+using CounterStrikeSharp.API.Modules.Timers;
 using System.Drawing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -291,12 +292,13 @@ namespace Deathmatch
         }
         public void RemoveBreakableEntities()
         {
-            var entities = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_breakable");
-            foreach (var func in entities)
+            var entities = Utilities.FindAllEntitiesByDesignerName<CBreakable>("prop_dynamic")
+                .Concat(Utilities.FindAllEntitiesByDesignerName<CBreakable>("func_breakable"));
+            foreach (var entity in entities)
             {
-                if (func.IsValid)
+                if (entity.IsValid)
                 {
-                    func.Remove();
+                    entity.AcceptInput("Break");
                 }
             }
         }
@@ -423,6 +425,99 @@ namespace Deathmatch
             }
             return 0;
         }
+        public void SetupPlayerWeapons(CCSPlayerController player, bool bNewMode)
+        {
+            if (IsPlayerValid(player, false))
+            {
+                player.InGameMoneyServices!.Account = 0;
+                if (playerData.ContainsPlayer(player))
+                {
+                    if (!bNewMode)
+                    {
+                        playerData[player].spawnProtection = true;
+                        AddTimer((float)Config.g_iProtectionTime, () =>
+                        {
+                            playerData[player].spawnProtection = false;
+                        }, TimerFlags.STOP_ON_MAPCHANGE);
+                    }
+
+                    int slot = IsHaveWeaponFromSlot(player, 0);
+                    if (slot == 1 || slot == 2)
+                    {
+                        return;
+                    }
+                    if (AllowedPrimaryWeaponsList.Count != 0)
+                    {
+                        if (!string.IsNullOrEmpty(playerData[player].primaryWeapon) && !ModeData.RandomWeapons)
+                        {
+                            if (AllowedPrimaryWeaponsList.Contains(playerData[player].primaryWeapon))
+                            {
+                                player.GiveNamedItem(playerData[player].primaryWeapon);
+                            }
+                            else
+                            {
+                                string replacedweaponName = Localizer[playerData[player].primaryWeapon];
+                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Disabled", replacedweaponName]}");
+                                //playerData[player].primaryWeapon = "";
+
+                                string weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
+                                player.GiveNamedItem(weapon);
+                            }
+                        }
+                        else
+                        {
+                            string weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
+                            player.GiveNamedItem(weapon);
+                        }
+                    }
+                    if (AllowedSecondaryWeaponsList.Count != 0)
+                    {
+                        if (!string.IsNullOrEmpty(playerData[player].secondaryWeapon) && !ModeData.RandomWeapons)
+                        {
+                            if (AllowedSecondaryWeaponsList.Contains(playerData[player].secondaryWeapon))
+                            {
+                                player.GiveNamedItem(playerData[player].secondaryWeapon);
+                            }
+                            else
+                            {
+                                string replacedweaponName = Localizer[playerData[player].secondaryWeapon];
+                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Disabled", replacedweaponName]}");
+                                //playerData[player].secondaryWeapon = "";
+
+                                string weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
+                                player.GiveNamedItem(weapon);
+                            }
+                        }
+                        else
+                        {
+                            string weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
+                            player.GiveNamedItem(weapon);
+                        }
+                    }
+                }
+            }
+            else if (player.IsValid && player.IsBot && !player.IsHLTV)
+            {
+                int slot = IsHaveWeaponFromSlot(player, 0);
+                if (slot == 1 || slot == 2)
+                {
+                    return;
+                }
+                AddTimer(0.2f, () =>
+                {
+                    if (AllowedPrimaryWeaponsList.Count != 0)
+                    {
+                        string weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
+                        player.GiveNamedItem(weapon);
+                    }
+                    if (AllowedSecondaryWeaponsList.Count != 0)
+                    {
+                        string weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
+                        player.GiveNamedItem(weapon);
+                    }
+                });
+            }
+        }
         static T GetRandomWeaponFromList<T>(HashSet<T> hashSet)
         {
             T[] array = new T[hashSet.Count];
@@ -430,6 +525,16 @@ namespace Deathmatch
             Random random = new Random();
             T randomWeapon = array[random.Next(array.Length)];
             return randomWeapon;
+        }
+        static void CheckIsValidWeaponsInList<T>(HashSet<T> setupedWeaponsList, HashSet<T> weaponsList)
+        {
+            foreach (var weapon in setupedWeaponsList)
+            {
+                if (!weaponsList.Contains(weapon))
+                {
+                    SendConsoleMessage($"[Deathmatch] Invalid weapon name: {weapon} (Mode ID: {g_iActiveMode})", ConsoleColor.Red);
+                }
+            }
         }
         public static void SendConsoleMessage(string text, ConsoleColor color)
         {
