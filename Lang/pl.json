@@ -1,5 +1,5 @@
 {
-  "Prefix": "{darkred}[Deathmatch]{domyślny}",
+  "Prefix": "{darkred}[Deathmatch]{default}",
   "Knife_damage_disabled": "W tym trybie obrażenia noża są wyłączone!",
   "New_mode": "Uruchamianie nowego trybu typu {green}{0}{default}!",
   "PrimaryWeapon_Set": "Twoja główna broń została ustawiona na {green}{0}",
