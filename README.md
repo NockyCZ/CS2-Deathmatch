@@ -14,6 +14,7 @@ etc...
 
 ### To-do list
 - Client preferences
+- Storing players weapons for different modes in the database
 
 <h1 align="center">Wiki</h1>
 
