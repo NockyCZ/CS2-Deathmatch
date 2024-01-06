@@ -4,6 +4,7 @@
 ```
 "YOUR MODE ID": {
     "mode_name": "Only Shotguns",
+    "mode_interval": 300,
     "armor": 2,
     "only_hs": false,
     "allow_knife_damage": false,

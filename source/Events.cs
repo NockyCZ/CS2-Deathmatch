@@ -4,6 +4,7 @@ using CounterStrikeSharp.API.Core.Attributes.Registration;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Admin;
 
 namespace Deathmatch
 {
@@ -24,7 +25,9 @@ namespace Deathmatch
                         killStreak = 0,
                         onlyHS = false,
                         killFeed = false,
-                        spawnProtection = false
+                        spawnProtection = false,
+                        showHud = true,
+                        lastSpawn = "0"
                     };
                     playerData[player] = setupPlayerData;
                 }
@@ -36,18 +39,14 @@ namespace Deathmatch
         public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
         {
             CCSPlayerController player = @event.Userid;
-            SetupPlayerWeapons(player, false);
-            /*Server.NextFrame(() =>
-            {
-                SetupPlayerWeapons(player, false);
-            });*/
+            GivePlayerWeapons(player, false);
             return HookResult.Continue;
         }
         [GameEventHandler]
         public HookResult OnItemPickup(EventItemPickup @event, GameEventInfo info)
         {
             CCSPlayerController player = @event.Userid;
-            if (player.IsValid || player.PlayerPawn.IsValid || !player.IsHLTV)
+            if (player.IsValid && player.PlayerPawn.IsValid && !player.IsHLTV && player.PawnIsAlive)
             {
                 var weaponName = $"weapon_{@event.Item}";
                 if (weaponName.Contains("knife"))
@@ -78,60 +77,146 @@ namespace Deathmatch
             CCSPlayerController player = @event.Userid;
             CCSPlayerController attacker = @event.Attacker;
             info.DontBroadcast = true;
+            if (player.IsValid)
+            {
+                if (playerData.ContainsPlayer(player))
+                {
+                    playerData[player].killStreak = 0;
+                }
+
+                if (!player.IsBot && AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
+                {
+                    AddTimer(Config.PlayersSettings.RespawnTimeVIP, () =>
+                    {
+                        string[] spawns = CheckAvaibleSpawns(player, player.TeamNum);
+                        if (!string.IsNullOrEmpty(spawns[0]))
+                        {
+                            if (spawns[0] == "not found")
+                            {
+                                DMRespawnPlayer(player, spawns, false);
+                                SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected.", ConsoleColor.DarkYellow);
+                            }
+                            else if (spawns[0] == "default")
+                            {
+                                DMRespawnPlayer(player, spawns, false);
+                            }
+                            else
+                            {
+                                DMRespawnPlayer(player, spawns);
+                            }
+                        }
+                    }, TimerFlags.STOP_ON_MAPCHANGE);
+                }
+                else
+                {
+                    AddTimer(Config.PlayersSettings.RespawnTime, () =>
+                    {
+                        string[] spawns = CheckAvaibleSpawns(player, player.TeamNum);
+                        if (!string.IsNullOrEmpty(spawns[0]))
+                        {
+                            if (spawns[0] == "not found")
+                            {
+                                DMRespawnPlayer(player, spawns, false);
+                                SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected.", ConsoleColor.DarkYellow);
+                            }
+                            else if (spawns[0] == "default")
+                            {
+                                DMRespawnPlayer(player, spawns, false);
+                            }
+                            else
+                            {
+                                DMRespawnPlayer(player, spawns);
+                            }
+                        }
+                    }, TimerFlags.STOP_ON_MAPCHANGE);
+                }
+            }
             if (attacker.IsValid && player.IsValid && attacker != player)
             {
-                if (!attacker.IsBot && playerData.ContainsPlayer(attacker))
+                if (Config.g_bRemoveDecals)
+                {
+                    var RemoveDecals = NativeAPI.CreateEvent("round_start", false);
+                    NativeAPI.FireEventToClient(RemoveDecals, (int)player.Index);
+                }
+                if (playerData.ContainsPlayer(attacker))
                 {
                     playerData[attacker].killStreak++;
                     if (attacker.Pawn.Value != null)
                     {
+                        int giveHP = 0;
                         if (@event.Headshot)
                         {
-                            var giveHP = 100 >= attacker.Pawn.Value.Health + Config.g_iHeadshotHealth ? Config.g_iHeadshotHealth : 100 - attacker.Pawn.Value.Health;
-                            if (giveHP != 0)
+                            if (AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag))
                             {
-                                attacker.Pawn.Value.Health += giveHP;
-                                Utilities.SetStateChanged(attacker.Pawn.Value, "CBaseEntity", "m_iHealth");
-                            }
-                            if (Config.g_bRefillAmmoHeadshot)
-                            {
-                                var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
-                                if (activeWeapon != null)
+                                giveHP = 100 >= attacker.Pawn.Value.Health + Config.PlayersSettings.HeadshotHealthVIP ? Config.PlayersSettings.HeadshotHealthVIP : 100 - attacker.Pawn.Value.Health;
+                                if (Config.PlayersSettings.RefillAmmoHSVIP)
                                 {
-                                    activeWeapon.Clip1 = 250;
-                                    activeWeapon.ReserveAmmo[0] = 250;
+                                    var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
+                                    if (activeWeapon != null)
+                                    {
+                                        activeWeapon.Clip1 = 250;
+                                        activeWeapon.ReserveAmmo[0] = 250;
+                                    }
                                 }
                             }
+                            else
+                            {
+                                giveHP = 100 >= attacker.Pawn.Value.Health + Config.PlayersSettings.HeadshotHealth ? Config.PlayersSettings.HeadshotHealth : 100 - attacker.Pawn.Value.Health;
+                                if (Config.PlayersSettings.RefillAmmoHS)
+                                {
+                                    var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
+                                    if (activeWeapon != null)
+                                    {
+                                        activeWeapon.Clip1 = 250;
+                                        activeWeapon.ReserveAmmo[0] = 250;
+                                    }
+                                }
+                            }
+
                         }
                         else
                         {
-                            var giveHP = 100 >= attacker.Pawn.Value.Health + Config.g_iKillHealth ? Config.g_iKillHealth : 100 - attacker.Pawn.Value.Health;
-                            if (giveHP != 0)
+                            if (AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag))
                             {
-                                attacker.Pawn.Value.Health += giveHP;
-                            }
-                            if (Config.g_bRefillAmmoKill)
-                            {
-                                var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
-                                if (activeWeapon != null)
+                                giveHP = 100 >= attacker.Pawn.Value.Health + Config.PlayersSettings.KillHealthVIP ? Config.PlayersSettings.KillHealthVIP : 100 - attacker.Pawn.Value.Health;
+                                if (Config.PlayersSettings.RefillAmmoVIP)
                                 {
-                                    activeWeapon.Clip1 = 250;
-                                    activeWeapon.ReserveAmmo[0] = 250;
+                                    var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
+                                    if (activeWeapon != null)
+                                    {
+                                        activeWeapon.Clip1 = 250;
+                                        activeWeapon.ReserveAmmo[0] = 250;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                giveHP = 100 >= attacker.Pawn.Value.Health + Config.PlayersSettings.KillHealth ? Config.PlayersSettings.KillHealth : 100 - attacker.Pawn.Value.Health;
+                                if (Config.PlayersSettings.RefillAmmo)
+                                {
+                                    var activeWeapon = attacker.Pawn.Value.WeaponServices!.ActiveWeapon.Value;
+                                    if (activeWeapon != null)
+                                    {
+                                        activeWeapon.Clip1 = 250;
+                                        activeWeapon.ReserveAmmo[0] = 250;
+                                    }
                                 }
                             }
                         }
+
+                        if (giveHP != 0)
+                        {
+                            attacker.Pawn.Value.Health += giveHP;
+                            Utilities.SetStateChanged(attacker.Pawn.Value, "CBaseEntity", "m_iHealth");
+                        }
                     }
-                }
-                if (!player.IsBot && playerData.ContainsPlayer(player))
-                {
-                    playerData[player].killStreak = 0;
                 }
                 @event.FireEventToClient(player);
                 @event.FireEventToClient(attacker);
 
-                foreach (var p in Utilities.GetPlayers().Where(p => p is { IsBot: false, IsHLTV: false }))
+                foreach (var p in Utilities.GetPlayers().Where(p => p is { IsBot: false, IsHLTV: false, IsValid: true }))
                 {
-                    if (p.IsValid && playerData.ContainsPlayer(p) && playerData[p].killFeed && (attacker != p || player != p))
+                    if (playerData.ContainsPlayer(p) && playerData[p].killFeed && (attacker != p || player != p))
                     {
                         @event.FireEventToClient(p);
                     }
@@ -154,13 +239,6 @@ namespace Deathmatch
         public HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
         {
             g_bIsActiveEditor = false;
-            if (GameRules().WarmupPeriod)
-            {
-                return HookResult.Continue;
-            }
-
-            var mode = GetModeType().ToString();
-            SetupCustomMode(mode);
             return HookResult.Continue;
         }
         private HookResult OnPlayerBuy(CCSPlayerController? player, CommandInfo info)
@@ -193,15 +271,15 @@ namespace Deathmatch
             {
                 return HookResult.Continue;
             }
-            
+
             if (player != null && player.IsValid && player.PawnIsAlive)
             {
                 var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
-                if (!player.IsBot && playerData.ContainsPlayer(player) && playerData[player].spawnProtection)
+                if (playerData.ContainsPlayer(player) && playerData[player].spawnProtection)
                 {
                     damageInfo.Damage = 0;
                 }
-                if (!ModeData.KnifeDamage && damageInfo.Ability.Value!.DesignerName.Contains("knife"))
+                if (!ModeData.KnifeDamage && damageInfo.Ability.IsValid && damageInfo.Ability.Value!.DesignerName.Contains("knife"))
                 {
                     player.PrintToCenter(Localizer["Knife_damage_disabled"]);
                     damageInfo.Damage = 0;

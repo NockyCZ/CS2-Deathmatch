@@ -4,6 +4,7 @@
 ```
 "YOUR MODE ID": {
     "mode_name": "Only AK47 & Headshot",
+    "mode_interval": 300,
     "armor": 1,
     "only_hs": true,
     "allow_knife_damage": false,

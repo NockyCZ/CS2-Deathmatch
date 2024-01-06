@@ -4,6 +4,7 @@
 ```
 "YOUR MODE ID": {
     "mode_name": "Only Rifles",
+    "mode_interval": 300,
     "armor": 1,
     "only_hs": false,
     "allow_knife_damage": true,
