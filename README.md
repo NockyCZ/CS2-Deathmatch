@@ -4,18 +4,17 @@ Use gamemodes like `Custom` or `Casual` for the plugin to work properly.<br>
 Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
 
 ### Main features
-- [CS2 Deathmatch plugin](#cs2-deathmatch-plugin)
-    - [Main features](#main-features)
-    - [To-do list](#to-do-list)
-    - [Installation](#installation)
-    - [Configuration](#configuration)
-    - [Player Commands:](#player-commands)
-    - [Admin Commands (permission: @css/root):](#admin-commands-permission-cssroot)
-    - [How Weapon Selection works](#how-weapon-selection-works)
-    - [Spawns Editor](#spawns-editor)
-    - [Creating Custom Modes](#creating-custom-modes)
-    - [Weapons Restrict](#weapons-restrict)
-    - [Deathmatch Cvars](#deathmatch-cvars)
+1. [Weapon Selection](#how-weapon-selection-works)
+2. [Spawns Editor](#spawns-editor)
+3. [Creating Custom Modes](#creating-custom-modes)
+4. [Weapons Restrict](#weapons-restrict)
+5. [Deathmatch Cvars](#deathmatch-cvars)
+6. [Admin](#admin-commands-permission-cssroot) & [Player](#player-commands) Commands
+7. Free For All (FFA)
+8. Spawn protection
+9. Refill ammo or health per kill/headshot
+10. VIP Support
+etc...
 
 ### To-do list
 - Client preferences
