@@ -6,15 +6,16 @@ using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Cvars;
 using Newtonsoft.Json.Linq;
+using CounterStrikeSharp.API.Modules.Entities.Constants;
 
 namespace Deathmatch;
 
-[MinimumApiVersion(142)]
+[MinimumApiVersion(163)]
 public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0.3";
+    public override string ModuleVersion => "1.0.4";
 
     public class ModeInfo
     {
@@ -29,9 +30,9 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     }
 
     public static CounterStrikeSharp.API.Modules.Timers.Timer? modeTimer;
-    public static string respawnWindowsSig = "\\x44\\x88\\x4C\\x24\\x2A\\x55\\x57";
-    public static string respawnLinuxSig = "\\x55\\x48\\x89\\xE5\\x41\\x57\\x41\\x56\\x41\\x55\\x41\\x54\\x49\\x89\\xFC\\x53\\x48\\x89\\xF3\\x48\\x81\\xEC\\xC8\\x00\\x00\\x00";
-    internal static PlayerCache<deathmatchPlayerData> playerData = new PlayerCache<deathmatchPlayerData>();
+    //public static string respawnWindowsSig = "\\x44\\x88\\x4C\\x24\\x2A\\x55\\x57";
+    //public static string respawnLinuxSig = "\\x55\\x48\\x89\\xE5\\x41\\x57\\x41\\x56\\x41\\x55\\x41\\x54\\x49\\x89\\xFC\\x53\\x48\\x89\\xF3\\x48\\x81\\xEC\\xC8\\x00\\x00\\x00";
+    internal static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
     public static ModeInfo ModeData = new ModeInfo();
     public DeathmatchConfig Config { get; set; } = null!;
     public static int g_iTotalModes = 0;
@@ -74,7 +75,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             string[] Value = weapon.Split(':');
             if (Value.Length == 2)
             {
-                customShortcuts.Add(Value[0], Value[1]);
+                customShortcuts.Add(Value[1], Value[0]);
                 AddCustomCommands(Value[1], Value[0]);
             }
         }
@@ -105,6 +106,22 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                         }
                     }, TimerFlags.REPEAT);
                 }
+                if (Config.ForceMapEnd)
+                {
+                    var timelimit = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>() * 60;
+                    AddTimer(10.0f, () =>
+                    {
+                        var gameStart = GameRules().GameStartTime;
+                        var currentTime = Server.CurrentTime;
+                        var timeleft = timelimit - (currentTime - gameStart);
+
+                        if (timeleft < 0)
+                        {
+                            GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
+                        }
+
+                    }, TimerFlags.REPEAT);
+                }
                 AddTimer(1.0f, () =>
                 {
                     RemoveEntities();
@@ -131,7 +148,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                 {
                     if (ModeData.CenterMessage && !string.IsNullOrEmpty(ModeData.CenterMessageText))
                     {
-                        if (playerData.ContainsPlayer(p) && playerData[p].showHud)
+                        if (playerData.ContainsPlayer(p) && playerData[p].ShowHud)
                         {
                             p.PrintToCenterHtml($"{ModeData.CenterMessageText}");
                         }

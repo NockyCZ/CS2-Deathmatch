@@ -208,8 +208,7 @@ namespace Deathmatch
             double X = v1.X - v2.X;
             double Y = v1.Y - v2.Y;
 
-            double distance = Math.Sqrt(X * X + Y * Y);
-            return distance;
+            return Math.Sqrt(X * X + Y * Y);
         }
         public string[] CheckAvaibleSpawns(CCSPlayerController player, int team)
         {
@@ -248,7 +247,7 @@ namespace Deathmatch
                     {
                         if (playerData.ContainsPlayer(player))
                         {
-                            if (playerData[player].lastSpawn != spawn.Key)
+                            if (playerData[player].LastSpawn != spawn.Key)
                             {
                                 availableSpawns.Add(spawn.Key, spawn.Value);
                                 iAvailableSpawns++;
@@ -282,7 +281,7 @@ namespace Deathmatch
                     {
                         if (playerData.ContainsPlayer(player))
                         {
-                            if (playerData[player].lastSpawn != spawn.Key)
+                            if (playerData[player].LastSpawn != spawn.Key)
                             {
                                 availableSpawns.Add(spawn.Key, spawn.Value);
                                 iAvailableSpawns++;
@@ -304,15 +303,11 @@ namespace Deathmatch
             string[] spawnLocation = new string[2];
             if (iAvailableSpawns == 0)
             {
-                if (team == 2)
-                {
+                if (team == 2 || team == 3)
                     spawnLocation[0] = "not found";
-                }
-                else if (team == 3)
-                {
-                    spawnLocation[0] = "not found";
-                }
-                playerData[player].lastSpawn = "0";
+
+                if (playerData.ContainsPlayer(player))
+                    playerData[player].LastSpawn = "0";
             }
             else
             {
@@ -321,7 +316,7 @@ namespace Deathmatch
                 spawnLocation[0] = availableSpawns.Keys.ElementAt(randomIndex);
                 spawnLocation[1] = availableSpawns.Values.ElementAt(randomIndex);
                 if (playerData.ContainsPlayer(player))
-                    playerData[player].lastSpawn = spawnLocation[0];
+                    playerData[player].LastSpawn = spawnLocation[0];
             }
             return spawnLocation;
         }

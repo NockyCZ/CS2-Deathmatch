@@ -12,16 +12,16 @@ namespace Deathmatch
 {
     public partial class DeathmatchCore
     {
-        public class deathmatchPlayerData
+        public class DeathmatchPlayerData
         {
-            public required string primaryWeapon { get; set; }
-            public required string secondaryWeapon { get; set; }
-            public required bool spawnProtection { get; set; }
-            public required int killStreak { get; set; }
-            public required bool onlyHS { get; set; }
-            public required bool killFeed { get; set; }
-            public required bool showHud { get; set; }
-            public required string lastSpawn { get; set; }
+            public required string PrimaryWeapon { get; set; }
+            public required string SecondaryWeapon { get; set; }
+            public required bool SpawnProtection { get; set; }
+            public required int KillStreak { get; set; }
+            public required bool OnlyHS { get; set; }
+            public required bool KillFeed { get; set; }
+            public required bool ShowHud { get; set; }
+            public required string LastSpawn { get; set; }
         }
         public void SetupPlayerWeapons(CCSPlayerController player, string weaponName, CommandInfo info)
         {
@@ -43,7 +43,7 @@ namespace Deathmatch
                         }
                     }
                     info.ReplyToCommand($"{Localizer["Allowed_Primary_Weapons"]}");
-                    info.ReplyToCommand($"{ChatColors.Darkred}• {primaryWeapons}");
+                    info.ReplyToCommand($"{ChatColors.DarkRed}• {primaryWeapons}");
                 }
                 if (AllowedSecondaryWeaponsList.Count != 0)
                 {
@@ -59,7 +59,7 @@ namespace Deathmatch
                         }
                     }
                     info.ReplyToCommand($"{Localizer["Allowed_Secondary_Weapons"]}");
-                    info.ReplyToCommand($"{ChatColors.Darkred}• {secondaryWeapons}");
+                    info.ReplyToCommand($"{ChatColors.DarkRed}• {secondaryWeapons}");
                 }
                 info.ReplyToCommand($"{Localizer["Prefix"]} /gun <weapon name>");
                 return;
@@ -89,13 +89,9 @@ namespace Deathmatch
                         string localizerWeaponName = Localizer[replacedweaponName];
                         if (matchingCount == 1)
                         {
-                            matchingValues = localizerWeaponName;
+                            matchingValues = $"{ChatColors.Green}{localizerWeaponName}";
                         }
-                        else if (matchingCount == 2)
-                        {
-                            matchingValues = $"{ChatColors.Green}{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
-                        }
-                        else if (matchingCount > 2)
+                        else if (matchingCount > 1)
                         {
                             matchingValues = $"{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
                         }
@@ -112,13 +108,9 @@ namespace Deathmatch
                             string localizerWeaponName = Localizer[replacedweaponName];
                             if (matchingCount == 1)
                             {
-                                matchingValues = localizerWeaponName;
+                                matchingValues = $"{ChatColors.Green}{localizerWeaponName}";
                             }
-                            else if (matchingCount == 2)
-                            {
-                                matchingValues = $"{ChatColors.Green}{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
-                            }
-                            else if (matchingCount > 2)
+                            else if (matchingCount > 1)
                             {
                                 matchingValues = $"{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
                             }
@@ -145,7 +137,7 @@ namespace Deathmatch
             if (AllowedPrimaryWeaponsList.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (weaponName == playerData[player].primaryWeapon)
+                if (weaponName == playerData[player].PrimaryWeapon)
                 {
                     info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
                     return;
@@ -156,18 +148,30 @@ namespace Deathmatch
                     info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
                     return;
                 }
-                playerData[player].primaryWeapon = weaponName;
+                playerData[player].PrimaryWeapon = weaponName;
                 info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
                 if (player.PawnIsAlive && IsHaveWeaponFromSlot(player, 1) != 1)
                 {
                     player.GiveNamedItem(weaponName);
+                }
+                else if (Config.SwitchWeapons && player.PawnIsAlive)
+                {
+                    string[] weapon = new string[3];
+                    weapon[0] = weaponName;
+                    weapon[1] = GetWeaponFromSlot(player, 2);
+
+                    player.RemoveWeapons();
+                    player.GiveNamedItem("weapon_knife");
+                    player.GiveNamedItem(weapon[0]);
+                    if (!string.IsNullOrEmpty(weapon[1]))
+                        player.GiveNamedItem(weapon[1]);
                 }
                 return;
             }
             else if (AllowedSecondaryWeaponsList.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (weaponName == playerData[player].secondaryWeapon)
+                if (weaponName == playerData[player].SecondaryWeapon)
                 {
                     info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
                     return;
@@ -178,11 +182,23 @@ namespace Deathmatch
                     info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
                     return;
                 }
-                playerData[player].secondaryWeapon = weaponName;
+                playerData[player].SecondaryWeapon = weaponName;
                 info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
                 if (player.PawnIsAlive && IsHaveWeaponFromSlot(player, 2) != 2)
                 {
                     player.GiveNamedItem(weaponName);
+                }
+                else if (Config.SwitchWeapons && player.PawnIsAlive)
+                {
+                    string[] weapon = new string[3];
+                    weapon[0] = weaponName;
+                    weapon[1] = GetWeaponFromSlot(player, 1);
+
+                    player.RemoveWeapons();
+                    player.GiveNamedItem("weapon_knife");
+                    player.GiveNamedItem(weapon[0]);
+                    if (!string.IsNullOrEmpty(weapon[1]))
+                        player.GiveNamedItem(weapon[1]);
                 }
                 return;
             }
@@ -200,19 +216,19 @@ namespace Deathmatch
                 player.InGameMoneyServices!.Account = 0;
                 if (!bNewMode)
                 {
-                    playerData[player].spawnProtection = true;
+                    playerData[player].SpawnProtection = true;
                     if (AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
                     {
                         AddTimer(Config.PlayersSettings.ProtectionTimeVIP, () =>
                         {
-                            playerData[player].spawnProtection = false;
+                            playerData[player].SpawnProtection = false;
                         }, TimerFlags.STOP_ON_MAPCHANGE);
                     }
                     else
                     {
                         AddTimer(Config.PlayersSettings.ProtectionTime, () =>
                         {
-                            playerData[player].spawnProtection = false;
+                            playerData[player].SpawnProtection = false;
                         }, TimerFlags.STOP_ON_MAPCHANGE);
                     }
                 }
@@ -230,15 +246,15 @@ namespace Deathmatch
                         int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
                         player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
                     }
-                    else if (!string.IsNullOrEmpty(playerData[player].primaryWeapon) && AllowedPrimaryWeaponsList.Count > 1)
+                    else if (!string.IsNullOrEmpty(playerData[player].PrimaryWeapon) && AllowedPrimaryWeaponsList.Count > 1)
                     {
-                        if (AllowedPrimaryWeaponsList.Contains(playerData[player].primaryWeapon))
+                        if (AllowedPrimaryWeaponsList.Contains(playerData[player].PrimaryWeapon))
                         {
-                            if (CheckIsWeaponRestricted(playerData[player].primaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                            if (CheckIsWeaponRestricted(playerData[player].PrimaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
                             {
-                                playerData[player].primaryWeapon = "";
-                                string localizerWeaponName = Localizer[playerData[player].primaryWeapon];
-                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].primaryWeapon];
+                                playerData[player].PrimaryWeapon = "";
+                                string localizerWeaponName = Localizer[playerData[player].PrimaryWeapon];
+                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].PrimaryWeapon];
                                 player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
                                 if (Config.DefaultModeWeapons == 2)
                                 {
@@ -257,12 +273,12 @@ namespace Deathmatch
                             }
                             else
                             {
-                                player.GiveNamedItem(playerData[player].primaryWeapon);
+                                player.GiveNamedItem(playerData[player].PrimaryWeapon);
                             }
                         }
                         else
                         {
-                            string replacedweaponName = Localizer[playerData[player].primaryWeapon];
+                            string replacedweaponName = Localizer[playerData[player].PrimaryWeapon];
                             player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Disabled", replacedweaponName]}");
 
                             if (Config.DefaultModeWeapons == 2)
@@ -313,15 +329,15 @@ namespace Deathmatch
                         int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
                         player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
                     }
-                    else if (!string.IsNullOrEmpty(playerData[player].secondaryWeapon) && AllowedSecondaryWeaponsList.Count > 1)
+                    else if (!string.IsNullOrEmpty(playerData[player].SecondaryWeapon) && AllowedSecondaryWeaponsList.Count > 1)
                     {
-                        if (AllowedSecondaryWeaponsList.Contains(playerData[player].secondaryWeapon))
+                        if (AllowedSecondaryWeaponsList.Contains(playerData[player].SecondaryWeapon))
                         {
-                            if (CheckIsWeaponRestricted(playerData[player].secondaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                            if (CheckIsWeaponRestricted(playerData[player].SecondaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
                             {
-                                playerData[player].secondaryWeapon = "";
-                                string localizerWeaponName = Localizer[playerData[player].secondaryWeapon];
-                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].secondaryWeapon];
+                                playerData[player].SecondaryWeapon = "";
+                                string localizerWeaponName = Localizer[playerData[player].SecondaryWeapon];
+                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].SecondaryWeapon];
                                 player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
                                 if (Config.DefaultModeWeapons == 2)
                                 {
@@ -340,12 +356,12 @@ namespace Deathmatch
                             }
                             else
                             {
-                                player.GiveNamedItem(playerData[player].secondaryWeapon);
+                                player.GiveNamedItem(playerData[player].SecondaryWeapon);
                             }
                         }
                         else
                         {
-                            string replacedweaponName = Localizer[playerData[player].secondaryWeapon];
+                            string replacedweaponName = Localizer[playerData[player].SecondaryWeapon];
                             player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Disabled", replacedweaponName]}");
 
                             if (Config.DefaultModeWeapons == 2)
@@ -413,16 +429,17 @@ namespace Deathmatch
                 }, TimerFlags.STOP_ON_MAPCHANGE);
             }
         }
-        public void DMRespawnPlayer(CCSPlayerController player, string[] spawn, bool teleport = true)
+        public static void DMRespawnPlayer(CCSPlayerController player, string[] spawn, bool teleport = true)
         {
             if (!player.IsValid || !player.PlayerPawn.IsValid || player.PawnIsAlive)
                 return;
 
             if (player.TeamNum == 2 || player.TeamNum == 3)
             {
-                MemoryFunctionVoid<CCSPlayerController, CCSPlayerPawn, bool, bool> RespawnFunc = new(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? respawnLinuxSig : respawnWindowsSig);
-                RespawnFunc.Invoke(player, player.PlayerPawn.Value!, true, false);
-                VirtualFunction.CreateVoid<CCSPlayerController>(player.Handle, GameData.GetOffset("CCSPlayerController_Respawn"))(player);
+                //MemoryFunctionVoid<CCSPlayerController, CCSPlayerPawn, bool, bool> RespawnFunc = new(RuntimeInformation.IsOSPlatform(OSPlatform.Linux) ? respawnLinuxSig : respawnWindowsSig);
+                //RespawnFunc.Invoke(player, player.PlayerPawn.Value!, true, false);
+                //VirtualFunction.CreateVoid<CCSPlayerController>(player.Handle, GameData.GetOffset("CCSPlayerController_Respawn"))(player);
+                player.Respawn();
 
                 if (teleport)
                 {
@@ -432,7 +449,7 @@ namespace Deathmatch
                 }
             }
         }
-        public bool IsPlayerValid(CCSPlayerController player, bool alive = false)
+        public static bool IsPlayerValid(CCSPlayerController player, bool alive = false)
         {
             if (player is null || !player.IsValid || !player.PlayerPawn.IsValid || player.IsBot || player.IsHLTV)
                 return false;
@@ -446,6 +463,8 @@ namespace Deathmatch
             }
             return true;
         }
+
+        //https://github.com/K4ryuu/K4-System/blob/dev/src/Plugin/PluginCache.cs
         public class PlayerCache<T> : Dictionary<int, T>
         {
             public T this[CCSPlayerController controller]

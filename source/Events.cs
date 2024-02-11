@@ -18,16 +18,16 @@ namespace Deathmatch
             {
                 if (!playerData.ContainsPlayer(player))
                 {
-                    deathmatchPlayerData setupPlayerData = new deathmatchPlayerData
+                    DeathmatchPlayerData setupPlayerData = new DeathmatchPlayerData
                     {
-                        primaryWeapon = "",
-                        secondaryWeapon = "",
-                        killStreak = 0,
-                        onlyHS = false,
-                        killFeed = false,
-                        spawnProtection = false,
-                        showHud = true,
-                        lastSpawn = "0"
+                        PrimaryWeapon = "",
+                        SecondaryWeapon = "",
+                        KillStreak = 0,
+                        OnlyHS = false,
+                        KillFeed = false,
+                        SpawnProtection = false,
+                        ShowHud = true,
+                        LastSpawn = "0"
                     };
                     playerData[player] = setupPlayerData;
                 }
@@ -81,7 +81,7 @@ namespace Deathmatch
             {
                 if (playerData.ContainsPlayer(player))
                 {
-                    playerData[player].killStreak = 0;
+                    playerData[player].KillStreak = 0;
                 }
 
                 if (!player.IsBot && AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
@@ -140,7 +140,7 @@ namespace Deathmatch
                 }
                 if (playerData.ContainsPlayer(attacker))
                 {
-                    playerData[attacker].killStreak++;
+                    playerData[attacker].KillStreak++;
                     if (attacker.Pawn.Value != null)
                     {
                         int giveHP = 0;
@@ -216,7 +216,7 @@ namespace Deathmatch
 
                 foreach (var p in Utilities.GetPlayers().Where(p => p is { IsBot: false, IsHLTV: false, IsValid: true }))
                 {
-                    if (playerData.ContainsPlayer(p) && playerData[p].killFeed && (attacker != p || player != p))
+                    if (playerData.ContainsPlayer(p) && playerData[p].KillFeed && (attacker != p || player != p))
                     {
                         @event.FireEventToClient(p);
                     }
@@ -260,28 +260,33 @@ namespace Deathmatch
         }
         private HookResult OnTakeDamage(DynamicHook hook)
         {
-            var entindex = hook.GetParam<CEntityInstance>(0).Index;
-            if (entindex == 0)
-            {
+            var p = hook.GetParam<CEntityInstance>(0).Index;
+            if (p == 0)
                 return HookResult.Continue;
-            }
-
-            var pawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)entindex);
-            if (pawn.OriginalController.Value is not { } player)
-            {
+            
+            var playerPawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)p);
+            if (playerPawn.OriginalController.Value is not { } player)
                 return HookResult.Continue;
-            }
 
-            if (player != null && player.IsValid && player.PawnIsAlive)
+            var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
+            var a = damageInfo.Attacker.Index;
+
+            if (a == 0)
+                return HookResult.Continue;
+
+            var attackerPawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)a);
+            if (attackerPawn.OriginalController.Value is not { } attacker)
+                return HookResult.Continue;
+
+            if (player != null && player.IsValid && attacker != null && attacker.IsValid)
             {
-                var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
-                if (playerData.ContainsPlayer(player) && playerData[player].spawnProtection)
+                if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
                 {
                     damageInfo.Damage = 0;
                 }
                 if (!ModeData.KnifeDamage && damageInfo.Ability.IsValid && damageInfo.Ability.Value!.DesignerName.Contains("knife"))
                 {
-                    player.PrintToCenter(Localizer["Knife_damage_disabled"]);
+                    attacker.PrintToCenter(Localizer["Knife_damage_disabled"]);
                     damageInfo.Damage = 0;
                 }
             }

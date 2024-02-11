@@ -6,7 +6,6 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.Timers;
 using System.Drawing;
-using System.ComponentModel;
 
 namespace Deathmatch
 {
@@ -29,9 +28,9 @@ namespace Deathmatch
                 }
                 string weaponName = info.GetArg(0).ToLower();
                 weaponName = weaponName.Replace("css_", "");
-                if (customShortcuts.ContainsValue(weaponName))
+                if (customShortcuts.ContainsKey(weaponName))
                 {
-                    string weaponID = customShortcuts.FirstOrDefault(x => x.Value == weaponName).Key;
+                    string weaponID = customShortcuts.FirstOrDefault(x => x.Key == weaponName).Value;
                     SetupPlayerWeapons(player!, weaponID, info);
                 }
             });

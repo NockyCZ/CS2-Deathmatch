@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Utils;
 using Newtonsoft.Json.Linq;
 
 namespace Deathmatch
@@ -14,12 +15,12 @@ namespace Deathmatch
             public int VIPRestrict_Team { get; set; } = 0; //CT
         }
 
-        HashSet<string> SecondaryWeaponsList = new HashSet<string> {
+        readonly HashSet<string> SecondaryWeaponsList = new HashSet<string> {
         "weapon_hkp2000", "weapon_cz75a", "weapon_deagle", "weapon_elite",
         "weapon_fiveseven", "weapon_glock", "weapon_p250",
         "weapon_revolver", "weapon_tec9", "weapon_usp_silencer" };
 
-        HashSet<string> PrimaryWeaponsList = new HashSet<string> {
+        readonly HashSet<string> PrimaryWeaponsList = new HashSet<string> {
         "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
         "weapon_m249", "weapon_negev", "weapon_mac10", "weapon_mp5sd",
         "weapon_mp7", "weapon_mp9", "weapon_p90", "weapon_bizon",
@@ -46,92 +47,82 @@ namespace Deathmatch
                 if (AllowedSecondaryWeaponsList.Count == 1)
                     return false;
             }
+            int restrictValue = 0;
             if (RestrictedWeapons.ContainsKey(weaponName))
             {
                 RestrictedWeaponsInfo restrict = RestrictedWeapons[weaponName];
-                int restrictValue = 0;
-                if (isVIP)
+
+                if (g_bWeaponRestrictGlobal)
                 {
-                    if (g_bWeaponRestrictGlobal)
+                    restrictValue = isVIP ? restrict.VIPRestrict : restrict.nonVIPRestrict;
+                    if (restrictValue == 0)
+                        return false;
+                    else if (restrictValue < 0)
+                        return true;
+
+                    foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
                     {
-                        restrictValue = restrict.VIPRestrict;
-                        if (restrictValue <= 0)
-                            return false;
-                    }
-                    else
-                    {
-                        switch (team)
+                        if (playerData.ContainsPlayer(p))
                         {
-                            case 2:
-                                restrictValue = restrict.VIPRestrict_Team;
-                                if (restrictValue <= 0)
-                                    return false;
-                                break;
-
-                            case 3:
-                                restrictValue = restrict.VIPRestrict;
-                                if (restrictValue <= 0)
-                                    return false;
-                                break;
-
-                            default:
-                                return true;
+                            if (bPrimary)
+                            {
+                                if (playerData[p].PrimaryWeapon == weaponName)
+                                    matchingCount++;
+                            }
+                            else
+                            {
+                                if (playerData[p].SecondaryWeapon == weaponName)
+                                    matchingCount++;
+                            }
                         }
                     }
                 }
                 else
                 {
-                    if (g_bWeaponRestrictGlobal)
+                    switch (team)
                     {
-                        restrictValue = restrict.VIPRestrict;
-                        if (restrictValue <= 0)
-                            return false;
-                    }
-                    else
-                    {
-                        switch (team)
-                        {
-                            case 2:
-                                restrictValue = restrict.nonVIPRestrict_Team;
-                                if (restrictValue <= 0)
-                                    return false;
-                                break;
-
-                            case 3:
-                                restrictValue = restrict.nonVIPRestrict;
-                                if (restrictValue <= 0)
-                                    return false;
-                                break;
-
-                            default:
+                        case 2:
+                            restrictValue = isVIP ? restrict.VIPRestrict_Team : restrict.nonVIPRestrict_Team;
+                            if (restrictValue == 0)
+                                return false;
+                            else if (restrictValue < 0)
                                 return true;
-                        }
-                    }
-                }
+                            break;
 
-                foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
-                {
-                    if (playerData.ContainsPlayer(p))
+                        case 3:
+                            restrictValue = isVIP ? restrict.VIPRestrict : restrict.nonVIPRestrict;
+                            if (restrictValue == 0)
+                                return false;
+                            else if (restrictValue < 0)
+                                return true;
+                            break;
+
+                        default:
+                            return true;
+                    }
+
+                    foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
                     {
-                        if (bPrimary)
+                        if (p.TeamNum == team && playerData.ContainsPlayer(p))
                         {
-                            if (playerData[p].primaryWeapon == weaponName)
-                                matchingCount++;
-                        }
-                        else
-                        {
-                            if (playerData[p].secondaryWeapon == weaponName)
-                                matchingCount++;
+                            if (bPrimary)
+                            {
+                                if (playerData[p].PrimaryWeapon == weaponName)
+                                    matchingCount++;
+                            }
+                            else
+                            {
+                                if (playerData[p].SecondaryWeapon == weaponName)
+                                    matchingCount++;
+                            }
                         }
                     }
                 }
-                if (matchingCount >= restrictValue)
-                {
-                    return true;
-                }
+                return matchingCount >= restrictValue;
             }
             return false;
         }
+
         public void CheckIsValidWeaponsInList<T>(List<T> setupedWeaponsList, HashSet<T> weaponsList)
         {
             foreach (var weapon in setupedWeaponsList)
@@ -191,7 +182,7 @@ namespace Deathmatch
                                 }
                                 else
                                 {
-                                    SendConsoleMessage($"[Deathmatch] Wrong configuration in weapons_restrict.json for '{weapon}'", ConsoleColor.Red);
+                                    //SendConsoleMessage($"[Deathmatch] Wrong configuration in weapons_restrict.json for '{weapon}'", ConsoleColor.Red);
                                 }
                             }
                         }
@@ -203,9 +194,36 @@ namespace Deathmatch
                 }
             }
         }
+        public string GetWeaponFromSlot(CCSPlayerController player, int slot)
+        {
+            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null)
+                return null!;
+
+            foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)
+            {
+                if (weapon != null && weapon.IsValid)
+                {
+                    if (slot == 1)
+                    {
+                        if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return weapon.Value!.DesignerName;
+                        }
+                    }
+                    else if (slot == 2)
+                    {
+                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                        {
+                            return weapon.Value!.DesignerName;
+                        }
+                    }
+                }
+            }
+            return null!;
+        }
         public int IsHaveWeaponFromSlot(CCSPlayerController player, int slot)
         {
-            if (player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
                 return 3;
 
             foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)

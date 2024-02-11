@@ -14,11 +14,13 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("check_enemies_distance")] public bool CheckDistance { get; set; } = true;
     [JsonPropertyName("distance_from_enemies_for_respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("default_weapons")] public int DefaultModeWeapons { get; set; } = 2;
+    [JsonPropertyName("switch_weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("respawn_players_after_new_mode")] public bool g_bRespawnPlayersAtNewMode { get; set; } = false;
     [JsonPropertyName("hide_round_seconds")] public bool g_bHideRoundSeconds { get; set; } = true;
     [JsonPropertyName("block_radio_messages")] public bool g_bBlockRadioMessage { get; set; } = true;
     [JsonPropertyName("remove_breakable_entities")] public bool g_bRemoveBreakableEntities { get; set; } = true;
     [JsonPropertyName("remove_decals_after_death")] public bool g_bRemoveDecals { get; set; } = true;
+    [JsonPropertyName("force_map_end")] public bool ForceMapEnd { get; set; } = true;
     [JsonPropertyName("weapons_select_shortcuts")] public string CustomShortcuts { get; set; } = "weapon_ak47:ak,weapon_m4a1:m4,weapon_awp:awp,weapon_usp_silencer:usp,weapon_glock:glock,weapon_deagle:deagle";
     [JsonPropertyName("Players Settings")] public PlayersSettings PlayersSettings { get; set; } = new PlayersSettings();
 }
