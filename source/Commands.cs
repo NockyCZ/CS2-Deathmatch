@@ -6,54 +6,77 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.Timers;
 using System.Drawing;
+using CounterStrikeSharp.API.Modules.Menu;
 
 namespace Deathmatch
 {
     public partial class DeathmatchCore
     {
         Dictionary<string, string> customShortcuts = new Dictionary<string, string>();
-        private void AddCustomCommands(string cmd_weapon, string weapon_name)
+        private void AddCustomCommands(string command, string weapon_name, int type)
         {
-            string cmdName = $"css_{cmd_weapon}";
-            SendConsoleMessage($"[Deathmatch] Commad '{cmdName}' for weapon '{weapon_name}' added!", ConsoleColor.Cyan);
-            AddCommand(cmdName, weapon_name, (player, info) =>
+            string cmdName = $"css_{command}";
+            switch (type)
             {
-                if (!playerData.ContainsPlayer(player!))
-                    return;
+                case 1:
+                    AddCommand(cmdName, weapon_name, (player, info) =>
+                    {
+                        if (!playerData.ContainsPlayer(player!))
+                            return;
 
-                if (ModeData.RandomWeapons)
-                {
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
-                    return;
-                }
-                string weaponName = info.GetArg(0).ToLower();
-                weaponName = weaponName.Replace("css_", "");
-                if (customShortcuts.ContainsKey(weaponName))
-                {
-                    string weaponID = customShortcuts.FirstOrDefault(x => x.Key == weaponName).Value;
-                    SetupPlayerWeapons(player!, weaponID, info);
-                }
-            });
-        }
+                        if (ModeData.RandomWeapons)
+                        {
+                            info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                            return;
+                        }
+                        string weaponName = info.GetArg(0).ToLower();
+                        weaponName = weaponName.Replace("css_", "");
+                        if (customShortcuts.ContainsKey(weaponName))
+                        {
+                            string weaponID = customShortcuts.FirstOrDefault(x => x.Key == weaponName).Value;
+                            SetupPlayerWeapons(player!, weaponID, info);
+                        }
+                    });
+                    break;
+                case 2:
+                    AddCommand(cmdName, "Select a weapon by command", (player, info) =>
+                    {
+                        string weaponName = info.GetArg(1).ToLower();
+                        if (!playerData.ContainsPlayer(player!))
+                            return;
 
-        [ConsoleCommand("css_gun", "Select a weapon")]
-        [ConsoleCommand("css_guns", "Select a weapon")]
-        [ConsoleCommand("css_weapons", "Select a weapon")]
-        [ConsoleCommand("css_weapon", "Select a weapon")]
-        [ConsoleCommand("css_w", "Select a weapon")]
-        [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
-        public void OnSelectGun_CMD(CCSPlayerController player, CommandInfo info)
-        {
-            string weaponName = info.GetArg(1).ToLower();
-            if (!playerData.ContainsPlayer(player))
-                return;
+                        if (ModeData.RandomWeapons)
+                        {
+                            info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                            return;
+                        }
+                        SetupPlayerWeapons(player!, weaponName, info);
+                    });
+                    break;
+                case 3:
+                    AddCommand(cmdName, "Opens a Deathmatch menu", (player, info) =>
+                    {
+                        if (!playerData.ContainsPlayer(player!))
+                            return;
 
-            if (ModeData.RandomWeapons)
-            {
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
-                return;
+                        if (PrefsMenuSounds.Count() == 0 && PrefsMenuFunctions.Count() == 0)
+                            return;
+
+                        if (PrefsMenuSounds.Count() > 0 && PrefsMenuFunctions.Count() == 0)
+                        {
+                            OpenSubMenu(player!, 1);
+                            return;
+                        }
+                        if (PrefsMenuSounds.Count() == 0 && PrefsMenuFunctions.Count() > 0)
+                        {
+                            OpenSubMenu(player!, 2);
+                            return;
+                        }
+                        OpenMainMenu(player!);
+
+                    });
+                    break;
             }
-            SetupPlayerWeapons(player, weaponName, info);
         }
 
         [ConsoleCommand("css_dm_checkdistance", "Determine the distance for spawn blocking")]
@@ -94,42 +117,6 @@ namespace Deathmatch
             }
             AddTimer(10.0f, () => { RemoveBeams(); }, TimerFlags.STOP_ON_MAPCHANGE);
         }
-
-        /*[ConsoleCommand("css_dm_allowedweapons", "Show all allowed weapons for current mod")]
-        [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
-        [RequiresPermissions("@css/root")]
-        public void OnBlockedList_CMD(CCSPlayerController? player, CommandInfo info)
-        {
-            string primary = "";
-            if (AllowedPrimaryWeaponsList.Count != 0)
-            {
-                foreach (string weaponName in AllowedPrimaryWeaponsList)
-                {
-                    primary = $"{primary}{weaponName} | ";
-                }
-            }
-            else
-            {
-                primary = "None allowed weapons...";
-            }
-            info.ReplyToCommand($"{Localizer["Prefix"]} {ChatColors.Green}PRIMARY ALLOWED WEAPONS {ModeData.Name} (ID: {g_iActiveMode})");
-            info.ReplyToCommand(primary);
-
-            string secondary = "";
-            if (AllowedSecondaryWeaponsList.Count != 0)
-            {
-                foreach (string weaponName in AllowedSecondaryWeaponsList)
-                {
-                    secondary = $"{secondary}{weaponName} | ";
-                }
-            }
-            else
-            {
-                secondary = "None allowed weapons...";
-            }
-            info.ReplyToCommand($"{Localizer["Prefix"]} {ChatColors.Green}SECONDARY ALLOWED WEAPONS {ModeData.Name} (ID: {g_iActiveMode})");
-            info.ReplyToCommand(secondary);
-        }*/
 
         [ConsoleCommand("css_dm_startmode", "Start Custom Mode")]
         [CommandHelper(1, "<mode id>")]

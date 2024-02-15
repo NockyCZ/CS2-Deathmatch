@@ -6,23 +6,119 @@ namespace Deathmatch;
 
 public class DeathmatchConfig : BasePluginConfig
 {
-    [JsonPropertyName("free_for_all")] public bool g_bFFA { get; set; } = true;
-    [JsonPropertyName("custom_modes")] public bool g_bCustomModes { get; set; } = true;
-    [JsonPropertyName("random_selection_of_modes")] public bool g_bRandomSelectionOfModes { get; set; } = true;
-    [JsonPropertyName("map_start_custom_mode")] public int g_iMapStartMode { get; set; } = 0;
-    [JsonPropertyName("new_mode_countdown")] public int NewModeCountdown { get; set; } = 10;
-    [JsonPropertyName("check_enemies_distance")] public bool CheckDistance { get; set; } = true;
-    [JsonPropertyName("distance_from_enemies_for_respawn")] public int DistanceRespawn { get; set; } = 500;
-    [JsonPropertyName("default_weapons")] public int DefaultModeWeapons { get; set; } = 2;
-    [JsonPropertyName("switch_weapons")] public bool SwitchWeapons { get; set; } = true;
-    [JsonPropertyName("respawn_players_after_new_mode")] public bool g_bRespawnPlayersAtNewMode { get; set; } = false;
-    [JsonPropertyName("hide_round_seconds")] public bool g_bHideRoundSeconds { get; set; } = true;
-    [JsonPropertyName("block_radio_messages")] public bool g_bBlockRadioMessage { get; set; } = true;
-    [JsonPropertyName("remove_breakable_entities")] public bool g_bRemoveBreakableEntities { get; set; } = true;
-    [JsonPropertyName("remove_decals_after_death")] public bool g_bRemoveDecals { get; set; } = true;
-    [JsonPropertyName("force_map_end")] public bool ForceMapEnd { get; set; } = true;
-    [JsonPropertyName("weapons_select_shortcuts")] public string CustomShortcuts { get; set; } = "weapon_ak47:ak,weapon_m4a1:m4,weapon_awp:awp,weapon_usp_silencer:usp,weapon_glock:glock,weapon_deagle:deagle";
-    [JsonPropertyName("Players Settings")] public PlayersSettings PlayersSettings { get; set; } = new PlayersSettings();
+    [JsonPropertyName("Gameplay Settings")] public Gameplay Gameplay { get; set; } = new Gameplay();
+    [JsonPropertyName("General Settings")] public General General { get; set; } = new General();
+    [JsonPropertyName("Sounds Settings")] public SoundSettings SoundSettings { get; set; } = new SoundSettings();
+    [JsonPropertyName("Custom Commands")] public CustomCommands CustomCommands { get; set; } = new CustomCommands();
+    [JsonPropertyName("Players Gameplay Settings")] public PlayersSettings PlayersSettings { get; set; } = new PlayersSettings();
+    [JsonPropertyName("Client Preferences")] public PlayersPreferences PlayersPreferences { get; set; } = new PlayersPreferences();
+
+    // BLOCK WEAPON BUY
+    // sounds/ui/weapon_cant_buy.vsnd_c
+    // sounds/buttons/button8.vsnd_c
+}
+
+public class SoundSettings
+{
+    [JsonPropertyName("Weapon Cant Equip Sound")] public string CantEquipSound { get; set; } = "sounds/ui/weapon_cant_buy.vsnd_c";
+    [JsonPropertyName("New Mode Sound")] public string NewModeSound { get; set; } = "sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c";
+    //sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c
+    //sounds/music/halflife_alyx_01/bombplanted.vsnd_c
+}
+public class Gameplay
+{
+    [JsonPropertyName("Free For All")] public bool IsFFA { get; set; } = true;
+    [JsonPropertyName("Custom Modes")] public bool IsCustomModes { get; set; } = true;
+    [JsonPropertyName("Random Selection Of Modes")] public bool RandomSelectionOfModes { get; set; } = true;
+    [JsonPropertyName("Map Start Custom Mode")] public int MapStartMode { get; set; } = 0;
+    [JsonPropertyName("New Mode Countdown")] public int NewModeCountdown { get; set; } = 10;
+    [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
+    [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
+    [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
+    [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
+    [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
+    [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
+}
+public class General
+{
+    [JsonPropertyName("Hide Round Seconds")] public bool HideRoundSeconds { get; set; } = true;
+    [JsonPropertyName("Block Radio Messages")] public bool BlockRadioMessage { get; set; } = true;
+    [JsonPropertyName("Remove Breakable Entities")] public bool RemoveBreakableEntities { get; set; } = true;
+    [JsonPropertyName("Remove Decals After Death")] public bool RemoveDecals { get; set; } = true;
+    [JsonPropertyName("Force Map End")] public bool ForceMapEnd { get; set; } = false;
+}
+public class CustomCommands
+{
+    [JsonPropertyName("Deatmatch Menu Commands")] public string DeatmatchMenuCmds { get; set; } = "dm,deathmatch";
+    [JsonPropertyName("Weapons Select Commands")] public string WeaponSelectCmds { get; set; } = "gun,weapon,w,g";
+    [JsonPropertyName("Weapons Select Shortcuts")] public string CustomShortcuts { get; set; } = "weapon_ak47:ak,weapon_m4a1:m4,weapon_awp:awp,weapon_usp_silencer:usp,weapon_glock:glock,weapon_deagle:deagle";
+}
+public class PlayersPreferences
+{
+    [JsonPropertyName("Kill Sound")] public KillSound KillSound { get; set; } = new KillSound();
+    [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new HSKillSound();
+    [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new KnifeKillSound();
+    [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new HitSound();
+    [JsonPropertyName("Only Headsnhot")] public OnlyHS OnlyHS { get; set; } = new OnlyHS();
+    [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new HudMessages();
+}
+// sounds/ui/beepclear.vsnd_c
+
+public class OnlyHS
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+}
+
+public class HudMessages
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = true;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+}
+public class HitSound
+{
+    // sounds/ui/animations/foley_general_grab.vsnd_c
+    // sounds/common/talk.vsnd_c
+    // sounds/ui/csgo_ui_contract_type2.vsnd_c BEST
+    // sounds/ui/buttonrollover.vsnd_c
+    // sounds/ui/xp_remaining.vsnd_c
+    // sounds/player/taunt_clap_01.vsnd_c
+
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/csgo_ui_contract_type2.vsnd_c";
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+}
+public class KnifeKillSound
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/armsrace_final_kill_knife.vsnd_c";
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+}
+public class KillSound
+{
+    //sounds/training/bell_normal.vsnd_c
+    //sounds/buttons/bell1.vsnd_c
+    //sounds/ui/armsrace_kill_01.vsnd_c
+    //sounds/ui/deathmatch_kill_bonus.vsnd_c
+    //sounds/music/kill_01.vsnd_c
+    //sounds/music/kill_02.vsnd_c
+    //sounds/music/kill_03.vsnd_c
+    //sounds/music/kill_bonus.vsnd_c
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/armsrace_kill_01.vsnd_c";
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+}
+public class HSKillSound
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/buttons/bell1.vsnd_c";
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
 }
 
 public class PlayersSettings
@@ -51,7 +147,7 @@ public static class Configuration
         {
             using (StreamWriter writer = new StreamWriter(filepath))
             {
-                writer.Write("mp_buy_anywhere 0\nmp_buytime 0\nsv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 0\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
+                writer.Write("sv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 0\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
             }
             CustomCvarsList = new List<string>(File.ReadLines(filepath));
         }
@@ -80,7 +176,7 @@ public static class Configuration
                         ["allow_center_message"] = false,
                         ["center_message_text"] = "",
                         ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
-                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000" }
+                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" }
                     },
                     ["1"] = new JObject
                     {
@@ -93,7 +189,7 @@ public static class Configuration
                         ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
                         ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
-                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000" },
+                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" },
                     },
                     ["2"] = new JObject
                     {
@@ -130,7 +226,7 @@ public static class Configuration
                         ["allow_knife_damage"] = true,
                         ["random_weapons"] = true,
                         ["allow_center_message"] = true,
-                        ["center_message_text"] = "<font class='fontSize-l' color='yellow'>Only SMG</font>",
+                        ["center_message_text"] = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font>",
                         ["primary_weapons"] = new JArray { "weapon_p90", "weapon_bizon", "weapon_mp5sd", "weapon_mp7", "weapon_mp9", "weapon_mac10", "weapon_ump45" },
                         ["secondary_weapons"] = new JArray { }
                     }

@@ -7,16 +7,18 @@ using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Cvars;
 using Newtonsoft.Json.Linq;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
+using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
+using CounterStrikeSharp.API.Modules.Menu;
 
 namespace Deathmatch;
 
-[MinimumApiVersion(163)]
+[MinimumApiVersion(166)]
 public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0.4";
-
+    public override string ModuleVersion => "1.0.5";
+    public static DeathmatchCore Instance { get; set; } = new();
     public class ModeInfo
     {
         public string Name { get; set; } = "";
@@ -29,9 +31,28 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         public string CenterMessageText { get; set; } = "";
     }
 
+    public enum AcquireResult : int
+    {
+        Allowed = 0,
+        InvalidItem,
+        AlreadyOwned,
+        AlreadyPurchased,
+        ReachedGrenadeTypeLimit,
+        ReachedGrenadeTotalLimit,
+        NotAllowedByTeam,
+        NotAllowedByMap,
+        NotAllowedByMode,
+        NotAllowedForPurchase,
+        NotAllowedByProhibition,
+    };
+
+    public enum AcquireMethod : int
+    {
+        PickUp = 0,
+        Buy,
+    };
+
     public static CounterStrikeSharp.API.Modules.Timers.Timer? modeTimer;
-    //public static string respawnWindowsSig = "\\x44\\x88\\x4C\\x24\\x2A\\x55\\x57";
-    //public static string respawnLinuxSig = "\\x55\\x48\\x89\\xE5\\x41\\x57\\x41\\x56\\x41\\x55\\x41\\x54\\x49\\x89\\xFC\\x53\\x48\\x89\\xF3\\x48\\x81\\xEC\\xC8\\x00\\x00\\x00";
     internal static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
     public static ModeInfo ModeData = new ModeInfo();
     public DeathmatchConfig Config { get; set; } = null!;
@@ -45,6 +66,9 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     public static bool g_bIsActiveEditor = false;
     public static bool g_bDefaultMapSpawnDisabled = false;
     public static bool g_bWeaponRestrictGlobal;
+
+    public MemoryFunctionWithReturn<CCSPlayer_ItemServices, CEconItemView, AcquireMethod, NativeObject, AcquireResult>? CCSPlayer_CanAcquireFunc;
+    public MemoryFunctionWithReturn<int, string, CCSWeaponBaseVData>? GetCSWeaponDataFromKeyFunc;
 
     HashSet<string> RadioMessagesList = new HashSet<string> {
         "coverme", "takepoint", "holdpos", "followme",
@@ -60,36 +84,41 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     }
     public override void Load(bool hotReload)
     {
+        GetCSWeaponDataFromKeyFunc = new(GameData.GetSignature("GetCSWeaponDataFromKey"));
+        CCSPlayer_CanAcquireFunc = new(GameData.GetSignature("CCSPlayer_CanAcquire"));
+        CCSPlayer_CanAcquireFunc.Hook(OnWeaponCanAcquire, HookMode.Pre);
         VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
         Configuration.CreateOrLoadCustomModes(ModuleDirectory + "/custom_modes.json");
         Configuration.CreateOrLoadCvars(ModuleDirectory + "/deathmatch_cvars.txt");
         LoadWeaponsRestrict(ModuleDirectory + "/weapons_restrict.json");
 
-        AddCommandListener("buy", OnPlayerBuy);
-        AddCommandListener("autobuy", OnPlayerBuy);
-        AddCommandListener("buymenu", OnPlayerBuy);
         customShortcuts.Clear();
-        string[] Shortcuts = Config.CustomShortcuts.Split(',');
+        string[] Shortcuts = Config.CustomCommands.CustomShortcuts.Split(',');
+        string[] WSelect = Config.CustomCommands.WeaponSelectCmds.Split(',');
+        string[] DeathmatchMenus = Config.CustomCommands.DeatmatchMenuCmds.Split(',');
         foreach (var weapon in Shortcuts)
         {
             string[] Value = weapon.Split(':');
             if (Value.Length == 2)
             {
                 customShortcuts.Add(Value[1], Value[0]);
-                AddCustomCommands(Value[1], Value[0]);
+                AddCustomCommands(Value[1], Value[0], 1);
             }
         }
+        foreach (var cmd in WSelect)
+            AddCustomCommands(cmd, "", 2);
+        foreach (var cmd in DeathmatchMenus)
+            AddCustomCommands(cmd, "", 3);
         foreach (string radioName in RadioMessagesList)
-        {
             AddCommandListener(radioName, OnPlayerRadioMessage);
-        }
+
         RegisterListener<Listeners.OnMapEnd>(() => { modeTimer?.Kill(); });
         RegisterListener<Listeners.OnMapStart>(mapName =>
         {
             g_bDefaultMapSpawnDisabled = false;
             Server.NextFrame(() =>
             {
-                if (Config.g_bCustomModes)
+                if (Config.Gameplay.IsCustomModes)
                 {
                     modeTimer?.Kill();
                     modeTimer = AddTimer(1.0f, () =>
@@ -106,17 +135,18 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                         }
                     }, TimerFlags.REPEAT);
                 }
-                if (Config.ForceMapEnd)
+                if (Config.General.ForceMapEnd)
                 {
+                    bool RoundTerminated = false;
                     var timelimit = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>() * 60;
                     AddTimer(10.0f, () =>
                     {
                         var gameStart = GameRules().GameStartTime;
                         var currentTime = Server.CurrentTime;
                         var timeleft = timelimit - (currentTime - gameStart);
-
-                        if (timeleft < 0)
+                        if (timeleft <= 0 && !RoundTerminated)
                         {
+                            RoundTerminated = true;
                             GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
                         }
 
@@ -127,7 +157,8 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                     RemoveEntities();
                     LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
                     SetupDeathMatchConfigValues();
-                    SetupCustomMode(Config.g_iMapStartMode.ToString());
+                    SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
+                    SetupDeathmatchMenus();
                 });
             });
         });
@@ -144,16 +175,13 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             }
             else
             {
-                foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV))
+                foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
                 {
-                    if (ModeData.CenterMessage && !string.IsNullOrEmpty(ModeData.CenterMessageText))
+                    if (ModeData.CenterMessage && !string.IsNullOrEmpty(ModeData.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
                     {
-                        if (playerData.ContainsPlayer(p) && playerData[p].ShowHud)
-                        {
-                            p.PrintToCenterHtml($"{ModeData.CenterMessageText}");
-                        }
+                        p.PrintToCenterHtml($"{ModeData.CenterMessageText}");
                     }
-                    if (g_iRemainingTime <= Config.NewModeCountdown && Config.NewModeCountdown > 0)
+                    if (g_iRemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
                     {
                         if (g_iRemainingTime == 0)
                         {
@@ -171,6 +199,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     public override void Unload(bool hotReload)
     {
         VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
+        CCSPlayer_CanAcquireFunc?.Unhook(OnWeaponCanAcquire, HookMode.Pre);
         playerData.Clear();
         AllowedPrimaryWeaponsList.Clear();
         AllowedSecondaryWeaponsList.Clear();
@@ -260,27 +289,35 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                 p.GiveNamedItem(armor);
             }
             if (!p.IsBot)
+            {
+                if (!string.IsNullOrEmpty(Config.SoundSettings.NewModeSound))
+                    p.ExecuteClientCommand("play " + Config.SoundSettings.NewModeSound);
                 p.GiveNamedItem("weapon_knife");
-            if (Config.g_bRespawnPlayersAtNewMode)
+            }
+            if (Config.Gameplay.RespawnPlayersAtNewMode)
                 p.Respawn();
         }
     }
     public void SetupDeathMatchConfigValues()
     {
-        var iHideSecond = Config.g_bHideRoundSeconds ? 1 : 0;
+        var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
         var time = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>();
-        var iFFA = Config.g_bFFA ? 1 : 0;
+        var iFFA = Config.Gameplay.IsFFA ? 1 : 0;
         Server.ExecuteCommand($"mp_teammates_are_enemies {iFFA};sv_hide_roundtime_until_seconds {iHideSecond};mp_roundtime_defuse {time};mp_roundtime {time};mp_roundtime_deployment {time};mp_roundtime_hostage {time};mp_respawn_on_death_ct 1;mp_respawn_on_death_t 1");
         foreach (var cvar in Configuration.CustomCvarsList)
         {
             Server.ExecuteCommand(cvar);
         }
+        if (Config.Gameplay.AllowBuyMenu)
+            Server.ExecuteCommand("mp_buy_anywhere 1;mp_buytime 60000;mp_buy_during_immunity 0");
+        else
+            Server.ExecuteCommand("mp_buy_anywhere 0;mp_buytime 0;mp_buy_during_immunity 0");
     }
     public int GetModeType()
     {
-        if (Config.g_bCustomModes)
+        if (Config.Gameplay.IsCustomModes)
         {
-            if (Config.g_bRandomSelectionOfModes)
+            if (Config.Gameplay.RandomSelectionOfModes)
             {
                 Random random = new Random();
                 int iRandomMode;
@@ -293,13 +330,11 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             else
             {
                 if (g_iActiveMode + 1 != g_iTotalModes && g_iActiveMode + 1 < g_iTotalModes)
-                {
                     return g_iActiveMode + 1;
-                }
                 return 0;
             }
         }
-        return 0;
+        return Config.Gameplay.MapStartMode;
     }
     public static void SendConsoleMessage(string text, ConsoleColor color)
     {

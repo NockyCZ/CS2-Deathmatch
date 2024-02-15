@@ -6,6 +6,7 @@ using System.Drawing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Numerics;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Deathmatch
 {
@@ -14,6 +15,70 @@ namespace Deathmatch
         public static Dictionary<string, string> spawnPositionsCT = new Dictionary<string, string>();
         public static Dictionary<string, string> spawnPositionsT = new Dictionary<string, string>();
 
+        public string[] CheckAvaibleSpawns(CCSPlayerController player, int team)
+        {
+            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance || !g_bDefaultMapSpawnDisabled)
+            {
+                string[] randomSpawn = new string[2];
+                randomSpawn[0] = "default";
+                return randomSpawn;
+            }
+            if (team == 1 || team == 0)
+            {
+                string[] randomSpawn = new string[2];
+                randomSpawn[0] = "";
+                return randomSpawn;
+            }
+
+            var allPlayers = Utilities.GetPlayers();
+            var playersList = allPlayers
+                .Where(p => p != null && p.IsValid && !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
+                .Select(player => player.PlayerPawn.Value!.AbsOrigin)
+                .ToList();
+
+            var spawnsDictionary = team == (byte)CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
+
+            List<KeyValuePair<string, string>> spawnsList = spawnsDictionary.ToList();
+            Random random = new Random();
+            spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
+
+            foreach (var spawn in spawnsList)
+            {
+                double closestValue = Config.Gameplay.DistanceRespawn + 100;
+                var spawnAbsOrigin = ParseVector(spawn.Key);
+
+                foreach (var playerPos in playersList)
+                {
+                    double distance = GetDistance(playerPos!, spawnAbsOrigin!);
+                    if (distance < closestValue)
+                    {
+                        closestValue = distance;
+                    }
+                }
+
+                if (closestValue > Config.Gameplay.DistanceRespawn)
+                {
+                    if (playerData.ContainsPlayer(player))
+                    {
+                        if (playerData[player].LastSpawn != spawn.Key)
+                        {
+                            playerData[player].LastSpawn = spawn.Key;
+                            return new string[] { spawn.Key, spawn.Value };
+                        }
+                    }
+                    else
+                    {
+                        return new string[] { spawn.Key, spawn.Value };
+                    }
+                }
+            }
+
+            if (playerData.ContainsPlayer(player))
+                playerData[player].LastSpawn = "0";
+
+            return new string[] { "not found" };
+        }
+        
         public void AddNewSpawnPoint(string filepath, string posValue, string angleValue, string team)
         {
             if (!File.Exists(filepath))
@@ -164,276 +229,6 @@ namespace Deathmatch
                 beam.DispatchSpawn();
             }
         }
-        private static Vector ParseVector(string pos)
-        {
-            var values = pos.Split(' ');
-            if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
-            {
-                return new Vector(x, y, z);
-            }
-
-            return new Vector(0, 0, 0);
-        }
-        private static QAngle ParseQAngle(string angle)
-        {
-            var values = angle.Split(' ');
-            if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
-            {
-                return new QAngle(x, y, z);
-            }
-
-            return new QAngle(0, 0, 0);
-        }
-        private static Vector3 ParseVector3(string pos)
-        {
-            var values = pos.Split(' ');
-            if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
-            {
-                return new Vector3(x, y, z);
-            }
-
-            return new Vector3(0, 0, 0);
-        }
-        static double GetDistance(Vector v1, Vector v2)
-        {
-            double X = v1.X - v2.X;
-            double Y = v1.Y - v2.Y;
-
-            return Math.Sqrt(X * X + Y * Y);
-        }
-        public string[] CheckAvaibleSpawns(CCSPlayerController player, int team)
-        {
-            if (GameRules().WarmupPeriod || !Config.CheckDistance || !g_bDefaultMapSpawnDisabled)
-            {
-                string[] randomSpawn = new string[2];
-                randomSpawn[0] = "default";
-                return randomSpawn;
-            }
-            if (team == 1 || team == 0)
-            {
-                string[] randomSpawn = new string[2];
-                randomSpawn[0] = "";
-                return randomSpawn;
-            }
-
-            Dictionary<string, string> availableSpawns = new Dictionary<string, string>();
-            int iAvailableSpawns = 0;
-            foreach (var spawn in spawnPositionsT)
-            {
-                double closestValue = Config.DistanceRespawn + 100;
-                Vector? spawnAbsOrigin = ParseVector(spawn.Key);
-
-                foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHLTV && p.PlayerPawn.IsValid && p.PawnIsAlive))
-                {
-                    var playerPos = p.PlayerPawn.Value!.AbsOrigin!;
-                    var distance = GetDistance(playerPos, spawnAbsOrigin!);
-                    if (distance < closestValue)
-                    {
-                        closestValue = distance;
-                    }
-                }
-                if (closestValue > Config.DistanceRespawn)
-                {
-                    if (team == 2)
-                    {
-                        if (playerData.ContainsPlayer(player))
-                        {
-                            if (playerData[player].LastSpawn != spawn.Key)
-                            {
-                                availableSpawns.Add(spawn.Key, spawn.Value);
-                                iAvailableSpawns++;
-                            }
-                        }
-                        else
-                        {
-                            availableSpawns.Add(spawn.Key, spawn.Value);
-                            iAvailableSpawns++;
-                        }
-                    }
-                }
-            }
-            foreach (var spawn in spawnPositionsCT)
-            {
-                double closestValue = Config.DistanceRespawn + 100;
-                Vector? spawnAbsOrigin = ParseVector(spawn.Key);
-
-                foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHLTV && p.PlayerPawn.IsValid && p.PawnIsAlive))
-                {
-                    var playerPos = p.PlayerPawn.Value!.AbsOrigin!;
-                    var distance = GetDistance(playerPos, spawnAbsOrigin!);
-                    if (distance < closestValue)
-                    {
-                        closestValue = distance;
-                    }
-                }
-                if (closestValue > Config.DistanceRespawn)
-                {
-                    if (team == 3)
-                    {
-                        if (playerData.ContainsPlayer(player))
-                        {
-                            if (playerData[player].LastSpawn != spawn.Key)
-                            {
-                                availableSpawns.Add(spawn.Key, spawn.Value);
-                                iAvailableSpawns++;
-                            }
-                        }
-                        else
-                        {
-                            availableSpawns.Add(spawn.Key, spawn.Value);
-                            iAvailableSpawns++;
-                        }
-                    }
-                }
-            }
-            /*if (team == 3)
-                SendConsoleMessage($"CT Available spawns - {iAvailableSpawns}", ConsoleColor.Blue);
-            if (team == 2)
-                SendConsoleMessage($"T Available spawns - {iAvailableSpawns}", ConsoleColor.DarkYellow);*/
-
-            string[] spawnLocation = new string[2];
-            if (iAvailableSpawns == 0)
-            {
-                if (team == 2 || team == 3)
-                    spawnLocation[0] = "not found";
-
-                if (playerData.ContainsPlayer(player))
-                    playerData[player].LastSpawn = "0";
-            }
-            else
-            {
-                Random random = new Random();
-                int randomIndex = random.Next(0, availableSpawns.Count);
-                spawnLocation[0] = availableSpawns.Keys.ElementAt(randomIndex);
-                spawnLocation[1] = availableSpawns.Values.ElementAt(randomIndex);
-                if (playerData.ContainsPlayer(player))
-                    playerData[player].LastSpawn = spawnLocation[0];
-            }
-            return spawnLocation;
-        }
-        /*public void ResetDisabledSpawns()
-        {
-            disabledSpawnPoints.Clear();
-            var tSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_terrorist");
-            foreach (var entity in tSpawns)
-            {
-                if (entity.IsValid)
-                {
-                    if (!defaultSpawnPoints.Contains(entity.Index))
-                        entity.AcceptInput("SetEnabled");
-                }
-            }
-            var ctSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_counterterrorist");
-            foreach (var entity in ctSpawns)
-            {
-                if (entity.IsValid)
-                {
-                    if (!defaultSpawnPoints.Contains(entity.Index))
-                        entity.AcceptInput("SetEnabled");
-                }
-            }
-        }*/
-        /*public int CheckAvaibleSpawns(int team)
-        {
-            if (GameRules().WarmupPeriod || !Config.CheckDistance || !g_bDefaultMapSpawnDisabled)
-                return 1;
-            if (team == 1 || team == 0)
-                return -1;
-
-            int iAvailableSpawns = 0;
-            var tSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_terrorist");
-            foreach (var entity in tSpawns)
-            {
-                if (entity.IsValid)
-                {
-                    if (!defaultSpawnPoints.Contains(entity.Index))
-                    {
-                        double closestValue = Config.DistanceRespawn + 100;
-                        Vector? entityPos = entity.AbsOrigin;
-                        foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHLTV && p.PlayerPawn.IsValid && p.PawnIsAlive))
-                        {
-                            var playerPos = p.PlayerPawn.Value!.AbsOrigin!;
-                            var distance = GetDistance(playerPos, entityPos!);
-                            if (distance < closestValue)
-                            {
-                                closestValue = distance;
-                            }
-                        }
-                        if (closestValue < Config.DistanceRespawn)
-                        {
-                            if (!disabledSpawnPoints.Contains(entity.Index))
-                            {
-                                entity.AcceptInput("SetDisabled");
-                                disabledSpawnPoints.Add(entity.Index);
-                            }
-                        }
-                        else
-                        {
-                            if (disabledSpawnPoints.Contains(entity.Index))
-                            {
-                                entity.AcceptInput("SetEnabled");
-                                disabledSpawnPoints.Remove(entity.Index);
-                            }
-                            if (team == 2)
-                                iAvailableSpawns++;
-                        }
-                    }
-                }
-            }
-            var ctSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_counterterrorist");
-            foreach (var entity in ctSpawns)
-            {
-                if (entity.IsValid)
-                {
-                    if (!defaultSpawnPoints.Contains(entity.Index))
-                    {
-                        double closestValue = Config.DistanceRespawn + 100;
-                        Vector? entityPos = entity.AbsOrigin;
-                        foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsHLTV && p.PlayerPawn.IsValid && p.PawnIsAlive))
-                        {
-                            var playerPos = p.PlayerPawn.Value!.AbsOrigin!;
-                            var distance = GetDistance(playerPos, entityPos!);
-                            if (distance < closestValue)
-                            {
-                                closestValue = distance;
-                            }
-                        }
-                        if (closestValue < Config.DistanceRespawn)
-                        {
-                            if (!disabledSpawnPoints.Contains(entity.Index))
-                            {
-                                entity.AcceptInput("SetDisabled");
-                                disabledSpawnPoints.Add(entity.Index);
-                            }
-                        }
-                        else
-                        {
-                            if (disabledSpawnPoints.Contains(entity.Index))
-                            {
-                                entity.AcceptInput("SetEnabled");
-                                disabledSpawnPoints.Remove(entity.Index);
-                            }
-                            if (team == 3)
-                                iAvailableSpawns++;
-                        }
-                    }
-                }
-            }
-            if (team == 3)
-                SendConsoleMessage($"CT Available spawns - {iAvailableSpawns}", ConsoleColor.Blue);
-            if (team == 2)
-                SendConsoleMessage($"T Available spawns - {iAvailableSpawns}", ConsoleColor.DarkYellow);
-            return iAvailableSpawns;
-        }*/
         public static void RemoveMapDefaulSpawns()
         {
             if (!g_bDefaultMapSpawnDisabled)
@@ -527,6 +322,52 @@ namespace Deathmatch
                 if (mapstart)
                     RemoveMapDefaulSpawns();
             }
+        }
+        private static Vector ParseVector(string pos)
+        {
+            var values = pos.Split(' ');
+            if (values.Length == 3 &&
+                float.TryParse(values[0], out float x) &&
+                float.TryParse(values[1], out float y) &&
+                float.TryParse(values[2], out float z))
+            {
+                return new Vector(x, y, z);
+            }
+
+            return new Vector(0, 0, 0);
+        }
+        private static QAngle ParseQAngle(string angle)
+        {
+            var values = angle.Split(' ');
+            if (values.Length == 3 &&
+                float.TryParse(values[0], out float x) &&
+                float.TryParse(values[1], out float y) &&
+                float.TryParse(values[2], out float z))
+            {
+                return new QAngle(x, y, z);
+            }
+
+            return new QAngle(0, 0, 0);
+        }
+        private static Vector3 ParseVector3(string pos)
+        {
+            var values = pos.Split(' ');
+            if (values.Length == 3 &&
+                float.TryParse(values[0], out float x) &&
+                float.TryParse(values[1], out float y) &&
+                float.TryParse(values[2], out float z))
+            {
+                return new Vector3(x, y, z);
+            }
+
+            return new Vector3(0, 0, 0);
+        }
+        static double GetDistance(Vector v1, Vector v2)
+        {
+            double X = v1.X - v2.X;
+            double Y = v1.Y - v2.Y;
+
+            return Math.Sqrt(X * X + Y * Y);
         }
     }
 }

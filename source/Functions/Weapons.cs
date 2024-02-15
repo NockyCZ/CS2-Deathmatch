@@ -60,7 +60,7 @@ namespace Deathmatch
                     else if (restrictValue < 0)
                         return true;
 
-                    foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
+                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)))
                     {
                         if (playerData.ContainsPlayer(p))
                         {
@@ -101,20 +101,17 @@ namespace Deathmatch
                             return true;
                     }
 
-                    foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, IsBot: false, IsHLTV: false }))
+                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && p.TeamNum == team))
                     {
-                        if (p.TeamNum == team && playerData.ContainsPlayer(p))
+                        if (bPrimary)
                         {
-                            if (bPrimary)
-                            {
-                                if (playerData[p].PrimaryWeapon == weaponName)
-                                    matchingCount++;
-                            }
-                            else
-                            {
-                                if (playerData[p].SecondaryWeapon == weaponName)
-                                    matchingCount++;
-                            }
+                            if (playerData[p].PrimaryWeapon == weaponName)
+                                matchingCount++;
+                        }
+                        else
+                        {
+                            if (playerData[p].SecondaryWeapon == weaponName)
+                                matchingCount++;
                         }
                     }
                 }
@@ -182,7 +179,7 @@ namespace Deathmatch
                                 }
                                 else
                                 {
-                                    //SendConsoleMessage($"[Deathmatch] Wrong configuration in weapons_restrict.json for '{weapon}'", ConsoleColor.Red);
+                                    SendConsoleMessage($"[Deathmatch] Wrong configuration in weapons_restrict.json for '{weapon}'", ConsoleColor.Red);
                                 }
                             }
                         }
@@ -223,37 +220,29 @@ namespace Deathmatch
         }
         public int IsHaveWeaponFromSlot(CCSPlayerController player, int slot)
         {
-            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+            if (!player.IsValid && player == null && player!.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
                 return 3;
 
             foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)
             {
                 if (weapon != null && weapon.IsValid)
                 {
-                    if (slot == 0)
+                    switch (slot)
                     {
-                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return 2;
-                        }
-                        else if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return 1;
-                        }
-                    }
-                    else if (slot == 1)
-                    {
-                        if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return 1;
-                        }
-                    }
-                    else if (slot == 2)
-                    {
-                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return 2;
-                        }
+                        case 0:
+                            if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                                return 2;
+                            else if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                                return 1;
+                            break;
+                        case 1:
+                            if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                                return 1;
+                            break;
+                        case 2:
+                            if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
+                                return 2;
+                            break;
                     }
                 }
             }
