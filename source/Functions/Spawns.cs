@@ -15,70 +15,76 @@ namespace Deathmatch
         public static Dictionary<string, string> spawnPositionsCT = new Dictionary<string, string>();
         public static Dictionary<string, string> spawnPositionsT = new Dictionary<string, string>();
 
-        public string[] CheckAvaibleSpawns(CCSPlayerController player, int team)
+        public string[] CheckAvaibleSpawns(CCSPlayerController player, int team, bool IsBot)
         {
             if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance || !g_bDefaultMapSpawnDisabled)
             {
-                string[] randomSpawn = new string[2];
-                randomSpawn[0] = "default";
-                return randomSpawn;
+                return new string[] { "default" };
             }
             if (team == 1 || team == 0)
             {
-                string[] randomSpawn = new string[2];
-                randomSpawn[0] = "";
-                return randomSpawn;
+                return new string[] { "" };
             }
 
-            var allPlayers = Utilities.GetPlayers();
-            var playersList = allPlayers
-                .Where(p => p != null && p.IsValid && !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
-                .Select(player => player.PlayerPawn.Value!.AbsOrigin)
-                .ToList();
-
             var spawnsDictionary = team == (byte)CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
+            var spawnsList = spawnsDictionary.ToList();
+            if (!IsBot)
+                spawnsList.RemoveAll(x => x.Key == playerData[player].LastSpawn);
 
-            List<KeyValuePair<string, string>> spawnsList = spawnsDictionary.ToList();
             Random random = new Random();
             spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
 
-            foreach (var spawn in spawnsList)
+            var closestDistances = CalculateClosestDistances(player, spawnsList);
+
+            var Spawn = spawnsList.FirstOrDefault(spawn =>
             {
-                double closestValue = Config.Gameplay.DistanceRespawn + 100;
-                var spawnAbsOrigin = ParseVector(spawn.Key);
+                var spawnKey = spawn.Key;
+                var closestDistance = closestDistances[spawnKey];
+                return closestDistance > Config.Gameplay.DistanceRespawn;
+            });
 
-                foreach (var playerPos in playersList)
-                {
-                    double distance = GetDistance(playerPos!, spawnAbsOrigin!);
-                    if (distance < closestValue)
-                    {
-                        closestValue = distance;
-                    }
-                }
-
-                if (closestValue > Config.Gameplay.DistanceRespawn)
-                {
-                    if (playerData.ContainsPlayer(player))
-                    {
-                        if (playerData[player].LastSpawn != spawn.Key)
-                        {
-                            playerData[player].LastSpawn = spawn.Key;
-                            return new string[] { spawn.Key, spawn.Value };
-                        }
-                    }
-                    else
-                    {
-                        return new string[] { spawn.Key, spawn.Value };
-                    }
-                }
+            if (Spawn.Key != null)
+            {
+                if (!IsBot)
+                    playerData[player].LastSpawn = Spawn.Key;
+                return new string[] { Spawn.Key, Spawn.Value };
             }
 
-            if (playerData.ContainsPlayer(player))
+            if (!IsBot)
                 playerData[player].LastSpawn = "0";
 
             return new string[] { "not found" };
         }
-        
+
+        private Dictionary<string, double> CalculateClosestDistances(CCSPlayerController player, List<KeyValuePair<string, string>> spawnsList)
+        {
+            var allPlayers = Utilities.GetPlayers();
+            var playerPositions = allPlayers
+                .Where(p => p != null && p.IsValid && !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
+                .Select(p => p.PlayerPawn.Value!.AbsOrigin)
+                .ToList();
+
+            var closestDistances = new Dictionary<string, double>();
+            foreach (var spawn in spawnsList)
+            {
+                var spawnKey = spawn.Key;
+                var spawnAbsOrigin = ParseVector(spawnKey);
+                double closestDistance = double.MaxValue;
+
+                foreach (var playerPos in playerPositions)
+                {
+                    double distance = GetDistance(playerPos!, spawnAbsOrigin);
+                    if (distance < closestDistance)
+                    {
+                        closestDistance = distance;
+                    }
+                }
+                closestDistances.Add(spawnKey, closestDistance);
+            }
+
+            return closestDistances;
+        }
+
         public void AddNewSpawnPoint(string filepath, string posValue, string angleValue, string team)
         {
             if (!File.Exists(filepath))

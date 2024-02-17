@@ -17,7 +17,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0.5";
+    public override string ModuleVersion => "1.0.6";
     public static DeathmatchCore Instance { get; set; } = new();
     public class ModeInfo
     {
@@ -150,7 +150,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                             GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
                         }
 
-                    }, TimerFlags.REPEAT);
+                    }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
                 AddTimer(1.0f, () =>
                 {
@@ -203,7 +203,6 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         playerData.Clear();
         AllowedPrimaryWeaponsList.Clear();
         AllowedSecondaryWeaponsList.Clear();
-        //modeTimer?.Kill();
     }
     public void SetupCustomMode(string modetype)
     {
@@ -212,9 +211,8 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         AllowedPrimaryWeaponsList.Clear();
         RestrictedWeapons.Clear();
         if (modetype == g_iActiveMode.ToString())
-        {
             bNewmode = false;
-        }
+
         if (Configuration.JsonCustomModes != null && Configuration.JsonCustomModes.TryGetValue(propertyName: "custom_modes", out var data) && data is JObject dataObject)
         {
             if (dataObject.TryGetValue(modetype, out var modeValue) && modeValue is JObject)
@@ -279,7 +277,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
 
         Server.ExecuteCommand($"mp_free_armor {ModeData.Armor};mp_damage_headshot_only {ModeData.OnlyHS};mp_ct_default_primary \"\";mp_t_default_primary \"\";mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
 
-        foreach (var p in Utilities.GetPlayers().Where(p => p is { IsValid: true, PawnIsAlive: true }))
+        foreach (var p in Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.PawnIsAlive))
         {
             p.RemoveWeapons();
             GivePlayerWeapons(p, true);

@@ -6,7 +6,6 @@ using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.Timers;
 using System.Drawing;
-using CounterStrikeSharp.API.Modules.Menu;
 
 namespace Deathmatch
 {
@@ -64,12 +63,12 @@ namespace Deathmatch
 
                         if (PrefsMenuSounds.Count() > 0 && PrefsMenuFunctions.Count() == 0)
                         {
-                            OpenSubMenu(player!, 1);
+                            OpenSubMenu(player!, 1, true);
                             return;
                         }
                         if (PrefsMenuSounds.Count() == 0 && PrefsMenuFunctions.Count() > 0)
                         {
-                            OpenSubMenu(player!, 2);
+                            OpenSubMenu(player!, 2, true);
                             return;
                         }
                         OpenMainMenu(player!);

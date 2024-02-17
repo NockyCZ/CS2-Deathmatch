@@ -41,7 +41,9 @@ namespace Deathmatch
         public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
         {
             CCSPlayerController player = @event.Userid;
-            GivePlayerWeapons(player, false);
+            if (player != null && player.IsValid)
+                GivePlayerWeapons(player, false);
+                
             return HookResult.Continue;
         }
         [GameEventHandler(HookMode.Pre)]
@@ -81,24 +83,30 @@ namespace Deathmatch
             CCSPlayerController player = @event.Userid;
             CCSPlayerController attacker = @event.Attacker;
             info.DontBroadcast = true;
-            if (player != null && !player.IsHLTV && player.IsValid)
-            {
-                var timer = Config.PlayersSettings.RespawnTime;
-                if (playerData.ContainsPlayer(player))
-                {
-                    playerData[player].KillStreak = 0;
-                    if (Config.General.RemoveDecals)
-                    {
-                        var RemoveDecals = NativeAPI.CreateEvent("round_start", false);
-                        NativeAPI.FireEventToClient(RemoveDecals, (int)player.Index);
-                    }
-                    timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.RespawnTimeVIP : Config.PlayersSettings.RespawnTime;
-                    @event.FireEventToClient(player);
-                }
 
-                AddTimer(timer, () =>
+            if (player == null && !player!.IsValid)
+                return HookResult.Continue;
+
+            var timer = Config.PlayersSettings.RespawnTime;
+            var IsBot = true;
+            if (playerData.ContainsPlayer(player))
+            {
+                IsBot = false;
+                playerData[player].KillStreak = 0;
+                if (Config.General.RemoveDecals)
                 {
-                    string[] spawns = CheckAvaibleSpawns(player, player.TeamNum);
+                    var RemoveDecals = NativeAPI.CreateEvent("round_start", false);
+                    NativeAPI.FireEventToClient(RemoveDecals, (int)player.Index);
+                }
+                timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.RespawnTimeVIP : Config.PlayersSettings.RespawnTime;
+                @event.FireEventToClient(player);
+            }
+
+            AddTimer(timer, () =>
+            {
+                if (player != null && player.IsValid)
+                {
+                    string[] spawns = CheckAvaibleSpawns(player, player.TeamNum, IsBot);
                     if (!string.IsNullOrEmpty(spawns[0]))
                     {
                         switch (spawns[0])
@@ -115,9 +123,10 @@ namespace Deathmatch
                                 break;
                         }
                     }
-                }, TimerFlags.STOP_ON_MAPCHANGE);
-            }
-            if (player != null && player.IsValid && attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
+                }
+            }, TimerFlags.STOP_ON_MAPCHANGE);
+
+            if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
             {
                 playerData[attacker].KillStreak++;
                 bool IsVIP = AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag);
@@ -259,6 +268,15 @@ namespace Deathmatch
             {
                 if (playerData.ContainsPlayer(player))
                 {
+                    if (ModeData.RandomWeapons)
+                    {
+                        if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
+                            player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                        hook.SetReturn(AcquireResult.AlreadyPurchased);
+                        return HookResult.Stop;
+                    }
+
                     string localizerWeaponName = Localizer[vdata.Name];
                     if (CheckIsWeaponRestricted(vdata.Name, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
                     {
@@ -283,6 +301,11 @@ namespace Deathmatch
                         }
                         playerData[player].PrimaryWeapon = vdata.Name;
                         player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
+                        if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 1) == 1)
+                        {
+                            hook.SetReturn(AcquireResult.AlreadyOwned);
+                            return HookResult.Stop;
+                        }
                         return HookResult.Continue;
                     }
                     else
@@ -297,6 +320,11 @@ namespace Deathmatch
                         }
                         playerData[player].SecondaryWeapon = vdata.Name;
                         player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
+                        if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 2) == 2)
+                        {
+                            hook.SetReturn(AcquireResult.AlreadyOwned);
+                            return HookResult.Stop;
+                        }
                         return HookResult.Continue;
                     }
                 }

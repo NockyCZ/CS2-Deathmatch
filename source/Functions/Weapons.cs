@@ -1,6 +1,5 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Modules.Utils;
 using Newtonsoft.Json.Linq;
 
 namespace Deathmatch
@@ -15,18 +14,30 @@ namespace Deathmatch
             public int VIPRestrict_Team { get; set; } = 0; //CT
         }
 
-        readonly HashSet<string> SecondaryWeaponsList = new HashSet<string> {
-        "weapon_hkp2000", "weapon_cz75a", "weapon_deagle", "weapon_elite",
-        "weapon_fiveseven", "weapon_glock", "weapon_p250",
-        "weapon_revolver", "weapon_tec9", "weapon_usp_silencer" };
+        readonly HashSet<string> SecondaryWeaponsList = new HashSet<string>
+        {
+            "weapon_hkp2000", "weapon_cz75a", "weapon_deagle", "weapon_elite",
+            "weapon_fiveseven", "weapon_glock", "weapon_p250",
+            "weapon_revolver", "weapon_tec9", "weapon_usp_silencer"
+        };
 
-        readonly HashSet<string> PrimaryWeaponsList = new HashSet<string> {
-        "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
-        "weapon_m249", "weapon_negev", "weapon_mac10", "weapon_mp5sd",
-        "weapon_mp7", "weapon_mp9", "weapon_p90", "weapon_bizon",
-        "weapon_ump45", "weapon_ak47", "weapon_aug", "weapon_famas",
-        "weapon_galilar", "weapon_m4a1_silencer", "weapon_m4a1", "weapon_sg556",
-        "weapon_awp", "weapon_g3sg1", "weapon_scar20", "weapon_ssg08" };
+        readonly HashSet<string> PrimaryWeaponsList = new HashSet<string>
+        {
+            "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
+            "weapon_m249", "weapon_negev", "weapon_mac10", "weapon_mp5sd",
+            "weapon_mp7", "weapon_mp9", "weapon_p90", "weapon_bizon",
+            "weapon_ump45", "weapon_ak47", "weapon_aug", "weapon_famas",
+            "weapon_galilar", "weapon_m4a1_silencer", "weapon_m4a1", "weapon_sg556",
+            "weapon_awp", "weapon_g3sg1", "weapon_scar20", "weapon_ssg08"
+        };
+
+        readonly Dictionary<string, string> weaponSelectMapping = new Dictionary<string, string>
+        {
+            { "m4a4", "weapon_m4a1" },
+            { "weapon_m4a1", "weapon_m4a1" },
+            { "m4a1_silencer", "weapon_m4a1_silencer" },
+            { "m4a1", "weapon_m4a1_silencer" }
+        };
 
         List<string> AllowedPrimaryWeaponsList = new List<string>();
         List<string> AllowedSecondaryWeaponsList = new List<string>();
@@ -248,12 +259,13 @@ namespace Deathmatch
             }
             return 3;
         }
-        public int GetRandomWeaponFromList<T>(List<T> list)
+        private string GetRandomWeaponFromList(List<string> weaponsList)
         {
-            Random random = new Random();
-            int iRandomWeapon = random.Next(0, list.Count);
-            return iRandomWeapon;
+            Random rand = new Random();
+            int index = rand.Next(weaponsList.Count);
+            return weaponsList[index];
         }
+
         public void LoadWeaponsRestrict(string filepath)
         {
             if (!File.Exists(filepath))

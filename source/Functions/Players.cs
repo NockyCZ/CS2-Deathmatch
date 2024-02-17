@@ -4,7 +4,6 @@ using CounterStrikeSharp.API.Modules.Timers;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
-using CounterStrikeSharp.API;
 
 namespace Deathmatch
 {
@@ -71,19 +70,14 @@ namespace Deathmatch
             string replacedweaponName = "";
             string matchingValues = "";
             int matchingCount = 0;
-            if (weaponName.Contains("m4a4"))
+            if (weaponSelectMapping.ContainsKey(weaponName))
             {
-                weaponName = "weapon_m4a1";
-                matchingCount = 1;
-            }
-            else if (weaponName.Contains("m4a1"))
-            {
-                weaponName = "weapon_m4a1_silencer";
+                weaponName = weaponSelectMapping[weaponName];
                 matchingCount = 1;
             }
             else
             {
-                foreach (string weapon in PrimaryWeaponsList)
+                foreach (string weapon in PrimaryWeaponsList.Concat(SecondaryWeaponsList))
                 {
                     if (weapon.Contains(weaponName))
                     {
@@ -100,26 +94,7 @@ namespace Deathmatch
                         }
                     }
                 }
-                if (matchingCount == 0)
-                {
-                    foreach (string weapon in SecondaryWeaponsList)
-                    {
-                        if (weapon.Contains(weaponName))
-                        {
-                            replacedweaponName = weapon;
-                            matchingCount++;
-                            string localizerWeaponName = Localizer[replacedweaponName];
-                            if (matchingCount == 1)
-                            {
-                                matchingValues = $"{ChatColors.Green}{localizerWeaponName}";
-                            }
-                            else if (matchingCount > 1)
-                            {
-                                matchingValues = $"{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
-                            }
-                        }
-                    }
-                }
+
                 if (matchingCount != 0)
                 {
                     weaponName = replacedweaponName;
@@ -165,15 +140,13 @@ namespace Deathmatch
                 }
                 else if (Config.Gameplay.SwitchWeapons && player.PawnIsAlive)
                 {
-                    string[] weapon = new string[3];
-                    weapon[0] = weaponName;
-                    weapon[1] = GetWeaponFromSlot(player, 2);
+                    string weapon = GetWeaponFromSlot(player, 2);
 
                     player.RemoveWeapons();
                     player.GiveNamedItem("weapon_knife");
-                    player.GiveNamedItem(weapon[0]);
-                    if (!string.IsNullOrEmpty(weapon[1]))
-                        player.GiveNamedItem(weapon[1]);
+                    player.GiveNamedItem(weaponName);
+                    if (!string.IsNullOrEmpty(weapon))
+                        player.GiveNamedItem(weapon);
                 }
                 return;
             }
@@ -203,15 +176,13 @@ namespace Deathmatch
                 }
                 else if (Config.Gameplay.SwitchWeapons && player.PawnIsAlive)
                 {
-                    string[] weapon = new string[3];
-                    weapon[0] = weaponName;
-                    weapon[1] = GetWeaponFromSlot(player, 1);
+                    string weapon = GetWeaponFromSlot(player, 1);
 
                     player.RemoveWeapons();
                     player.GiveNamedItem("weapon_knife");
-                    player.GiveNamedItem(weapon[0]);
-                    if (!string.IsNullOrEmpty(weapon[1]))
-                        player.GiveNamedItem(weapon[1]);
+                    player.GiveNamedItem(weaponName);
+                    if (!string.IsNullOrEmpty(weapon))
+                        player.GiveNamedItem(weapon);
                 }
                 return;
             }
@@ -228,221 +199,136 @@ namespace Deathmatch
         {
             if (playerData.ContainsPlayer(player))
             {
-                player.InGameMoneyServices!.Account = 16000;
+                player.InGameMoneyServices!.Account = Config.Gameplay.AllowBuyMenu ? 16000 : 0;
                 if (!bNewMode)
                 {
                     playerData[player].SpawnProtection = true;
-                    if (AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
-                    {
-                        AddTimer(Config.PlayersSettings.ProtectionTimeVIP, () =>
-                        {
-                            playerData[player].SpawnProtection = false;
-                        }, TimerFlags.STOP_ON_MAPCHANGE);
-                    }
-                    else
-                    {
-                        AddTimer(Config.PlayersSettings.ProtectionTime, () =>
-                        {
-                            playerData[player].SpawnProtection = false;
-                        }, TimerFlags.STOP_ON_MAPCHANGE);
-                    }
+                    var timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.ProtectionTimeVIP : Config.PlayersSettings.ProtectionTime;
+                    AddTimer(timer, () => playerData[player].SpawnProtection = false, TimerFlags.STOP_ON_MAPCHANGE);
                 }
 
                 int slot = IsHaveWeaponFromSlot(player, 0);
                 if (slot == 1 || slot == 2)
-                {
                     return;
-                }
-                bool SetupWeaponsMsg = false;
+
                 if (AllowedPrimaryWeaponsList.Count != 0)
                 {
+                    string PrimaryWeapon = playerData[player].PrimaryWeapon;
                     if (ModeData.RandomWeapons)
                     {
-                        int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
-                        player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
+                        PrimaryWeapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
                     }
-                    else if (!string.IsNullOrEmpty(playerData[player].PrimaryWeapon) && AllowedPrimaryWeaponsList.Count > 1)
+                    else if (string.IsNullOrEmpty(PrimaryWeapon) || !AllowedPrimaryWeaponsList.Contains(PrimaryWeapon))
                     {
-                        if (AllowedPrimaryWeaponsList.Contains(playerData[player].PrimaryWeapon))
+                        PrimaryWeapon = AllowedPrimaryWeaponsList.Count switch
                         {
-                            if (CheckIsWeaponRestricted(playerData[player].PrimaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                            1 => AllowedPrimaryWeaponsList[0],
+                            _ => Config.Gameplay.DefaultModeWeapons switch
                             {
-                                playerData[player].PrimaryWeapon = "";
-                                string localizerWeaponName = Localizer[playerData[player].PrimaryWeapon];
-                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].PrimaryWeapon];
-                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
-                                if (Config.Gameplay.DefaultModeWeapons == 2)
-                                {
-                                    int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
-                                    player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
-                                }
-                                else if (Config.Gameplay.DefaultModeWeapons == 1)
-                                {
-                                    player.GiveNamedItem(AllowedPrimaryWeaponsList[0]);
-                                }
-                                else
-                                {
-                                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                                    SetupWeaponsMsg = true;
-                                }
+                                2 => GetRandomWeaponFromList(AllowedPrimaryWeaponsList),
+                                1 => AllowedPrimaryWeaponsList[0],
+                                _ => ""
                             }
-                            else
-                            {
-                                player.GiveNamedItem(playerData[player].PrimaryWeapon);
-                            }
-                        }
-                        else
-                        {
-                            string replacedweaponName = Localizer[playerData[player].PrimaryWeapon];
-                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Disabled", replacedweaponName]}");
-
-                            if (Config.Gameplay.DefaultModeWeapons == 2)
-                            {
-                                int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
-                                player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
-                            }
-                            else if (Config.Gameplay.DefaultModeWeapons == 1)
-                            {
-                                player.GiveNamedItem(AllowedPrimaryWeaponsList[0]);
-                            }
-                            else
-                            {
-                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                                SetupWeaponsMsg = true;
-                            }
-                        }
+                        };
                     }
                     else
                     {
-                        if (AllowedPrimaryWeaponsList.Count == 1)
+                        if (CheckIsWeaponRestricted(PrimaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
                         {
-                            player.GiveNamedItem(AllowedPrimaryWeaponsList[0]);
-                        }
-                        else
-                        {
-                            if (Config.Gameplay.DefaultModeWeapons == 2)
+                            playerData[player].PrimaryWeapon = "";
+                            string localizerWeaponName = Localizer[PrimaryWeapon];
+                            RestrictedWeaponsInfo restrict = RestrictedWeapons[PrimaryWeapon];
+                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+
+                            PrimaryWeapon = Config.Gameplay.DefaultModeWeapons switch
                             {
-                                int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
-                                player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
-                            }
-                            else if (Config.Gameplay.DefaultModeWeapons == 1)
-                            {
-                                player.GiveNamedItem(AllowedPrimaryWeaponsList[0]);
-                            }
-                            else
-                            {
-                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                                SetupWeaponsMsg = true;
-                            }
+                                2 => GetRandomWeaponFromList(AllowedPrimaryWeaponsList),
+                                1 => AllowedPrimaryWeaponsList[0],
+                                _ => ""
+                            };
                         }
                     }
+
+                    if (string.IsNullOrEmpty(PrimaryWeapon))
+                    {
+                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
+                    }
+                    else
+                    {
+                        player.GiveNamedItem(PrimaryWeapon);
+                    }
+                }
+
+                if (AllowedSecondaryWeaponsList.Count != 0)
+                {
+                    string SecondaryWeapon = playerData[player].SecondaryWeapon;
+                    if (ModeData.RandomWeapons)
+                    {
+                        SecondaryWeapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
+                    }
+                    else if (string.IsNullOrEmpty(SecondaryWeapon) || !AllowedSecondaryWeaponsList.Contains(SecondaryWeapon))
+                    {
+                        SecondaryWeapon = AllowedSecondaryWeaponsList.Count switch
+                        {
+                            1 => AllowedSecondaryWeaponsList[0],
+                            _ => Config.Gameplay.DefaultModeWeapons switch
+                            {
+                                2 => GetRandomWeaponFromList(AllowedSecondaryWeaponsList),
+                                1 => AllowedSecondaryWeaponsList[0],
+                                _ => ""
+                            }
+                        };
+                    }
+                    else
+                    {
+                        if (CheckIsWeaponRestricted(SecondaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                        {
+                            playerData[player].SecondaryWeapon = "";
+                            string localizerWeaponName = Localizer[SecondaryWeapon];
+                            RestrictedWeaponsInfo restrict = RestrictedWeapons[SecondaryWeapon];
+                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+
+                            SecondaryWeapon = Config.Gameplay.DefaultModeWeapons switch
+                            {
+                                2 => GetRandomWeaponFromList(AllowedSecondaryWeaponsList),
+                                1 => AllowedSecondaryWeaponsList[0],
+                                _ => ""
+                            };
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(SecondaryWeapon))
+                    {
+                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
+                    }
+                    else
+                    {
+                        player.GiveNamedItem(SecondaryWeapon);
+                    }
+                }
+                return;
+            }
+
+            AddTimer(0.2f, () =>
+            {
+                if (player == null && !player!.IsValid)
+                    return;
+
+                player!.InGameMoneyServices!.Account = 0;
+
+                int slot = IsHaveWeaponFromSlot(player, slot: 0);
+                if (slot == 1 || slot == 2)
+                    return;
+
+                if (AllowedPrimaryWeaponsList.Count != 0)
+                {
+                    player.GiveNamedItem(GetRandomWeaponFromList(AllowedPrimaryWeaponsList));
                 }
                 if (AllowedSecondaryWeaponsList.Count != 0)
                 {
-                    if (ModeData.RandomWeapons)
-                    {
-                        int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
-                        player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
-                    }
-                    else if (!string.IsNullOrEmpty(playerData[player].SecondaryWeapon) && AllowedSecondaryWeaponsList.Count > 1)
-                    {
-                        if (AllowedSecondaryWeaponsList.Contains(playerData[player].SecondaryWeapon))
-                        {
-                            if (CheckIsWeaponRestricted(playerData[player].SecondaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
-                            {
-                                playerData[player].SecondaryWeapon = "";
-                                string localizerWeaponName = Localizer[playerData[player].SecondaryWeapon];
-                                RestrictedWeaponsInfo restrict = RestrictedWeapons[playerData[player].SecondaryWeapon];
-                                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
-                                if (Config.Gameplay.DefaultModeWeapons == 2)
-                                {
-                                    int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
-                                    player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
-                                }
-                                else if (Config.Gameplay.DefaultModeWeapons == 1)
-                                {
-                                    player.GiveNamedItem(AllowedSecondaryWeaponsList[0]);
-                                }
-                                else
-                                {
-                                    if (!SetupWeaponsMsg)
-                                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                                }
-                            }
-                            else
-                            {
-                                player.GiveNamedItem(playerData[player].SecondaryWeapon);
-                            }
-                        }
-                        else
-                        {
-                            string replacedweaponName = Localizer[playerData[player].SecondaryWeapon];
-                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Disabled", replacedweaponName]}");
-
-                            if (Config.Gameplay.DefaultModeWeapons == 2)
-                            {
-                                int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
-                                player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
-                            }
-                            else if (Config.Gameplay.DefaultModeWeapons == 1)
-                            {
-                                player.GiveNamedItem(AllowedSecondaryWeaponsList[0]);
-                            }
-                            else
-                            {
-                                if (!SetupWeaponsMsg)
-                                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (AllowedSecondaryWeaponsList.Count == 1)
-                        {
-                            player.GiveNamedItem(AllowedSecondaryWeaponsList[0]);
-                        }
-                        else
-                        {
-                            if (Config.Gameplay.DefaultModeWeapons == 2)
-                            {
-                                int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
-                                player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
-                            }
-                            else if (Config.Gameplay.DefaultModeWeapons == 1)
-                            {
-                                player.GiveNamedItem(AllowedSecondaryWeaponsList[0]);
-                            }
-                            else
-                            {
-                                if (!SetupWeaponsMsg)
-                                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
-                            }
-                        }
-                    }
+                    player.GiveNamedItem(GetRandomWeaponFromList(AllowedSecondaryWeaponsList));
                 }
-            }
-            else if (player != null && player.IsValid && !player.IsHLTV)
-            {
-                player.InGameMoneyServices!.Account = 0;
-                AddTimer(0.2f, () =>
-                {
-                    int slot = IsHaveWeaponFromSlot(player, slot: 0);
-                    if (slot == 1 || slot == 2)
-                    {
-                        return;
-                    }
-                    if (AllowedPrimaryWeaponsList.Count != 0)
-                    {
-                        int weapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
-                        player.GiveNamedItem(AllowedPrimaryWeaponsList[weapon]);
-                    }
-                    if (AllowedSecondaryWeaponsList.Count != 0)
-                    {
-                        int weapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
-                        player.GiveNamedItem(AllowedSecondaryWeaponsList[weapon]);
-                    }
-                }, TimerFlags.STOP_ON_MAPCHANGE);
-            }
+            }, TimerFlags.STOP_ON_MAPCHANGE);
         }
         public static void RespawnPlayer(CCSPlayerController player, string[] spawn, bool teleport = true)
         {

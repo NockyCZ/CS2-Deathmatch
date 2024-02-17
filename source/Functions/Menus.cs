@@ -16,12 +16,10 @@ namespace Deathmatch
         List<(string, bool, int)> PrefsMenuSounds = new List<(string, bool, int)>();
         List<(string, bool, int)> PrefsMenuFunctions = new List<(string, bool, int)>();
 
-        delegate void OnSelectSwitchPrefDelegate(CCSPlayerController player, ChatMenuOption option);
-
-        private void OnSelectSubMenu(CCSPlayerController player, ChatMenuOption option)
+        private void OnSelectSubMenu(CCSPlayerController player, ChatMenuOption option, int menutype)
         {
-            playerData[player].OpenedMenu = option.Text.Contains("Sounds") ? 1 : 2;
-            OpenSubMenu(player, playerData[player].OpenedMenu);
+            playerData[player].OpenedMenu = menutype;
+            OpenSubMenu(player, menutype);
         }
         private void OnSelectBack(CCSPlayerController player, ChatMenuOption option)
         {
@@ -31,25 +29,19 @@ namespace Deathmatch
         {
             playerData[player].OpenedMenu = 0;
 
-            var Menu = new CenterHtmlMenu($"Deathmatch Menu<br>");
-            Menu.AddMenuOption($"Functions Menu", OnSelectSubMenu);
-            Menu.AddMenuOption($"Sounds Menu", OnSelectSubMenu);
+            var Menu = new CenterHtmlMenu($"{Localizer["Menu.Title"]}<br>");
+            Menu.AddMenuOption($"{Localizer["Menu.Functions"]}", (player, opt) => OnSelectSubMenu(player, opt, 2));
+            Menu.AddMenuOption($"{Localizer["Menu.Sounds"]}", (player, opt) => OnSelectSubMenu(player, opt, 1));
 
             MenuManager.OpenCenterHtmlMenu(DeathmatchCore.Instance, player!, Menu);
         }
-        private void OnSelectSwtichPref(CCSPlayerController player, ChatMenuOption option)
-        {
-            //SwitchPrefsValue(player, GetPrefsIDbyName(option.Text));
-            //OpenSubMenu(player, playerData[player].OpenedMenu);
-        }
-
-        private void OnSelectSwtichPref(CCSPlayerController player, ChatMenuOption option, int preference)
+        private void OnSelectSwitchPref(CCSPlayerController player, ChatMenuOption option, int preference, bool solo = false)
         {
             SwitchPrefsValue(player, preference);
-            OpenSubMenu(player, playerData[player].OpenedMenu);
+            OpenSubMenu(player, playerData[player].OpenedMenu, solo);
         }
 
-        public void OpenSubMenu(CCSPlayerController player, int menu)
+        public void OpenSubMenu(CCSPlayerController player, int menu, bool solo = false)
         {
             var PrefsMenu = menu == 1 ? PrefsMenuSounds : PrefsMenuFunctions;
             var title = menu == 1 ? Localizer["Menu.SoundsTitle"] : Localizer["Menu.FunctionsTitle"];
@@ -64,10 +56,12 @@ namespace Deathmatch
 
                 if (options.Item2 && IsVIP || !options.Item2)
                 {
-                    Menu.AddMenuOption($"{Localizer[options.Item1]} [{Value}]", (p, opt) => OnSelectSwtichPref(player, opt, options.Item3));
+                    Menu.AddMenuOption($"{Localizer[options.Item1]} [{Value}]", (player, opt) => OnSelectSwitchPref(player, opt, options.Item3, solo));
                 }
             }
-            Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
+            if (solo)
+                Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
+
             MenuManager.OpenCenterHtmlMenu(DeathmatchCore.Instance, player!, Menu);
         }
 
