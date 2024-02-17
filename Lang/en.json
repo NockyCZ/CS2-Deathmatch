@@ -23,11 +23,8 @@
   "Menu.Back": "Back",
   "Menu.Enabled": "enabled",
   "Menu.Disabled": "disabled",
-<<<<<<< HEAD
   "Menu.Sounds": "Sounds Menu",
   "Menu.Functions": "Functions Menu",
-=======
->>>>>>> 254487520697e0732fff497148c1ee7954d8ff67
   "Prefs.KillSound": "Kill Sound",
   "Prefs.HeadshotKillSound": "HS Kill Sound",
   "Prefs.KnifeKillSound": "Knife Kill Sound",
