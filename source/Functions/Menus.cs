@@ -59,7 +59,7 @@ namespace Deathmatch
                     Menu.AddMenuOption($"{Localizer[options.Item1]} [{Value}]", (player, opt) => OnSelectSwitchPref(player, opt, options.Item3, solo));
                 }
             }
-            if (solo)
+            if (!solo)
                 Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
 
             MenuManager.OpenCenterHtmlMenu(DeathmatchCore.Instance, player!, Menu);

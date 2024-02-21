@@ -59,7 +59,7 @@ public class PlayersPreferences
     [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new HSKillSound();
     [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new KnifeKillSound();
     [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new HitSound();
-    [JsonPropertyName("Only Headsnhot")] public OnlyHS OnlyHS { get; set; } = new OnlyHS();
+    [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new OnlyHS();
     [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new HudMessages();
 }
 // sounds/ui/beepclear.vsnd_c
@@ -147,7 +147,7 @@ public static class Configuration
         {
             using (StreamWriter writer = new StreamWriter(filepath))
             {
-                writer.Write("sv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 0\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
+                writer.Write("sv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 1\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
             }
             CustomCvarsList = new List<string>(File.ReadLines(filepath));
         }
