@@ -3,7 +3,7 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 Use gamemodes like `Custom` or `Casual` for the plugin to work properly.<br>
 Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
 
-> LAST UPDATE OF WIKI IS FOR VERSION 1.0.4 (Will be updated soon)
+> LAST UPDATE OF WIKI IS FOR VERSION 1.0.3 (Will be updated soon)
 
 ### Main features
 1. [Weapon Selection](#how-weapon-selection-works)
