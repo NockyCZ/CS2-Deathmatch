@@ -9,6 +9,7 @@ namespace Deathmatch
 {
     public partial class DeathmatchCore
     {
+        public List<CCSPlayerController> blockRandomWeaponsIntegeration = new List<CCSPlayerController>();
         public class DeathmatchPlayerData
         {
             public required string PrimaryWeapon { get; set; }
@@ -205,6 +206,11 @@ namespace Deathmatch
                     playerData[player].SpawnProtection = true;
                     var timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.ProtectionTimeVIP : Config.PlayersSettings.ProtectionTime;
                     AddTimer(timer, () => playerData[player].SpawnProtection = false, TimerFlags.STOP_ON_MAPCHANGE);
+                    if (!IsCasualGamemode && !blockRandomWeaponsIntegeration.Contains(player))
+                    {
+                        blockRandomWeaponsIntegeration.Add(player);
+                        AddTimer(0.25f, () => blockRandomWeaponsIntegeration.Remove(player), TimerFlags.STOP_ON_MAPCHANGE);
+                    }
                 }
 
                 int slot = IsHaveWeaponFromSlot(player, 0);
@@ -329,23 +335,6 @@ namespace Deathmatch
                     player.GiveNamedItem(GetRandomWeaponFromList(AllowedSecondaryWeaponsList));
                 }
             }, TimerFlags.STOP_ON_MAPCHANGE);
-        }
-        public static void RespawnPlayer(CCSPlayerController player, string[] spawn, bool teleport = true)
-        {
-            if (!player.IsValid || !player.PlayerPawn.IsValid || player.PawnIsAlive)
-                return;
-
-            if (player.TeamNum == 2 || player.TeamNum == 3)
-            {
-                player.Respawn();
-
-                if (teleport)
-                {
-                    var position = ParseVector(spawn[0]);
-                    var angle = ParseQAngle(spawn[1]);
-                    player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
-                }
-            }
         }
         public static bool IsPlayerValid(CCSPlayerController player)
         {

@@ -12,12 +12,12 @@ using CounterStrikeSharp.API.Modules.Menu;
 
 namespace Deathmatch;
 
-[MinimumApiVersion(166)]
+[MinimumApiVersion(178)]
 public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0.7";
+    public override string ModuleVersion => "1.0.8";
     public static DeathmatchCore Instance { get; set; } = new();
     public class ModeInfo
     {
@@ -27,7 +27,6 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
         public bool OnlyHS { get; set; } = false;
         public bool KnifeDamage { get; set; } = true;
         public bool RandomWeapons { get; set; } = true;
-        public bool CenterMessage { get; set; } = false;
         public string CenterMessageText { get; set; } = "";
     }
 
@@ -66,6 +65,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     public static bool g_bIsActiveEditor = false;
     public static bool g_bDefaultMapSpawnDisabled = false;
     public static bool g_bWeaponRestrictGlobal;
+    public static bool IsCasualGamemode;
 
     public MemoryFunctionWithReturn<CCSPlayer_ItemServices, CEconItemView, AcquireMethod, NativeObject, AcquireResult>? CCSPlayer_CanAcquireFunc;
     public MemoryFunctionWithReturn<int, string, CCSWeaponBaseVData>? GetCSWeaponDataFromKeyFunc;
@@ -111,6 +111,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             AddCustomCommands(cmd, "", 3);
         foreach (string radioName in RadioMessagesList)
             AddCommandListener(radioName, OnPlayerRadioMessage);
+        AddCommandListener("autobuy", OnRandomWeapons);
 
         RegisterListener<Listeners.OnMapEnd>(() => { modeTimer?.Kill(); });
         RegisterListener<Listeners.OnMapStart>(mapName =>
@@ -152,14 +153,11 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
 
                     }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
-                AddTimer(1.0f, () =>
-                {
-                    RemoveEntities();
-                    LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
-                    SetupDeathMatchConfigValues();
-                    SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
-                    SetupDeathmatchMenus();
-                });
+                RemoveEntities();
+                SetupDeathMatchConfigValues();
+                SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
+                SetupDeathmatchMenus();
+                LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
             });
         });
         RegisterListener<Listeners.OnTick>(() =>
@@ -177,7 +175,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             {
                 foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
                 {
-                    if (ModeData.CenterMessage && !string.IsNullOrEmpty(ModeData.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
+                    if (!string.IsNullOrEmpty(ModeData.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
                     {
                         p.PrintToCenterHtml($"{ModeData.CenterMessageText}");
                     }
@@ -223,7 +221,6 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
                 ModeData.OnlyHS = modeValue["only_hs"]?.Value<bool>() ?? false;
                 ModeData.KnifeDamage = modeValue["allow_knife_damage"]?.Value<bool>() ?? true;
                 ModeData.RandomWeapons = modeValue["random_weapons"]?.Value<bool>() ?? false;
-                ModeData.CenterMessage = modeValue["allow_center_message"]?.Value<bool>() ?? false;
                 ModeData.CenterMessageText = modeValue["center_message_text"]?.ToString() ?? "";
                 g_iActiveMode = int.Parse(modetype);
 
@@ -298,6 +295,10 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
     }
     public void SetupDeathMatchConfigValues()
     {
+        var gameType = ConVar.Find("game_type")!.GetPrimitiveValue<int>();
+        Server.PrintToConsole($"gametype {gameType}");
+        IsCasualGamemode = gameType != 1;
+
         var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
         var time = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>();
         var iFFA = Config.Gameplay.IsFFA ? 1 : 0;
@@ -310,6 +311,12 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
             Server.ExecuteCommand("mp_buy_anywhere 1;mp_buytime 60000;mp_buy_during_immunity 0");
         else
             Server.ExecuteCommand("mp_buy_anywhere 0;mp_buytime 0;mp_buy_during_immunity 0");
+
+        if (!IsCasualGamemode)
+        {
+            var TeamMode = Config.Gameplay.IsFFA ? 0 : 1;
+            Server.ExecuteCommand($"mp_dm_teammode {TeamMode}; mp_dm_bonus_length_max 0;mp_dm_bonus_length_min 0;mp_dm_time_between_bonus_max 9999;mp_dm_time_between_bonus_min 9999;mp_respawn_immunitytime 0");
+        }
     }
     public int GetModeType()
     {

@@ -231,7 +231,7 @@ namespace Deathmatch
         }
         public int IsHaveWeaponFromSlot(CCSPlayerController player, int slot)
         {
-            if (!player.IsValid && player == null && player!.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
                 return 3;
 
             foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)

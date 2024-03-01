@@ -37,6 +37,7 @@ public class Gameplay
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
     [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
+    [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
 }
 public class General

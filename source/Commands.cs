@@ -131,6 +131,11 @@ namespace Deathmatch
         [RequiresPermissions("@css/root")]
         public void OnEditor_CMD(CCSPlayerController player, CommandInfo info)
         {
+            if (Config.Gameplay.DefaultSpawns)
+            {
+                info.ReplyToCommand($"{Localizer["Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
+                return;
+            }
             g_bIsActiveEditor = !g_bIsActiveEditor;
             info.ReplyToCommand($"{Localizer["Prefix"]} Spawn Editor has been {ChatColors.Green}{(g_bIsActiveEditor ? "Enabled" : "Disabled")}");
             if (g_bIsActiveEditor)

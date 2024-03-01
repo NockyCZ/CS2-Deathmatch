@@ -101,30 +101,7 @@ namespace Deathmatch
                 timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.RespawnTimeVIP : Config.PlayersSettings.RespawnTime;
                 @event.FireEventToClient(player);
             }
-
-            AddTimer(timer, () =>
-            {
-                if (player != null && player.IsValid)
-                {
-                    string[] spawns = CheckAvaibleSpawns(player, player.TeamNum, IsBot);
-                    if (!string.IsNullOrEmpty(spawns[0]))
-                    {
-                        switch (spawns[0])
-                        {
-                            case "not found":
-                                RespawnPlayer(player, spawns, false);
-                                SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected.", ConsoleColor.DarkYellow);
-                                break;
-                            case "default":
-                                RespawnPlayer(player, spawns, false);
-                                break;
-                            default:
-                                RespawnPlayer(player, spawns);
-                                break;
-                        }
-                    }
-                }
-            }, TimerFlags.STOP_ON_MAPCHANGE);
+            AddTimer(timer, () => { PerformRespawn(player, player.TeamNum, IsBot); }, TimerFlags.STOP_ON_MAPCHANGE);
 
             if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
             {
@@ -191,37 +168,30 @@ namespace Deathmatch
 
             return HookResult.Continue;
         }
+
+        private HookResult OnRandomWeapons(CCSPlayerController? player, CommandInfo info)
+        {
+            return HookResult.Stop;
+        }
         private HookResult OnTakeDamage(DynamicHook hook)
         {
-            var p = hook.GetParam<CEntityInstance>(0).Index;
-            if (p == 0)
-                return HookResult.Continue;
-
-            var playerPawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)p);
-            if (playerPawn.OriginalController.Value is not { } player)
-                return HookResult.Continue;
-
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
-            var a = damageInfo.Attacker.Index;
 
-            if (a == 0)
+            var player = new CCSPlayerController(new CCSPlayerPawn(hook.GetParam<CEntityInstance>(0).Handle).Controller.Value!.Handle);
+            var attacker = new CCSPlayerController(new CCSPlayerPawn(damageInfo.Attacker.Value!.Handle).Controller.Value!.Handle);
+
+            if (player == null || !player.IsValid || attacker == null || !attacker.IsValid)
                 return HookResult.Continue;
 
-            var attackerPawn = Utilities.GetEntityFromIndex<CCSPlayerPawn>((int)a);
-            if (attackerPawn.OriginalController.Value is not { } attacker)
-                return HookResult.Continue;
-
-            if (player != null && player.IsValid && attacker != null && attacker.IsValid)
+            if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
             {
-                if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
-                {
-                    damageInfo.Damage = 0;
-                }
-                if (!ModeData.KnifeDamage && damageInfo.Ability.IsValid && (damageInfo.Ability.Value!.DesignerName.Contains("knife") || damageInfo.Ability.Value!.DesignerName.Contains("bayonet")))
-                {
-                    attacker.PrintToCenter(Localizer["Knife_damage_disabled"]);
-                    damageInfo.Damage = 0;
-                }
+                damageInfo.Damage = 0;
+                return HookResult.Continue;
+            }
+            if (!ModeData.KnifeDamage && damageInfo.Ability.IsValid && (damageInfo.Ability.Value!.DesignerName.Contains("knife") || damageInfo.Ability.Value!.DesignerName.Contains("bayonet")))
+            {
+                attacker.PrintToCenter(Localizer["Knife_damage_disabled"]);
+                damageInfo.Damage = 0;
             }
             return HookResult.Continue;
         }
@@ -246,6 +216,12 @@ namespace Deathmatch
                 return HookResult.Continue;
             }
 
+            if (!IsCasualGamemode && blockRandomWeaponsIntegeration.Contains(player))
+            {
+                hook.SetReturn(AcquireResult.AlreadyPurchased);
+                return HookResult.Stop;
+            }
+
             if (ModeData.RandomWeapons)
             {
                 if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
@@ -257,15 +233,6 @@ namespace Deathmatch
 
             if (!AllowedPrimaryWeaponsList.Contains(vdata!.Name!) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
             {
-                /*if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet"))
-                {
-                    if (player.IsBot)
-                    {
-                        hook.SetReturn(AcquireResult.AlreadyPurchased);
-                        return HookResult.Stop;
-                    }
-                    return HookResult.Continue;
-                }*/
                 if (!player.IsBot)
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))

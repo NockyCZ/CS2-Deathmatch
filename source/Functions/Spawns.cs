@@ -15,16 +15,10 @@ namespace Deathmatch
         public static Dictionary<string, string> spawnPositionsCT = new Dictionary<string, string>();
         public static Dictionary<string, string> spawnPositionsT = new Dictionary<string, string>();
 
-        public string[] CheckAvaibleSpawns(CCSPlayerController player, int team, bool IsBot)
+        public void PerformRespawn(CCSPlayerController player, int team, bool IsBot)
         {
-            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance || !g_bDefaultMapSpawnDisabled)
-            {
-                return new string[] { "default" };
-            }
-            if (team == 1 || team == 0)
-            {
-                return new string[] { "" };
-            }
+            if (player == null || !player.IsValid || !player.PlayerPawn.IsValid || player.PawnIsAlive || team == 1 || team == 0)
+                return;
 
             var spawnsDictionary = team == (byte)CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
             var spawnsList = spawnsDictionary.ToList();
@@ -33,6 +27,22 @@ namespace Deathmatch
 
             Random random = new Random();
             spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
+
+            var randomSpawn = spawnsList.FirstOrDefault();
+            Vector position;
+            QAngle angle;
+
+            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance || !g_bDefaultMapSpawnDisabled || Config.Gameplay.DefaultSpawns)
+            {
+                if (!IsBot)
+                    playerData[player].LastSpawn = randomSpawn.Key;
+
+                player.Respawn();
+                position = ParseVector(randomSpawn.Key);
+                angle = ParseQAngle(randomSpawn.Value);
+                player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
+                return;
+            }
 
             var closestDistances = CalculateClosestDistances(player, spawnsList);
 
@@ -47,13 +57,22 @@ namespace Deathmatch
             {
                 if (!IsBot)
                     playerData[player].LastSpawn = Spawn.Key;
-                return new string[] { Spawn.Key, Spawn.Value };
+
+                player.Respawn();
+                position = ParseVector(Spawn.Key);
+                angle = ParseQAngle(Spawn.Value);
+                player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
+                return;
             }
 
             if (!IsBot)
-                playerData[player].LastSpawn = "0";
+                playerData[player].LastSpawn = randomSpawn.Key;
 
-            return new string[] { "not found" };
+            player.Respawn();
+            position = ParseVector(randomSpawn.Key);
+            angle = ParseQAngle(randomSpawn.Value);
+            player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
+            SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected.", ConsoleColor.DarkYellow);
         }
 
         private Dictionary<string, double> CalculateClosestDistances(CCSPlayerController player, List<KeyValuePair<string, string>> spawnsList)
@@ -239,38 +258,65 @@ namespace Deathmatch
         {
             if (!g_bDefaultMapSpawnDisabled)
             {
-                int iDefaultCTSpawns = 0;
-                int iDefaultTSpawns = 0;
-                var ctSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_counterterrorist");
-                foreach (var entity in ctSpawns)
+                if (IsCasualGamemode)
                 {
-                    if (entity.IsValid)
+                    int iDefaultCTSpawns = 0;
+                    int iDefaultTSpawns = 0;
+                    var ctSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist");
+                    foreach (var entity in ctSpawns)
                     {
-                        entity.AcceptInput("SetDisabled");
-                        iDefaultCTSpawns++;
+                        if (entity.IsValid)
+                        {
+                            entity.AcceptInput("SetDisabled");
+                            iDefaultCTSpawns++;
+                        }
                     }
+                    var tSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist");
+                    foreach (var entity in tSpawns)
+                    {
+                        if (entity.IsValid)
+                        {
+                            entity.AcceptInput("SetDisabled");
+                            iDefaultTSpawns++;
+                        }
+                    }
+                    SendConsoleMessage($"[Deathmatch] Total {iDefaultTSpawns} T and {iDefaultCTSpawns} CT default Spawns disabled!", ConsoleColor.Green);
                 }
-                var tSpawns = Utilities.FindAllEntitiesByDesignerName<CBaseEntity>("info_player_terrorist");
-                foreach (var entity in tSpawns)
+                else
                 {
-                    if (entity.IsValid)
+                    int DMSpawns = 0;
+                    var dmSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn");
+                    foreach (var entity in dmSpawns)
                     {
-                        entity.AcceptInput("SetDisabled");
-                        iDefaultTSpawns++;
+                        if (entity.IsValid)
+                        {
+                            entity.AcceptInput("SetDisabled");
+                            DMSpawns++;
+                        }
                     }
+                    SendConsoleMessage($"[Deathmatch] Total {DMSpawns} default Spawns disabled!", ConsoleColor.Green);
+
                 }
-                SendConsoleMessage($"[Deathmatch] Total {iDefaultTSpawns} T and {iDefaultCTSpawns} CT default Spawns disabled!", ConsoleColor.Green);
                 g_bDefaultMapSpawnDisabled = true;
                 CreateCustomMapSpawns();
             }
         }
         public static void CreateCustomMapSpawns()
         {
+            string infoPlayerCT = IsCasualGamemode ? "info_player_counterterrorist" : "info_deathmatch_spawn";
+            string infoPlayerT = IsCasualGamemode ? "info_player_terrorist" : "info_deathmatch_spawn";
+
             foreach (var spawn in spawnPositionsCT)
             {
                 var position = ParseVector(spawn.Key);
                 var angle = ParseQAngle(spawn.Value);
-                var entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>("info_player_counterterrorist");
+
+                CBaseEntity entity;
+                if (IsCasualGamemode)
+                    entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerCT)!;
+                else
+                    entity = Utilities.CreateEntityByName<CInfoDeathmatchSpawn>(infoPlayerCT)!;
+
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for CT", ConsoleColor.DarkYellow);
@@ -283,7 +329,11 @@ namespace Deathmatch
             {
                 var position = ParseVector(spawn.Key);
                 var angle = ParseQAngle(spawn.Value);
-                var entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>("info_player_terrorist");
+                CBaseEntity entity;
+                if (IsCasualGamemode)
+                    entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerT)!;
+                else
+                    entity = Utilities.CreateEntityByName<CInfoDeathmatchSpawn>(infoPlayerT)!;
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for T", ConsoleColor.DarkYellow);
@@ -293,40 +343,61 @@ namespace Deathmatch
                 entity.DispatchSpawn();
             }
         }
-        public static void LoadMapSpawns(string filepath, bool mapstart)
+        public void LoadMapSpawns(string filepath, bool mapstart)
         {
             spawnPositionsCT.Clear();
             spawnPositionsT.Clear();
-
-            if (!File.Exists(filepath))
+            if (Config.Gameplay.DefaultSpawns)
             {
-                SendConsoleMessage($"[Deathmatch] No spawn points found for this map! (Deathmatch/spawns/{Server.MapName}.json)", ConsoleColor.Red);
-            }
-            else
-            {
-                var jsonContent = File.ReadAllText(filepath);
-                JObject jsonData = JsonConvert.DeserializeObject<JObject>(jsonContent)!;
-
-                foreach (var teamData in jsonData["spawnpoints"]!)
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
                 {
-                    string teamType = teamData["team"]!.ToString();
-                    string pos = teamData["pos"]!.ToString();
-                    string angle = teamData["angle"]!.ToString();
+                    if (spawn == null)
+                        return;
+                    spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                }
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
+                {
+                    if (spawn == null)
+                        return;
 
-                    if (teamType == "ct")
-                    {
-                        spawnPositionsCT.Add(pos, angle);
-                    }
-                    else if (teamType == "t")
-                    {
-                        spawnPositionsT.Add(pos, angle);
-                    }
+                    spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
                 }
 
                 g_iTotalCTSpawns = spawnPositionsCT.Count;
                 g_iTotalTSpawns = spawnPositionsT.Count;
-                if (mapstart)
-                    RemoveMapDefaulSpawns();
+            }
+            else
+            {
+                if (!File.Exists(filepath))
+                {
+                    SendConsoleMessage($"[Deathmatch] No spawn points found for this map! (Deathmatch/spawns/{Server.MapName}.json)", ConsoleColor.Red);
+                }
+                else
+                {
+                    var jsonContent = File.ReadAllText(filepath);
+                    JObject jsonData = JsonConvert.DeserializeObject<JObject>(jsonContent)!;
+
+                    foreach (var teamData in jsonData["spawnpoints"]!)
+                    {
+                        string teamType = teamData["team"]!.ToString();
+                        string pos = teamData["pos"]!.ToString();
+                        string angle = teamData["angle"]!.ToString();
+
+                        if (teamType == "ct")
+                        {
+                            spawnPositionsCT.Add(pos, angle);
+                        }
+                        else if (teamType == "t")
+                        {
+                            spawnPositionsT.Add(pos, angle);
+                        }
+                    }
+
+                    g_iTotalCTSpawns = spawnPositionsCT.Count;
+                    g_iTotalTSpawns = spawnPositionsT.Count;
+                    if (mapstart)
+                        RemoveMapDefaulSpawns();
+                }
             }
         }
         private static Vector ParseVector(string pos)
