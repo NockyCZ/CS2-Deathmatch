@@ -1,6 +1,6 @@
 # CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 166<br>
-Use gamemodes like `Custom` or `Casual` for the plugin to work properly.<br>
+CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 178<br>
+Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
 Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
 
 > LAST UPDATE OF WIKI IS FOR VERSION 1.0.3 (Will be updated soon)
