@@ -174,7 +174,6 @@ public static class Configuration
                         ["only_hs"] = false,
                         ["allow_knife_damage"] = true,
                         ["random_weapons"] = false,
-                        ["allow_center_message"] = false,
                         ["center_message_text"] = "",
                         ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
                         ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" }
@@ -187,7 +186,6 @@ public static class Configuration
                         ["only_hs"] = true,
                         ["allow_knife_damage"] = false,
                         ["random_weapons"] = false,
-                        ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
                         ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
                         ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" },
@@ -200,7 +198,6 @@ public static class Configuration
                         ["only_hs"] = false,
                         ["allow_knife_damage"] = true,
                         ["random_weapons"] = false,
-                        ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='green'>Only Deagle</font>",
                         ["primary_weapons"] = new JArray { },
                         ["secondary_weapons"] = new JArray { "weapon_deagle" },
@@ -213,7 +210,6 @@ public static class Configuration
                         ["only_hs"] = false,
                         ["allow_knife_damage"] = true,
                         ["random_weapons"] = false,
-                        ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='blue'>Only Pistols</font>",
                         ["primary_weapons"] = new JArray { },
                         ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_cz75a", "weapon_elite", "weapon_fiveseven", "weapon_tec9", "weapon_hkp2000" }
@@ -226,7 +222,6 @@ public static class Configuration
                         ["only_hs"] = false,
                         ["allow_knife_damage"] = true,
                         ["random_weapons"] = true,
-                        ["allow_center_message"] = true,
                         ["center_message_text"] = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font>",
                         ["primary_weapons"] = new JArray { "weapon_p90", "weapon_bizon", "weapon_mp5sd", "weapon_mp7", "weapon_mp9", "weapon_mac10", "weapon_ump45" },
                         ["secondary_weapons"] = new JArray { }

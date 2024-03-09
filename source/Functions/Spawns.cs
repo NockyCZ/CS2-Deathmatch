@@ -21,14 +21,21 @@ namespace Deathmatch
                 return;
 
             var spawnsDictionary = team == (byte)CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
+
             var spawnsList = spawnsDictionary.ToList();
             if (!IsBot)
                 spawnsList.RemoveAll(x => x.Key == playerData[player].LastSpawn);
 
-            Random random = new Random();
-            spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
+            if (spawnsList.Count == 0)
+            {
+                player.Respawn();
+                SendConsoleMessage("[Deathmatch] Spawns list is empty, you got something wrong!", ConsoleColor.Red);
+                return;
+            }
 
-            var randomSpawn = spawnsList.FirstOrDefault();
+            Random random = new Random();
+            int selectRadnomSpawn = random.Next(0, spawnsList.Count);
+            var randomSpawn = spawnsList.ElementAt(selectRadnomSpawn);
             Vector position;
             QAngle angle;
 
@@ -44,6 +51,7 @@ namespace Deathmatch
                 return;
             }
 
+            spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
             var closestDistances = CalculateClosestDistances(player, spawnsList);
 
             var Spawn = spawnsList.FirstOrDefault(spawn =>
@@ -349,18 +357,41 @@ namespace Deathmatch
             spawnPositionsT.Clear();
             if (Config.Gameplay.DefaultSpawns)
             {
-                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
+                if (IsCasualGamemode)
                 {
-                    if (spawn == null)
-                        return;
-                    spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                }
-                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
-                {
-                    if (spawn == null)
-                        return;
+                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
+                    {
+                        if (spawn == null)
+                            return;
+                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
+                    {
+                        if (spawn == null)
+                            return;
 
-                    spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+                }
+                else
+                {
+                    int randomizer = 0;
+                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn"))
+                    {
+                        randomizer++;
+                        if (randomizer % 2 == 0)
+                        {
+                            if (spawn == null)
+                                return;
+                            spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                        }
+                        else
+                        {
+                            if (spawn == null)
+                                return;
+                            spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                        }
+                    }
                 }
 
                 g_iTotalCTSpawns = spawnPositionsCT.Count;
@@ -371,6 +402,23 @@ namespace Deathmatch
                 if (!File.Exists(filepath))
                 {
                     SendConsoleMessage($"[Deathmatch] No spawn points found for this map! (Deathmatch/spawns/{Server.MapName}.json)", ConsoleColor.Red);
+
+                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
+                    {
+                        if (spawn == null)
+                            return;
+                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
+                    {
+                        if (spawn == null)
+                            return;
+
+                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+
+                    g_iTotalCTSpawns = spawnPositionsCT.Count;
+                    g_iTotalTSpawns = spawnPositionsT.Count;
                 }
                 else
                 {

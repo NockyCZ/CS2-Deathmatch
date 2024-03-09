@@ -101,7 +101,11 @@ namespace Deathmatch
                 timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.RespawnTimeVIP : Config.PlayersSettings.RespawnTime;
                 @event.FireEventToClient(player);
             }
-            AddTimer(timer, () => { PerformRespawn(player, player.TeamNum, IsBot); }, TimerFlags.STOP_ON_MAPCHANGE);
+            AddTimer(timer, () =>
+            {
+                if (player != null && player.IsValid && !player.PawnIsAlive)
+                    PerformRespawn(player, player.TeamNum, IsBot);
+            }, TimerFlags.STOP_ON_MAPCHANGE);
 
             if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
             {
