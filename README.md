@@ -34,7 +34,7 @@ Set the map duration according to `mp_timelimit`, the roundtime is also determin
 
 ### Installation
 1. Download the latest verison - https://github.com/NockyCZ/CS2-Deathmatch/releases
-2. Unzip into your servers `csgo/addons/counterstrikesharp/plugins/` dir
+2. Unzip into your servers `csgo/addons/counterstrikesharp/` dir
 3. Restart the server
 4. Configure the config files and custom modes
 <h1></h1>
