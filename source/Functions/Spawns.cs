@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Numerics;
 using CounterStrikeSharp.API.Modules.Utils;
+using CounterStrikeSharp.API.Modules.Timers;
 
 namespace Deathmatch
 {
@@ -39,7 +40,7 @@ namespace Deathmatch
             Vector position;
             QAngle angle;
 
-            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance || !g_bDefaultMapSpawnDisabled || Config.Gameplay.DefaultSpawns)
+            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance)
             {
                 if (!IsBot)
                     playerData[player].LastSpawn = randomSpawn.Key;
@@ -48,6 +49,13 @@ namespace Deathmatch
                 position = ParseVector(randomSpawn.Key);
                 angle = ParseQAngle(randomSpawn.Value);
                 player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
+                spawnsDictionary.Remove(randomSpawn.Key);
+
+                AddTimer(5.0f, () =>
+                {
+                    if (!spawnsDictionary.ContainsKey(randomSpawn.Key))
+                        spawnsDictionary.Add(randomSpawn.Key, randomSpawn.Value);
+                }, TimerFlags.STOP_ON_MAPCHANGE);
                 return;
             }
 
@@ -357,68 +365,14 @@ namespace Deathmatch
             spawnPositionsT.Clear();
             if (Config.Gameplay.DefaultSpawns)
             {
-                if (IsCasualGamemode)
-                {
-                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
-                    {
-                        if (spawn == null)
-                            return;
-                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                    }
-                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
-                    {
-                        if (spawn == null)
-                            return;
-
-                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                    }
-                }
-                else
-                {
-                    int randomizer = 0;
-                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn"))
-                    {
-                        randomizer++;
-                        if (randomizer % 2 == 0)
-                        {
-                            if (spawn == null)
-                                return;
-                            spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                        }
-                        else
-                        {
-                            if (spawn == null)
-                                return;
-                            spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                        }
-                    }
-                }
-
-                g_iTotalCTSpawns = spawnPositionsCT.Count;
-                g_iTotalTSpawns = spawnPositionsT.Count;
+                addDefaultSpawnsToList();
             }
             else
             {
                 if (!File.Exists(filepath))
                 {
                     SendConsoleMessage($"[Deathmatch] No spawn points found for this map! (Deathmatch/spawns/{Server.MapName}.json)", ConsoleColor.Red);
-
-                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
-                    {
-                        if (spawn == null)
-                            return;
-                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                    }
-                    foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
-                    {
-                        if (spawn == null)
-                            return;
-
-                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
-                    }
-
-                    g_iTotalCTSpawns = spawnPositionsCT.Count;
-                    g_iTotalTSpawns = spawnPositionsT.Count;
+                    addDefaultSpawnsToList();
                 }
                 else
                 {
@@ -487,12 +441,54 @@ namespace Deathmatch
 
             return new Vector3(0, 0, 0);
         }
-        static double GetDistance(Vector v1, Vector v2)
+        private static double GetDistance(Vector v1, Vector v2)
         {
             double X = v1.X - v2.X;
             double Y = v1.Y - v2.Y;
 
             return Math.Sqrt(X * X + Y * Y);
+        }
+
+        public void addDefaultSpawnsToList()
+        {
+            if (IsCasualGamemode)
+            {
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
+                {
+                    if (spawn == null)
+                        return;
+                    spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                }
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
+                {
+                    if (spawn == null)
+                        return;
+                    spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                }
+            }
+            else
+            {
+                int randomizer = 0;
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn"))
+                {
+                    randomizer++;
+                    if (randomizer % 2 == 0)
+                    {
+                        if (spawn == null)
+                            return;
+                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+                    else
+                    {
+                        if (spawn == null)
+                            return;
+                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    }
+                }
+            }
+
+            g_iTotalCTSpawns = spawnPositionsCT.Count;
+            g_iTotalTSpawns = spawnPositionsT.Count;
         }
     }
 }

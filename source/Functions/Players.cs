@@ -317,10 +317,11 @@ namespace Deathmatch
 
             AddTimer(0.2f, () =>
             {
-                if (player == null && !player!.IsValid)
+                if (player == null || !player.IsValid)
                     return;
 
-                player!.InGameMoneyServices!.Account = 0;
+                if (player.InGameMoneyServices != null)
+                    player.InGameMoneyServices.Account = 0;
 
                 int slot = IsHaveWeaponFromSlot(player, slot: 0);
                 if (slot == 1 || slot == 2)

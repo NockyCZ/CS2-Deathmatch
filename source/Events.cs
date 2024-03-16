@@ -84,7 +84,7 @@ namespace Deathmatch
             CCSPlayerController attacker = @event.Attacker;
             info.DontBroadcast = true;
 
-            if (player == null && !player!.IsValid)
+            if (player == null || !player.IsValid)
                 return HookResult.Continue;
 
             var timer = Config.PlayersSettings.RespawnTime;

@@ -17,7 +17,7 @@ public partial class DeathmatchCore : BasePlugin, IPluginConfig<DeathmatchConfig
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.0.9";
+    public override string ModuleVersion => "1.1.1";
     public static DeathmatchCore Instance { get; set; } = new();
     public class ModeInfo
     {
