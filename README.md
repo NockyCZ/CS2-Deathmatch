@@ -3,6 +3,8 @@ CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/Cou
 Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
 Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
 
+**Spawns do not work properly if you have a `ServerLanguage` other than `en`**
+
 ## [Documentation/Wiki](https://docs.sourcefactory.eu/cs2-free-plugins/deathmatch)
 ## [Discord Support Server](https://discord.gg/sourcefactory)
 
