@@ -8,7 +8,7 @@ using CounterStrikeSharp.API.Modules.Admin;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
         [GameEventHandler]
         public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
@@ -30,7 +30,7 @@ namespace Deathmatch
                     HudMessages = Config.PlayersPreferences.HudMessages.Enabled ? ((Config.PlayersPreferences.HudMessages.OnlyVIP && IsVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false) || (!Config.PlayersPreferences.HudMessages.OnlyVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false)) : false,
                     SpawnProtection = false,
                     OpenedMenu = 0,
-                    LastSpawn = "0"
+                    LastSpawn = null!
                 };
                 playerData[player] = setupPlayerData;
             }
@@ -54,9 +54,9 @@ namespace Deathmatch
 
             CCSPlayerController attacker = @event.Attacker;
             CCSPlayerController player = @event.Userid;
-            if (playerData.ContainsPlayer(attacker))
+            if (ActiveMode != null && playerData.ContainsPlayer(attacker))
             {
-                if (ModeData.OnlyHS)
+                if (ActiveMode.OnlyHS)
                 {
                     if (@event.Hitgroup == 1 && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")) && playerData[attacker].HitSound)
                         attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
@@ -104,7 +104,7 @@ namespace Deathmatch
             AddTimer(timer, () =>
             {
                 if (player != null && player.IsValid && !player.PawnIsAlive)
-                    PerformRespawn(player, player.TeamNum, IsBot);
+                    PerformRespawn(player, player.Team, IsBot);
             }, TimerFlags.STOP_ON_MAPCHANGE);
 
             if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
@@ -145,6 +145,12 @@ namespace Deathmatch
                     attacker.PlayerPawn.Value.Health += giveHP;
                     Utilities.SetStateChanged(attacker.PlayerPawn.Value, "CBaseEntity", "m_iHealth");
                 }
+                
+                if (ActiveMode != null && ActiveMode.Armor != 0)
+                {
+                    string armor = ActiveMode.Armor == 1 ? "item_kevlar" : "item_assaultsuit";
+                    attacker.GiveNamedItem(armor);
+                }
                 @event.FireEventToClient(attacker);
             }
             return HookResult.Continue;
@@ -184,7 +190,7 @@ namespace Deathmatch
             var player = new CCSPlayerController(new CCSPlayerPawn(hook.GetParam<CEntityInstance>(0).Handle).Controller.Value!.Handle);
             var attacker = new CCSPlayerController(new CCSPlayerPawn(damageInfo.Attacker.Value!.Handle).Controller.Value!.Handle);
 
-            if (player == null || !player.IsValid || attacker == null || !attacker.IsValid)
+            if (player == null || !player.IsValid || attacker == null || !attacker.IsValid || ActiveMode == null)
                 return HookResult.Continue;
 
             if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
@@ -192,9 +198,9 @@ namespace Deathmatch
                 damageInfo.Damage = 0;
                 return HookResult.Continue;
             }
-            if (!ModeData.KnifeDamage && damageInfo.Ability.IsValid && (damageInfo.Ability.Value!.DesignerName.Contains("knife") || damageInfo.Ability.Value!.DesignerName.Contains("bayonet")))
+            if (!ActiveMode.KnifeDamage && damageInfo.Ability.IsValid && (damageInfo.Ability.Value!.DesignerName.Contains("knife") || damageInfo.Ability.Value!.DesignerName.Contains("bayonet")))
             {
-                attacker.PrintToCenter(Localizer["Knife_damage_disabled"]);
+                attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
                 damageInfo.Damage = 0;
             }
             return HookResult.Continue;
@@ -226,11 +232,11 @@ namespace Deathmatch
                 return HookResult.Stop;
             }
 
-            if (ModeData.RandomWeapons)
+            if (ActiveMode != null && ActiveMode.RandomWeapons)
             {
                 if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                     player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
                 hook.SetReturn(AcquireResult.AlreadyPurchased);
                 return HookResult.Stop;
             }
@@ -243,7 +249,7 @@ namespace Deathmatch
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
 
                     string replacedweaponName = Localizer[vdata.Name];
-                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Disabled", replacedweaponName]}");
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", replacedweaponName]}");
                 }
                 hook.SetReturn(AcquireResult.AlreadyPurchased);
                 return HookResult.Stop;
@@ -252,13 +258,14 @@ namespace Deathmatch
             if (playerData.ContainsPlayer(player))
             {
                 string localizerWeaponName = Localizer[vdata.Name];
-                if (CheckIsWeaponRestricted(vdata.Name, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
+                if (CheckIsWeaponRestricted(vdata.Name, IsVIP, player.Team))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
 
-                    RestrictedWeaponsInfo restrict = RestrictedWeapons[vdata.Name];
-                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+                    var restrictInfo = GetRestrictData(vdata.Name, IsVIP, player.Team);
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
                     hook.SetReturn(AcquireResult.NotAllowedByMode);
                     return HookResult.Stop;
                 }
@@ -268,12 +275,12 @@ namespace Deathmatch
                 {
                     if (vdata.Name == playerData[player].PrimaryWeapon)
                     {
-                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
                     playerData[player].PrimaryWeapon = vdata.Name;
-                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
                     if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 1) == 1)
                     {
                         hook.SetReturn(AcquireResult.AlreadyOwned);
@@ -284,12 +291,12 @@ namespace Deathmatch
                 {
                     if (vdata.Name == playerData[player].SecondaryWeapon)
                     {
-                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
                     playerData[player].SecondaryWeapon = vdata.Name;
-                    player.PrintToChat($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
                     if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 2) == 2)
                     {
                         hook.SetReturn(AcquireResult.AlreadyOwned);

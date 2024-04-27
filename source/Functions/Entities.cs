@@ -3,9 +3,8 @@ using CounterStrikeSharp.API.Core;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
-       
         public void RemoveEntities()
         {
             var bombSites = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_bomb_target");

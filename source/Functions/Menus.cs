@@ -1,21 +1,11 @@
-using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Core.Attributes.Registration;
-using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Admin;
-using CounterStrikeSharp.API.Modules.Utils;
-using CounterStrikeSharp.API.Modules.Timers;
-using System.Drawing;
 using CounterStrikeSharp.API.Modules.Menu;
-using System.Collections.Generic;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
-        List<(string, bool, int)> PrefsMenuSounds = new List<(string, bool, int)>();
-        List<(string, bool, int)> PrefsMenuFunctions = new List<(string, bool, int)>();
-
         private void OnSelectSubMenu(CCSPlayerController player, ChatMenuOption option, int menutype)
         {
             playerData[player].OpenedMenu = menutype;
@@ -29,11 +19,11 @@ namespace Deathmatch
         {
             playerData[player].OpenedMenu = 0;
 
-            var Menu = new CenterHtmlMenu($"{Localizer["Menu.Title"]}<br>");
+            var Menu = new CenterHtmlMenu($"{Localizer["Menu.Title"]}<br>", this);
             Menu.AddMenuOption($"{Localizer["Menu.Functions"]}", (player, opt) => OnSelectSubMenu(player, opt, 2));
             Menu.AddMenuOption($"{Localizer["Menu.Sounds"]}", (player, opt) => OnSelectSubMenu(player, opt, 1));
 
-            MenuManager.OpenCenterHtmlMenu(DeathmatchCore.Instance, player!, Menu);
+            Menu.Open(player);
         }
         private void OnSelectSwitchPref(CCSPlayerController player, ChatMenuOption option, int preference, bool solo = false)
         {
@@ -47,7 +37,7 @@ namespace Deathmatch
             var title = menu == 1 ? Localizer["Menu.SoundsTitle"] : Localizer["Menu.FunctionsTitle"];
 
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-            var Menu = new CenterHtmlMenu($"{title}<br>");
+            var Menu = new CenterHtmlMenu($"{title}<br>", this);
             string Value;
 
             foreach (var options in PrefsMenu)
@@ -62,7 +52,7 @@ namespace Deathmatch
             if (!solo)
                 Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
 
-            MenuManager.OpenCenterHtmlMenu(DeathmatchCore.Instance, player!, Menu);
+            Menu.Open(player);
         }
 
         private void SetupDeathmatchMenus()

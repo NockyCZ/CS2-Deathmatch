@@ -9,46 +9,49 @@ using System.Drawing;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
-        Dictionary<string, string> customShortcuts = new Dictionary<string, string>();
         private void AddCustomCommands(string command, string weapon_name, int type)
         {
             string cmdName = $"css_{command}";
             switch (type)
             {
                 case 1:
-                    AddCommand(cmdName, weapon_name, (player, info) =>
+                    AddCommand(cmdName, $"Weapon Shortcut: {weapon_name}", (player, info) =>
                     {
                         if (!playerData.ContainsPlayer(player!))
                             return;
 
-                        if (ModeData.RandomWeapons)
+                        if (ActiveMode == null)
                         {
-                            info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Custom Mode is not active, contact the Administrator!");
                             return;
                         }
-                        string weaponName = info.GetArg(0).ToLower();
-                        weaponName = weaponName.Replace("css_", "");
-                        if (customShortcuts.ContainsKey(weaponName))
+                        if (ActiveMode.RandomWeapons)
                         {
-                            string weaponID = customShortcuts.FirstOrDefault(x => x.Key == weaponName).Value;
-                            SetupPlayerWeapons(player!, weaponID, info);
+                            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
+                            return;
                         }
+                        SetupPlayerWeapons(player!, weapon_name, info);
                     });
                     break;
                 case 2:
                     AddCommand(cmdName, "Select a weapon by command", (player, info) =>
                     {
-                        string weaponName = info.GetArg(1).ToLower();
                         if (!playerData.ContainsPlayer(player!))
                             return;
-
-                        if (ModeData.RandomWeapons)
+                        if (ActiveMode == null)
                         {
-                            info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Select_Is_Disabled"]}");
+                            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Custom Mode is not active, contact the Administrator!");
                             return;
                         }
+                        if (ActiveMode.RandomWeapons)
+                        {
+                            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
+                            return;
+                        }
+
+                        string weaponName = info.GetArg(1).ToLower();
                         SetupPlayerWeapons(player!, weaponName, info);
                     });
                     break;
@@ -85,13 +88,13 @@ namespace Deathmatch
         {
             if (player.IsValid && !player.PawnIsAlive)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} You have to be alive to add a new spawn!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to add a new spawn!");
                 return;
             }
             var distance = info.GetArg(1);
             if (!int.TryParse(distance, out int radius))
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} The distance must be a number!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} The distance must be a number!");
                 return;
             }
             var position = player.PlayerPawn.Value!.AbsOrigin!;
@@ -123,6 +126,19 @@ namespace Deathmatch
         public void OnStartMode_CMD(CCSPlayerController player, CommandInfo info)
         {
             string modeid = info.GetArg(1);
+            if (int.TryParse(modeid, out _))
+            {
+                if (!CustomModes.ContainsKey(modeid))
+                {
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} A mod with a number doesn't exist!");
+                    return;
+                }
+            }
+            else
+            {
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Mode ID must be a number!");
+                return;
+            }
             SetupCustomMode(modeid);
         }
 
@@ -133,11 +149,11 @@ namespace Deathmatch
         {
             if (Config.Gameplay.DefaultSpawns)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
                 return;
             }
             g_bIsActiveEditor = !g_bIsActiveEditor;
-            info.ReplyToCommand($"{Localizer["Prefix"]} Spawn Editor has been {ChatColors.Green}{(g_bIsActiveEditor ? "Enabled" : "Disabled")}");
+            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor has been {ChatColors.Green}{(g_bIsActiveEditor ? "Enabled" : "Disabled")}");
             if (g_bIsActiveEditor)
             {
                 ShowAllSpawnPoints();
@@ -156,19 +172,20 @@ namespace Deathmatch
         {
             if (!g_bIsActiveEditor)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} Spawn Editor is disabled!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;
             }
             if (player.IsValid && !player.PawnIsAlive)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} You have to be alive to add a new spawn!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to add a new spawn!");
                 return;
             }
             var position = player.PlayerPawn.Value!.AbsOrigin;
             var angle = player.PlayerPawn.Value.AbsRotation;
             AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", $"{position}", $"{angle}", "ct");
-            info.ReplyToCommand($"{Localizer["Prefix"]} Spawn for the CT team has been added. (Total: {ChatColors.Green}{g_iTotalCTSpawns}{ChatColors.Default})");
+            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn for the CT team has been added. (Total: {ChatColors.Green}{spawnPositionsCT.Count}{ChatColors.Default})");
         }
+
         [ConsoleCommand("css_dm_addspawn_t", "Add the new T spawn point")]
         [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
         [RequiresPermissions("@css/root")]
@@ -176,19 +193,20 @@ namespace Deathmatch
         {
             if (!g_bIsActiveEditor)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} Spawn Editor is disabled!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;
             }
             if (player.IsValid && !player.PawnIsAlive)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} You have to be alive to add a new spawn!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to add a new spawn!");
                 return;
             }
             var position = player.PlayerPawn.Value!.AbsOrigin;
             var angle = player.PlayerPawn.Value.AbsRotation;
             AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", $"{position}", $"{angle}", "t");
-            info.ReplyToCommand($"{Localizer["Prefix"]} Spawn for the T team has been added. (Total: {ChatColors.Green}{g_iTotalTSpawns}{ChatColors.Default})");
+            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn for the T team has been added. (Total: {ChatColors.Green}{spawnPositionsT.Count}{ChatColors.Default})");
         }
+
         [ConsoleCommand("css_dm_removespawn", "Remove the nearest spawn point")]
         [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
         [RequiresPermissions("@css/root")]
@@ -196,23 +214,28 @@ namespace Deathmatch
         {
             if (!g_bIsActiveEditor)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} Spawn Editor is disabled!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;
             }
             if (player.IsValid && !player.PawnIsAlive)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} You have to be alive to remove a spawn!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to remove a spawn!");
                 return;
             }
-            if (g_iTotalCTSpawns < 1 && g_iTotalTSpawns < 1)
+            if (spawnPositionsCT.Count() < 1 && spawnPositionsT.Count() < 1)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} No spawns found!");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} No spawns found!");
                 return;
             }
-            var position = player.PlayerPawn.Value!.AbsOrigin!;
+            if (player.PlayerPawn.Value == null)
+            {
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} No spawns found!");
+                return;
+            }
+            var position = player.PlayerPawn.Value.AbsOrigin;
 
-            string deleted = GetNearestSpawnPoint(position[0], position[1], position[2]);
-            player.PrintToChat($"{Localizer["Prefix"]} {ChatColors.Default}{deleted}");
+            string deleted = GetNearestSpawnPoint(position);
+            player.PrintToChat($"{Localizer["Chat.Prefix"]} {ChatColors.Default}{deleted}");
         }
     }
 }

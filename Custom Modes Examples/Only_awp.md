@@ -1,19 +1,21 @@
-<h1>IN THIS MODE, PLAYERS CAN USE ONLY AWP</h1>
+<h1>IN THIS MODE, PLAYERS CAN USE ONLY AWP AND GET FLASH</h1>
 
-- Add this in your `custom_modes.json` file and edit YOUR MODE ID for valid value
+- Add this in your config file (`counterstrikesharp/configs/plugins/Deathmatch/Deathmatch.json`) and edit YOUR MODE ID for valid value
 ```
 "YOUR MODE ID": {
-    "mode_name": "Only AWP",
-    "mode_interval": 300,
-    "armor": 1,
-    "only_hs": false,
-    "allow_knife_damage": false,
-    "random_weapons": false,
-    "allow_center_message": true,
-    "center_message_text": "<font class='fontSize-l' color='red'>Only AWP</font>",
-    "primary_weapons": [
+    "Name": "Only AWP",
+    "Interval": 300,
+    "Armor": 1,
+    "OnlyHS": false,
+    "KnifeDamage": false,
+    "RandomWeapons": false,
+    "CenterMessageText": "<font class='fontSize-l' color='red'>Only AWP</font>",
+    "PrimaryWeapons": [
         "weapon_awp"
     ],
-    "secondary_weapons": []
+    "SecondaryWeapons": [],
+    "Utilities": [
+        "weapon_flashbang"
+    ]
 }
 ```

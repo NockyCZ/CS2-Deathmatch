@@ -1,31 +1,13 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Timers;
-using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
-        public List<CCSPlayerController> blockRandomWeaponsIntegeration = new List<CCSPlayerController>();
-        public class DeathmatchPlayerData
-        {
-            public required string PrimaryWeapon { get; set; }
-            public required string SecondaryWeapon { get; set; }
-            public required bool SpawnProtection { get; set; }
-            public required int KillStreak { get; set; }
-            public required bool KillSound { get; set; }
-            public required bool HSKillSound { get; set; }
-            public required bool KnifeKillSound { get; set; }
-            public required bool HitSound { get; set; }
-            public required bool OnlyHS { get; set; }
-            public required bool HudMessages { get; set; }
-            public required string LastSpawn { get; set; }
-            public required int OpenedMenu { get; set; }
-        }
-
         public void SetupPlayerWeapons(CCSPlayerController player, string weaponName, CommandInfo info)
         {
             if (string.IsNullOrEmpty(weaponName))
@@ -38,14 +20,14 @@ namespace Deathmatch
                     {
                         if (string.IsNullOrEmpty(primaryWeapons))
                         {
-                            primaryWeapons = $"{ChatColors.Green} {weapon.Replace("weapon_", "")}";
+                            primaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
                         }
                         else
                         {
-                            primaryWeapons = $"{primaryWeapons}{ChatColors.Default}, {ChatColors.Green}{weapon.Replace("weapon_", "")}";
+                            primaryWeapons = $"{primaryWeapons}{ChatColors.Default}, {ChatColors.Green}{Localizer[weapon]}";
                         }
                     }
-                    info.ReplyToCommand($"{Localizer["Allowed_Primary_Weapons"]}");
+                    info.ReplyToCommand($"{Localizer["Chat.ListOfAllowedWeapons"]}");
                     info.ReplyToCommand($"{ChatColors.DarkRed}• {primaryWeapons.ToUpper()}");
                 }
                 if (AllowedSecondaryWeaponsList.Count != 0)
@@ -54,17 +36,17 @@ namespace Deathmatch
                     {
                         if (string.IsNullOrEmpty(secondaryWeapons))
                         {
-                            secondaryWeapons = $"{ChatColors.Green} {weapon.Replace("weapon_", "")}";
+                            secondaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
                         }
                         else
                         {
-                            secondaryWeapons = $"{secondaryWeapons}{ChatColors.Default}, {ChatColors.Green}{weapon.Replace("weapon_", "")}";
+                            secondaryWeapons = $"{secondaryWeapons}{ChatColors.Default}, {ChatColors.Green}{Localizer[weapon]}";
                         }
                     }
-                    info.ReplyToCommand($"{Localizer["Allowed_Secondary_Weapons"]}");
+                    info.ReplyToCommand($"{Localizer["Chat.ListOfAllowedSecondaryWeapons"]}");
                     info.ReplyToCommand($"{ChatColors.DarkRed}• {secondaryWeapons.ToUpper()}");
                 }
-                info.ReplyToCommand($"{Localizer["Prefix"]} /gun <weapon name>");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} /gun <weapon name>");
                 return;
             }
 
@@ -104,17 +86,17 @@ namespace Deathmatch
 
             if (matchingCount > 1)
             {
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Multiple_Weapon_Select"]} {ChatColors.Default}( {matchingValues} {ChatColors.Default})");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.MultipleWeaponsSelected"]} {ChatColors.Default}( {matchingValues} {ChatColors.Default})");
                 return;
             }
             else if (matchingCount == 0)
             {
                 if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                     player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Name_Not_Found", weaponName]}");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponNotFound", weaponName]}");
                 return;
             }
-
+            bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
             if (AllowedPrimaryWeaponsList.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
@@ -122,19 +104,20 @@ namespace Deathmatch
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                     return;
                 }
-                if (CheckIsWeaponRestricted(weaponName, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                    RestrictedWeaponsInfo restrict = RestrictedWeapons[weaponName];
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+
+                    var restrictInfo = GetRestrictData(weaponName, IsVIP, player.Team);
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
                     return;
                 }
                 playerData[player].PrimaryWeapon = weaponName;
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["PrimaryWeapon_Set", localizerWeaponName]}");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
                 if (player.PawnIsAlive && IsHaveWeaponFromSlot(player, 1) != 1)
                 {
                     player.GiveNamedItem(weaponName);
@@ -158,19 +141,20 @@ namespace Deathmatch
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Already_Set", localizerWeaponName]}");
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                     return;
                 }
-                if (CheckIsWeaponRestricted(weaponName, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                    RestrictedWeaponsInfo restrict = RestrictedWeapons[weaponName];
-                    info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+
+                    var restrictInfo = GetRestrictData(weaponName, IsVIP, player.Team);
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
                     return;
                 }
                 playerData[player].SecondaryWeapon = weaponName;
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["SecondaryWeapon_Set", localizerWeaponName]}");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
                 if (player.PawnIsAlive && IsHaveWeaponFromSlot(player, 2) != 2)
                 {
                     player.GiveNamedItem(weaponName);
@@ -192,7 +176,7 @@ namespace Deathmatch
                 if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                     player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
                 string localizerWeaponName = Localizer[weaponName];
-                info.ReplyToCommand($"{Localizer["Prefix"]} {Localizer["Weapon_Disabled", localizerWeaponName]}");
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", localizerWeaponName]}");
                 return;
             }
         }
@@ -203,9 +187,16 @@ namespace Deathmatch
                 player.InGameMoneyServices!.Account = Config.Gameplay.AllowBuyMenu ? 16000 : 0;
                 if (!bNewMode)
                 {
-                    playerData[player].SpawnProtection = true;
                     var timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.ProtectionTimeVIP : Config.PlayersSettings.ProtectionTime;
-                    AddTimer(timer, () => playerData[player].SpawnProtection = false, TimerFlags.STOP_ON_MAPCHANGE);
+                    if (timer > 0.1)
+                    {
+                        playerData[player].SpawnProtection = true;
+                        AddTimer(timer, () =>
+                        {
+                            playerData[player].SpawnProtection = false;
+                        }, TimerFlags.STOP_ON_MAPCHANGE);
+                    }
+
                     if (!IsCasualGamemode && !blockRandomWeaponsIntegeration.Contains(player))
                     {
                         blockRandomWeaponsIntegeration.Add(player);
@@ -214,13 +205,14 @@ namespace Deathmatch
                 }
 
                 int slot = IsHaveWeaponFromSlot(player, 0);
-                if (slot == 1 || slot == 2)
+                if (slot == 1 || slot == 2 || ActiveMode == null)
                     return;
 
+                bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                 if (AllowedPrimaryWeaponsList.Count != 0)
                 {
                     string PrimaryWeapon = playerData[player].PrimaryWeapon;
-                    if (ModeData.RandomWeapons)
+                    if (ActiveMode.RandomWeapons)
                     {
                         PrimaryWeapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList);
                     }
@@ -239,12 +231,12 @@ namespace Deathmatch
                     }
                     else
                     {
-                        if (CheckIsWeaponRestricted(PrimaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                        if (CheckIsWeaponRestricted(PrimaryWeapon, IsVIP, player.Team))
                         {
                             playerData[player].PrimaryWeapon = "";
                             string localizerWeaponName = Localizer[PrimaryWeapon];
-                            RestrictedWeaponsInfo restrict = RestrictedWeapons[PrimaryWeapon];
-                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+                            var restrictInfo = GetRestrictData(PrimaryWeapon, IsVIP, player.Team);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
 
                             PrimaryWeapon = Config.Gameplay.DefaultModeWeapons switch
                             {
@@ -257,7 +249,7 @@ namespace Deathmatch
 
                     if (string.IsNullOrEmpty(PrimaryWeapon))
                     {
-                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
                     }
                     else
                     {
@@ -268,7 +260,7 @@ namespace Deathmatch
                 if (AllowedSecondaryWeaponsList.Count != 0)
                 {
                     string SecondaryWeapon = playerData[player].SecondaryWeapon;
-                    if (ModeData.RandomWeapons)
+                    if (ActiveMode.RandomWeapons)
                     {
                         SecondaryWeapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList);
                     }
@@ -287,12 +279,13 @@ namespace Deathmatch
                     }
                     else
                     {
-                        if (CheckIsWeaponRestricted(SecondaryWeapon, AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag), player.TeamNum))
+                        if (CheckIsWeaponRestricted(SecondaryWeapon, IsVIP, player.Team))
                         {
                             playerData[player].SecondaryWeapon = "";
                             string localizerWeaponName = Localizer[SecondaryWeapon];
-                            RestrictedWeaponsInfo restrict = RestrictedWeapons[SecondaryWeapon];
-                            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Weapon_Is_Restricted", localizerWeaponName, restrict.nonVIPRestrict, restrict.VIPRestrict]}");
+
+                            var restrictInfo = GetRestrictData(SecondaryWeapon, IsVIP, player.Team);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
 
                             SecondaryWeapon = Config.Gameplay.DefaultModeWeapons switch
                             {
@@ -305,12 +298,17 @@ namespace Deathmatch
 
                     if (string.IsNullOrEmpty(SecondaryWeapon))
                     {
-                        player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Setup_Weapons_By_Command"]}");
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
                     }
                     else
                     {
                         player.GiveNamedItem(SecondaryWeapon);
                     }
+                }
+                if (ActiveMode.Utilities != null && ActiveMode.Utilities.Count() > 0)
+                {
+                    foreach (var item in ActiveMode.Utilities)
+                        player.GiveNamedItem(item);
                 }
                 return;
             }
@@ -399,7 +397,7 @@ namespace Deathmatch
                     Preference = Localizer["Prefs.HudMessages"];
                     break;
             }
-            player.PrintToChat($"{Localizer["Prefix"]} {Localizer["Prefs.ValueChanged", Preference, changedValue]}");
+            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueChanged", Preference, changedValue]}");
         }
 
         //https://github.com/K4ryuu/K4-System/blob/dev/src/Plugin/PluginCache.cs

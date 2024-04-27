@@ -1,28 +1,23 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
-using QAngle = CounterStrikeSharp.API.Modules.Utils.QAngle;
 using System.Drawing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Numerics;
 using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.Timers;
+using System.Globalization;
 
 namespace Deathmatch
 {
-    public partial class DeathmatchCore
+    public partial class Deathmatch
     {
-        public static Dictionary<string, string> spawnPositionsCT = new Dictionary<string, string>();
-        public static Dictionary<string, string> spawnPositionsT = new Dictionary<string, string>();
-
-        public void PerformRespawn(CCSPlayerController player, int team, bool IsBot)
+        public void PerformRespawn(CCSPlayerController player, CsTeam team, bool IsBot)
         {
-            if (player == null || !player.IsValid || !player.PlayerPawn.IsValid || player.PawnIsAlive || team == 1 || team == 0)
+            if (player == null || !player.IsValid || player.PlayerPawn.Value == null || player.PawnIsAlive || team == CsTeam.None || team == CsTeam.Spectator)
                 return;
 
-            var spawnsDictionary = team == (byte)CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
-
+            var spawnsDictionary = team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT;
             var spawnsList = spawnsDictionary.ToList();
             if (!IsBot)
                 spawnsList.RemoveAll(x => x.Key == playerData[player].LastSpawn);
@@ -34,21 +29,15 @@ namespace Deathmatch
                 return;
             }
 
-            Random random = new Random();
-            int selectRadnomSpawn = random.Next(0, spawnsList.Count);
-            var randomSpawn = spawnsList.ElementAt(selectRadnomSpawn);
-            Vector position;
-            QAngle angle;
-
             if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance)
             {
+                Random random = new Random();
+                var randomSpawn = spawnsDictionary.ElementAt(random.Next(spawnsDictionary.Count));
                 if (!IsBot)
                     playerData[player].LastSpawn = randomSpawn.Key;
 
                 player.Respawn();
-                position = ParseVector(randomSpawn.Key);
-                angle = ParseQAngle(randomSpawn.Value);
-                player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
+                player.PlayerPawn.Value.Teleport(randomSpawn.Key, randomSpawn.Value, new Vector(0, 0, 0));
                 spawnsDictionary.Remove(randomSpawn.Key);
 
                 AddTimer(5.0f, () =>
@@ -59,65 +48,64 @@ namespace Deathmatch
                 return;
             }
 
-            spawnsList = spawnsList.OrderBy(x => random.Next()).ToList();
-            var closestDistances = CalculateClosestDistances(player, spawnsList);
-
-            var Spawn = spawnsList.FirstOrDefault(spawn =>
-            {
-                var spawnKey = spawn.Key;
-                var closestDistance = closestDistances[spawnKey];
-                return closestDistance > Config.Gameplay.DistanceRespawn;
-            });
-
-            if (Spawn.Key != null)
-            {
-                if (!IsBot)
-                    playerData[player].LastSpawn = Spawn.Key;
-
-                player.Respawn();
-                position = ParseVector(Spawn.Key);
-                angle = ParseQAngle(Spawn.Value);
-                player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
-                return;
-            }
-
+            var Spawn = GetAvailableSpawn(player, spawnsList);
             if (!IsBot)
-                playerData[player].LastSpawn = randomSpawn.Key;
+                playerData[player].LastSpawn = Spawn.Key;
 
             player.Respawn();
-            position = ParseVector(randomSpawn.Key);
-            angle = ParseQAngle(randomSpawn.Value);
-            player.PlayerPawn.Value!.Teleport(position, angle, new Vector(0, 0, 0));
-            SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected.", ConsoleColor.DarkYellow);
+            player.PlayerPawn.Value.Teleport(Spawn.Key, Spawn.Value, new Vector(0, 0, 0));
+            AddTimer(5.0f, () =>
+            {
+                if (!spawnsDictionary.ContainsKey(Spawn.Key))
+                    spawnsDictionary.Add(Spawn.Key, Spawn.Value);
+            }, TimerFlags.STOP_ON_MAPCHANGE);
         }
 
-        private Dictionary<string, double> CalculateClosestDistances(CCSPlayerController player, List<KeyValuePair<string, string>> spawnsList)
+        private KeyValuePair<Vector, QAngle> GetAvailableSpawn(CCSPlayerController player, List<KeyValuePair<Vector, QAngle>> spawnsList)
         {
             var allPlayers = Utilities.GetPlayers();
             var playerPositions = allPlayers
-                .Where(p => p != null && p.IsValid && !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
+                .Where(p => !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
                 .Select(p => p.PlayerPawn.Value!.AbsOrigin)
                 .ToList();
 
-            var closestDistances = new Dictionary<string, double>();
-            foreach (var spawn in spawnsList)
+            var availableSpawns = new Dictionary<Vector, QAngle>();
+            int spawnCount = 0;
+            foreach (KeyValuePair<Vector, QAngle> spawn in spawnsList)
             {
-                var spawnKey = spawn.Key;
-                var spawnAbsOrigin = ParseVector(spawnKey);
-                double closestDistance = double.MaxValue;
 
+                spawnCount++;
+                double closestDistance = 4000;
                 foreach (var playerPos in playerPositions)
                 {
-                    double distance = GetDistance(playerPos!, spawnAbsOrigin);
-                    if (distance < closestDistance)
+                    if (playerPos != null)
                     {
-                        closestDistance = distance;
+                        double distance = GetDistance(playerPos, spawn.Key);
+                        //Console.WriteLine($"Distance {distance} | {closestDistance}");
+                        if (distance < closestDistance)
+                        {
+                            //Console.WriteLine($"ClosestDistance Distance {distance}");
+                            closestDistance = distance;
+                        }
                     }
                 }
-                closestDistances.Add(spawnKey, closestDistance);
+                if (closestDistance > Config.Gameplay.DistanceRespawn)
+                {
+                    //Console.WriteLine($"closestDistance {closestDistance} > DistanceRespawn {Config.Gameplay.DistanceRespawn}");
+                    availableSpawns.Add(spawn.Key, spawn.Value);
+                }
             }
 
-            return closestDistances;
+            Random random = new Random();
+            if (availableSpawns.Count > 0)
+            {
+                //SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, available spawns found: {availableSpawns.Count})", ConsoleColor.DarkYellow);
+                var randomAvailableSpawn = availableSpawns.ElementAt(random.Next(availableSpawns.Count));
+                return randomAvailableSpawn;
+            }
+            SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected. (T {spawnPositionsT.Count()} : CT {spawnPositionsCT.Count()})", ConsoleColor.DarkYellow);
+            var randomSpawn = spawnsList.ElementAt(random.Next(spawnsList.Count));
+            return randomSpawn;
         }
 
         public void AddNewSpawnPoint(string filepath, string posValue, string angleValue, string team)
@@ -174,6 +162,7 @@ namespace Deathmatch
             File.WriteAllText(filepath, jsonData.ToString());
             return true;
         }
+
         static void RemoveSpawnpointByPos(JArray spawnpointsArray, string posToRemove)
         {
             for (int i = spawnpointsArray.Count - 1; i >= 0; i--)
@@ -185,16 +174,16 @@ namespace Deathmatch
                 }
             }
         }
-        public string GetNearestSpawnPoint(float X, float Y, float Z)
+        public string GetNearestSpawnPoint(Vector? playerPos)
         {
-            float lowestDistance = float.MaxValue;
-            string nearestSpawn = "";
+            if (playerPos == null)
+                return "Spawn point cannot be deleted!";
+
+            double lowestDistance = float.MaxValue;
+            Vector? nearestSpawn = null;
             foreach (var ctSpawn in spawnPositionsCT.Keys)
             {
-                Vector3 playerPos = new Vector3(X, Y, Z);
-                Vector3 ctSpawnPosition = ParseVector3(ctSpawn);
-                float distance = Vector3.Distance(playerPos, ctSpawnPosition);
-
+                double distance = GetDistance(playerPos, ctSpawn);
                 if (distance < lowestDistance)
                 {
                     lowestDistance = distance;
@@ -203,17 +192,18 @@ namespace Deathmatch
             }
             foreach (var tSpawn in spawnPositionsT.Keys)
             {
-                Vector3 playerPos = new Vector3(X, Y, Z);
-                Vector3 tSpawnPosition = ParseVector3(tSpawn);
-                float distance = Vector3.Distance(playerPos, tSpawnPosition);
-
+                double distance = GetDistance(playerPos, tSpawn);
                 if (distance < lowestDistance)
                 {
                     lowestDistance = distance;
                     nearestSpawn = tSpawn;
                 }
             }
-            bool isDeleted = RemoveSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", nearestSpawn);
+
+            bool isDeleted = false;
+            if (nearestSpawn != null)
+                isDeleted = RemoveSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", $"{nearestSpawn}");
+
             if (isDeleted)
             {
                 LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json", false);
@@ -237,7 +227,7 @@ namespace Deathmatch
                     return;
                 }
 
-                Vector position = ParseVector(ctTeam);
+                var position = ctTeam;
                 beam.Render = Color.Blue;
                 beam.Width = 5.5f;
                 position[2] += 50.00f;
@@ -257,7 +247,7 @@ namespace Deathmatch
                     SendConsoleMessage($"[Deathmatch] Failed to create beam for T", ConsoleColor.DarkYellow);
                     return;
                 }
-                Vector position = ParseVector(tTeam);
+                var position = tTeam;
                 beam.Render = Color.Orange;
                 beam.Width = 5.5f;
                 position[2] += 50.00f;
@@ -324,9 +314,6 @@ namespace Deathmatch
 
             foreach (var spawn in spawnPositionsCT)
             {
-                var position = ParseVector(spawn.Key);
-                var angle = ParseQAngle(spawn.Value);
-
                 CBaseEntity entity;
                 if (IsCasualGamemode)
                     entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerCT)!;
@@ -336,15 +323,14 @@ namespace Deathmatch
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for CT", ConsoleColor.DarkYellow);
-                    return;
+                    continue;
                 }
-                entity.Teleport(position, angle, new Vector(0, 0, 0));
+                entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
             }
+
             foreach (var spawn in spawnPositionsT)
             {
-                var position = ParseVector(spawn.Key);
-                var angle = ParseQAngle(spawn.Value);
                 CBaseEntity entity;
                 if (IsCasualGamemode)
                     entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerT)!;
@@ -353,13 +339,14 @@ namespace Deathmatch
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for T", ConsoleColor.DarkYellow);
-                    return;
+                    continue;
                 }
-                entity.Teleport(position, angle, new Vector(0, 0, 0));
+                entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
             }
         }
-        public void LoadMapSpawns(string filepath, bool mapstart)
+
+        public void LoadMapSpawns(string filePath, bool mapstart)
         {
             spawnPositionsCT.Clear();
             spawnPositionsT.Clear();
@@ -369,14 +356,15 @@ namespace Deathmatch
             }
             else
             {
-                if (!File.Exists(filepath))
+                if (!File.Exists(filePath))
                 {
                     SendConsoleMessage($"[Deathmatch] No spawn points found for this map! (Deathmatch/spawns/{Server.MapName}.json)", ConsoleColor.Red);
                     addDefaultSpawnsToList();
                 }
                 else
                 {
-                    var jsonContent = File.ReadAllText(filepath);
+
+                    var jsonContent = File.ReadAllText(filePath);
                     JObject jsonData = JsonConvert.DeserializeObject<JObject>(jsonContent)!;
 
                     foreach (var teamData in jsonData["spawnpoints"]!)
@@ -387,16 +375,15 @@ namespace Deathmatch
 
                         if (teamType == "ct")
                         {
-                            spawnPositionsCT.Add(pos, angle);
+                            spawnPositionsCT.Add(ParseVector(pos), ParseQAngle(angle));
                         }
                         else if (teamType == "t")
                         {
-                            spawnPositionsT.Add(pos, angle);
+                            spawnPositionsT.Add(ParseVector(pos), ParseQAngle(angle));
                         }
                     }
 
-                    g_iTotalCTSpawns = spawnPositionsCT.Count;
-                    g_iTotalTSpawns = spawnPositionsT.Count;
+                    SendConsoleMessage($"[Deathmatch] Total Loaded Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
                     if (mapstart)
                         RemoveMapDefaulSpawns();
                 }
@@ -404,43 +391,33 @@ namespace Deathmatch
         }
         private static Vector ParseVector(string pos)
         {
+            pos = pos.Replace(",", "");
             var values = pos.Split(' ');
             if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
+                float.TryParse(values[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) &&
+                float.TryParse(values[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y) &&
+                float.TryParse(values[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
             {
                 return new Vector(x, y, z);
             }
-
             return new Vector(0, 0, 0);
         }
+
         private static QAngle ParseQAngle(string angle)
         {
+            angle = angle.Replace(",", "");
             var values = angle.Split(' ');
             if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
+                float.TryParse(values[0], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) &&
+                float.TryParse(values[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float y) &&
+                float.TryParse(values[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float z))
             {
                 return new QAngle(x, y, z);
             }
 
             return new QAngle(0, 0, 0);
         }
-        private static Vector3 ParseVector3(string pos)
-        {
-            var values = pos.Split(' ');
-            if (values.Length == 3 &&
-                float.TryParse(values[0], out float x) &&
-                float.TryParse(values[1], out float y) &&
-                float.TryParse(values[2], out float z))
-            {
-                return new Vector3(x, y, z);
-            }
 
-            return new Vector3(0, 0, 0);
-        }
         private static double GetDistance(Vector v1, Vector v2)
         {
             double X = v1.X - v2.X;
@@ -455,15 +432,15 @@ namespace Deathmatch
             {
                 foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
                 {
-                    if (spawn == null)
+                    if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                         return;
-                    spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                 }
                 foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
                 {
-                    if (spawn == null)
+                    if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                         return;
-                    spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                    spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                 }
             }
             else
@@ -474,21 +451,18 @@ namespace Deathmatch
                     randomizer++;
                     if (randomizer % 2 == 0)
                     {
-                        if (spawn == null)
+                        if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             return;
-                        spawnPositionsT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                        spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                     }
                     else
                     {
-                        if (spawn == null)
+                        if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             return;
-                        spawnPositionsCT.Add($"{spawn.AbsOrigin}", $"{spawn.AbsRotation}");
+                        spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                     }
                 }
             }
-
-            g_iTotalCTSpawns = spawnPositionsCT.Count;
-            g_iTotalTSpawns = spawnPositionsT.Count;
         }
     }
 }

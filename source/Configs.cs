@@ -1,6 +1,6 @@
 using CounterStrikeSharp.API.Core;
-using Newtonsoft.Json.Linq;
 using System.Text.Json.Serialization;
+using static Deathmatch.Deathmatch;
 
 namespace Deathmatch;
 
@@ -12,10 +12,8 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("Custom Commands")] public CustomCommands CustomCommands { get; set; } = new CustomCommands();
     [JsonPropertyName("Players Gameplay Settings")] public PlayersSettings PlayersSettings { get; set; } = new PlayersSettings();
     [JsonPropertyName("Client Preferences")] public PlayersPreferences PlayersPreferences { get; set; } = new PlayersPreferences();
-
-    // BLOCK WEAPON BUY
-    // sounds/ui/weapon_cant_buy.vsnd_c
-    // sounds/buttons/button8.vsnd_c
+    [JsonPropertyName("Custom Modes")] public CustomModes CustomModes { get; set; } = new CustomModes();
+    [JsonPropertyName("Weapons Restrict")] public WeaponsRestrict WeaponsRestrict { get; set; } = new WeaponsRestrict();
 }
 
 public class SoundSettings
@@ -138,120 +136,172 @@ public class PlayersSettings
     [JsonPropertyName("refill_health_headshot")] public int HeadshotHealth { get; set; } = 40;
     [JsonPropertyName("VIP_refill_health_headshot")] public int HeadshotHealthVIP { get; set; } = 50;
 }
-public static class Configuration
+
+public class CustomModes
 {
-    public static JObject? JsonCustomModes { get; private set; }
-    public static List<string> CustomCvarsList = new List<string>();
-    public static void CreateOrLoadCvars(string filepath)
+    [JsonPropertyName("0")]
+    public ModeData _0 { get; set; } = new ModeData
     {
-        if (!File.Exists(filepath))
-        {
-            using (StreamWriter writer = new StreamWriter(filepath))
-            {
-                writer.Write("sv_disable_radar 1\nmp_give_player_c4 0\nmp_playercashawards 0\nmp_teamcashawards 0\nmp_weapons_allow_zeus 0\nmp_buy_allow_grenades 0\nmp_max_armor 0\nmp_freezetime 0\nmp_death_drop_grenade 0\nmp_death_drop_gun 0\nmp_death_drop_healthshot 0\nmp_drop_grenade_enable 0\nmp_death_drop_c4 0\nmp_death_drop_taser 0\nmp_defuser_allocation 0\nmp_solid_teammates 1\nmp_weapons_allow_typecount -1\nmp_hostages_max 0");
-            }
-            CustomCvarsList = new List<string>(File.ReadLines(filepath));
-        }
-        else
-        {
-            CustomCvarsList = new List<string>(File.ReadLines(filepath));
-        }
-    }
+        Name = "Default",
+        Interval = 300,
+        Armor = 1,
+        OnlyHS = false,
+        KnifeDamage = true,
+        RandomWeapons = false,
+        CenterMessageText = "",
+        PrimaryWeapons = new List<string> {
+                        "weapon_aug", "weapon_sg556", "weapon_xm1014",
+                        "weapon_ak47", "weapon_famas", "weapon_galilar",
+                        "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd",
+                        "weapon_mp7", "weapon_p90", "weapon_awp"
+                    },
+        SecondaryWeapons = new List<string> {
+                        "weapon_usp_silencer", "weapon_p250", "weapon_glock",
+                        "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle"
+                    },
+        Utilities = new List<string> {
+                        "weapon_flashbang"
+                    },
+    };
 
-    public static void CreateOrLoadCustomModes(string filepath)
+    [JsonPropertyName("1")]
+    public ModeData _1 { get; set; } = new ModeData
     {
-        if (!File.Exists(filepath))
+        Name = "Only Headshot",
+        Interval = 300,
+        Armor = 1,
+        OnlyHS = true,
+        KnifeDamage = false,
+        RandomWeapons = false,
+        CenterMessageText = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
+        PrimaryWeapons = new List<string> {
+                        "weapon_aug", "weapon_sg556", "weapon_xm1014",
+                        "weapon_ak47", "weapon_famas", "weapon_galilar",
+                        "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd",
+                        "weapon_mp7", "weapon_p90"
+                    },
+        SecondaryWeapons = new List<string> {
+                        "weapon_usp_silencer", "weapon_p250", "weapon_glock",
+                        "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle"
+                    },
+    };
+
+    [JsonPropertyName("2")]
+    public ModeData _2 { get; set; } = new ModeData
+    {
+        Name = "Only Deagle",
+        Interval = 120,
+        Armor = 2,
+        OnlyHS = false,
+        KnifeDamage = true,
+        RandomWeapons = false,
+        CenterMessageText = "<font class='fontSize-l' color='green'>Only Deagle</font>",
+        PrimaryWeapons = new List<string>(),
+        SecondaryWeapons = new List<string> {
+                        "weapon_deagle"
+                    },
+        Utilities = new List<string> {
+                        "weapon_flashbang" , "weapon_healthshot"
+                    },
+    };
+
+    [JsonPropertyName("3")]
+    public ModeData _3 { get; set; } = new ModeData
+    {
+        Name = "Only Pistols",
+        Interval = 180,
+        Armor = 1,
+        OnlyHS = false,
+        KnifeDamage = true,
+        RandomWeapons = false,
+        CenterMessageText = "<font class='fontSize-l' color='blue'>Only Pistols</font>",
+        PrimaryWeapons = new List<string>(),
+        SecondaryWeapons = new List<string> {
+                        "weapon_usp_silencer", "weapon_p250", "weapon_glock",
+                        "weapon_cz75a", "weapon_elite", "weapon_fiveseven",
+                        "weapon_tec9", "weapon_hkp2000"
+                    },
+    };
+
+    [JsonPropertyName("4")]
+    public ModeData _4 { get; set; } = new ModeData
+    {
+        Name = "Only SMG",
+        Interval = 200,
+        Armor = 2,
+        OnlyHS = false,
+        KnifeDamage = true,
+        RandomWeapons = true,
+        CenterMessageText = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font>",
+        PrimaryWeapons = new List<string> {
+                        "weapon_p90", "weapon_bizon", "weapon_mp5sd",
+                        "weapon_mp7", "weapon_mp9", "weapon_mac10",
+                        "weapon_ump45"
+                    },
+        SecondaryWeapons = new List<string>(),
+        Utilities = new List<string> {
+                        "weapon_hegrenade", "weapon_flashbang", "weapon_healthshot"
+                    },
+    };
+}
+
+public class WeaponsRestrict
+{
+    [JsonPropertyName("Global Restrict")] public bool Global { get; set; } = true;
+
+    [JsonPropertyName("Weapons")]
+    public Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> DefaultRestrictions { get; set; } = new()
+    {
+        ["weapon_ak47"] = new Dictionary<string, Dictionary<RestrictType, RestrictData>>()
         {
-            JObject exampleData = new JObject
+            ["0"] = new Dictionary<RestrictType, RestrictData>()
             {
-                ["custom_modes"] = new JObject
+                [RestrictType.VIP] = new RestrictData()
                 {
-                    ["0"] = new JObject
-                    {
-                        ["mode_name"] = "Default",
-                        ["mode_interval"] = 300,
-                        ["armor"] = 1,
-                        ["only_hs"] = false,
-                        ["allow_knife_damage"] = true,
-                        ["random_weapons"] = false,
-                        ["center_message_text"] = "",
-                        ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
-                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" }
-                    },
-                    ["1"] = new JObject
-                    {
-                        ["mode_name"] = "Only Headshot",
-                        ["mode_interval"] = 300,
-                        ["armor"] = 1,
-                        ["only_hs"] = true,
-                        ["allow_knife_damage"] = false,
-                        ["random_weapons"] = false,
-                        ["center_message_text"] = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
-                        ["primary_weapons"] = new JArray { "weapon_aug", "weapon_sg556", "weapon_xm1014", "weapon_ak47", "weapon_famas", "weapon_galilar", "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd", "weapon_mp7", "weapon_p90" },
-                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle" },
-                    },
-                    ["2"] = new JObject
-                    {
-                        ["mode_name"] = "Only Deagle",
-                        ["mode_interval"] = 120,
-                        ["armor"] = 2,
-                        ["only_hs"] = false,
-                        ["allow_knife_damage"] = true,
-                        ["random_weapons"] = false,
-                        ["center_message_text"] = "<font class='fontSize-l' color='green'>Only Deagle</font>",
-                        ["primary_weapons"] = new JArray { },
-                        ["secondary_weapons"] = new JArray { "weapon_deagle" },
-                    },
-                    ["3"] = new JObject
-                    {
-                        ["mode_name"] = "Only Pistols",
-                        ["mode_interval"] = 180,
-                        ["armor"] = 1,
-                        ["only_hs"] = false,
-                        ["allow_knife_damage"] = true,
-                        ["random_weapons"] = false,
-                        ["center_message_text"] = "<font class='fontSize-l' color='blue'>Only Pistols</font>",
-                        ["primary_weapons"] = new JArray { },
-                        ["secondary_weapons"] = new JArray { "weapon_usp_silencer", "weapon_p250", "weapon_glock", "weapon_cz75a", "weapon_elite", "weapon_fiveseven", "weapon_tec9", "weapon_hkp2000" }
-                    },
-                    ["4"] = new JObject
-                    {
-                        ["mode_name"] = "Only SMG",
-                        ["mode_interval"] = 200,
-                        ["armor"] = 2,
-                        ["only_hs"] = false,
-                        ["allow_knife_damage"] = true,
-                        ["random_weapons"] = true,
-                        ["center_message_text"] = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font>",
-                        ["primary_weapons"] = new JArray { "weapon_p90", "weapon_bizon", "weapon_mp5sd", "weapon_mp7", "weapon_mp9", "weapon_mac10", "weapon_ump45" },
-                        ["secondary_weapons"] = new JArray { }
-                    }
+                    CT = 6,
+                    T = 6,
+                    Global = 12
+                },
+                [RestrictType.NonVIP] = new RestrictData()
+                {
+                    CT = 5,
+                    T = 5,
+                    Global = 10
                 }
-            };
-
-            File.WriteAllText(filepath, exampleData.ToString());
-            var jsonData = File.ReadAllText(filepath);
-            JsonCustomModes = JObject.Parse(jsonData);
-        }
-        else
-        {
-            var jsonData = File.ReadAllText(filepath);
-            JsonCustomModes = JObject.Parse(jsonData);
-        }
-
-        if (JsonCustomModes != null && JsonCustomModes["custom_modes"] is JObject customModesObject)
-        {
-            DeathmatchCore.g_iTotalModes = customModesObject?.Count ?? 0;
-            if (DeathmatchCore.g_iTotalModes == 0)
+            },
+            ["1"] = new Dictionary<RestrictType, RestrictData>()
             {
-                DeathmatchCore.SendConsoleMessage($"[Deathmatch] Wrong modes setup! (Deathmatch/custom_modes.json.json)", ConsoleColor.Red);
-                throw new Exception($"[Deathmatch] Wrong modes setup in custom_modes.json!");
+                [RestrictType.VIP] = new RestrictData()
+                {
+                    CT = 5,
+                    T = 5,
+                    Global = 7
+                },
+                [RestrictType.NonVIP] = new RestrictData()
+                {
+                    CT = 4,
+                    T = 4,
+                    Global = 5
+                }
+            }
+        },
+        ["weapon_awp"] = new Dictionary<string, Dictionary<RestrictType, RestrictData>>()
+        {
+            ["0"] = new Dictionary<RestrictType, RestrictData>()
+            {
+                [RestrictType.VIP] = new RestrictData()
+                {
+                    CT = 3,
+                    T = 3,
+                    Global = 4
+                },
+                [RestrictType.NonVIP] = new RestrictData()
+                {
+                    CT = 2,
+                    T = 2,
+                    Global = 3
+                }
             }
         }
-        else
-        {
-            DeathmatchCore.SendConsoleMessage($"[Deathmatch] Wrong modes setup! (Deathmatch/custom_modes.json.json)", ConsoleColor.Red);
-            throw new Exception($"[Deathmatch] Wrong modes setup in custom_modes.json!");
-        }
-    }
+    };
 }
