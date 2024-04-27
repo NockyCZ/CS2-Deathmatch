@@ -24,7 +24,8 @@
     "Utilities": [
         "weapon_flashbang",
         "weapon_hegrenade
-    ]
+    ],
+    "ExecuteCommands": []
 }
 ```
 

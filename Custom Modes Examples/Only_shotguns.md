@@ -17,6 +17,7 @@
         "weapon_xm1014"
     ],
     "SecondaryWeapons": [],
-    "Utilities": []
+    "Utilities": [],
+    "ExecuteCommands": []
 }
 ```

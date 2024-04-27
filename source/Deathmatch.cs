@@ -170,7 +170,13 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             Server.PrintToChatAll($"{Localizer["Chat.Prefix"]} {Localizer["Chat.NewModeStarted", mode.Name]}");
 
         Server.ExecuteCommand($"mp_free_armor {mode.Armor};mp_damage_headshot_only {mode.OnlyHS};mp_ct_default_primary \"\";mp_t_default_primary \"\";mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
-
+        
+        if (mode.ExecuteCommands != null && mode.ExecuteCommands.Count > 0)
+        {
+            foreach (var cmd in mode.ExecuteCommands)
+                Server.ExecuteCommand(cmd);
+        }
+        
         foreach (var p in Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.PawnIsAlive))
         {
             p.RemoveWeapons();

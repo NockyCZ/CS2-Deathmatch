@@ -18,6 +18,7 @@
         "weapon_sg556"
     ],
     "SecondaryWeapons": [],
-    "Utilities": []
+    "Utilities": [],
+    "ExecuteCommands": []
 }
 ```

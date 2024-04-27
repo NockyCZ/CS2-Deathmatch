@@ -162,6 +162,7 @@ public class CustomModes
         Utilities = new List<string> {
                         "weapon_flashbang"
                     },
+        ExecuteCommands = new List<string>()
     };
 
     [JsonPropertyName("1")]
@@ -184,6 +185,8 @@ public class CustomModes
                         "weapon_usp_silencer", "weapon_p250", "weapon_glock",
                         "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle"
                     },
+        Utilities = new List<string>(),
+        ExecuteCommands = new List<string>()
     };
 
     [JsonPropertyName("2")]
@@ -203,6 +206,7 @@ public class CustomModes
         Utilities = new List<string> {
                         "weapon_flashbang" , "weapon_healthshot"
                     },
+        ExecuteCommands = new List<string>()
     };
 
     [JsonPropertyName("3")]
@@ -221,6 +225,8 @@ public class CustomModes
                         "weapon_cz75a", "weapon_elite", "weapon_fiveseven",
                         "weapon_tec9", "weapon_hkp2000"
                     },
+        Utilities = new List<string>(),
+        ExecuteCommands = new List<string>()
     };
 
     [JsonPropertyName("4")]
@@ -242,6 +248,7 @@ public class CustomModes
         Utilities = new List<string> {
                         "weapon_hegrenade", "weapon_flashbang", "weapon_healthshot"
                     },
+        ExecuteCommands = new List<string>()
     };
 }
 

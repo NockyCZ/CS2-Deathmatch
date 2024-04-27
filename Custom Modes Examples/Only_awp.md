@@ -16,6 +16,7 @@
     "SecondaryWeapons": [],
     "Utilities": [
         "weapon_flashbang"
-    ]
+    ],
+    "ExecuteCommands": []
 }
 ```

@@ -16,6 +16,7 @@ namespace Deathmatch
             public List<string>? PrimaryWeapons { get; set; }
             public List<string>? SecondaryWeapons { get; set; }
             public List<string>? Utilities { get; set; }
+            public List<string>? ExecuteCommands { get; set; }
         }
 
         public class DeathmatchPlayerData

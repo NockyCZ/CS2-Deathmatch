@@ -14,7 +14,8 @@
         "weapon_ak47"
     ],
     "SecondaryWeapons": [],
-    "Utilities": []
+    "Utilities": [],
+    "ExecuteCommands": []
 }
 ```
  
