@@ -152,9 +152,9 @@ namespace Deathmatch
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
                 return;
             }
-            g_bIsActiveEditor = !g_bIsActiveEditor;
-            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor has been {ChatColors.Green}{(g_bIsActiveEditor ? "Enabled" : "Disabled")}");
-            if (g_bIsActiveEditor)
+            IsActiveEditor = !IsActiveEditor;
+            info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor has been {ChatColors.Green}{(IsActiveEditor ? "Enabled" : "Disabled")}");
+            if (IsActiveEditor)
             {
                 ShowAllSpawnPoints();
             }
@@ -170,7 +170,7 @@ namespace Deathmatch
         [RequiresPermissions("@css/root")]
         public void OnAddSpawnCT_CMD(CCSPlayerController player, CommandInfo info)
         {
-            if (!g_bIsActiveEditor)
+            if (!IsActiveEditor)
             {
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;
@@ -191,7 +191,7 @@ namespace Deathmatch
         [RequiresPermissions("@css/root")]
         public void OnAddSpawnT_CMD(CCSPlayerController player, CommandInfo info)
         {
-            if (!g_bIsActiveEditor)
+            if (!IsActiveEditor)
             {
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;
@@ -212,7 +212,7 @@ namespace Deathmatch
         [RequiresPermissions("@css/root")]
         public void OnRemoveSpawn_CMD(CCSPlayerController player, CommandInfo info)
         {
-            if (!g_bIsActiveEditor)
+            if (!IsActiveEditor)
             {
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn Editor is disabled!");
                 return;

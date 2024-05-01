@@ -133,8 +133,16 @@ namespace Deathmatch
             return 3;
         }
 
-        private string GetRandomWeaponFromList(List<string> weaponsList)
+        private string GetRandomWeaponFromList(List<string> weaponsList, bool isVIP, CsTeam team)
         {
+            if (Config.Gameplay.RemoveRestrictedWeapons)
+            {
+                foreach (var weapon in weaponsList)
+                {
+                    if (CheckIsWeaponRestricted(weapon, isVIP, team))
+                        weaponsList.Remove(weapon);
+                }
+            }
             Random rand = new Random();
             int index = rand.Next(weaponsList.Count);
             return weaponsList[index];

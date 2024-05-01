@@ -33,14 +33,17 @@ public class Gameplay
     [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
     [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
+    [JsonPropertyName("Contains Restricted Weapons As Default Weapons")] public bool RemoveRestrictedWeapons { get; set; } = true;
     [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
     [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
+    [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "#000000";
 }
 public class General
 {
     [JsonPropertyName("Hide Round Seconds")] public bool HideRoundSeconds { get; set; } = true;
+    [JsonPropertyName("Hide New Mode Countdown")] public bool HideModeRemainingTime { get; set; } = false;
     [JsonPropertyName("Block Radio Messages")] public bool BlockRadioMessage { get; set; } = true;
     [JsonPropertyName("Remove Breakable Entities")] public bool RemoveBreakableEntities { get; set; } = true;
     [JsonPropertyName("Remove Decals After Death")] public bool RemoveDecals { get; set; } = true;
@@ -174,7 +177,7 @@ public class CustomModes
         OnlyHS = true,
         KnifeDamage = false,
         RandomWeapons = false,
-        CenterMessageText = "<font class='fontSize-l' color='orange'>Only Headshot</font>",
+        CenterMessageText = "<font class='fontSize-l' color='orange'>Only Headshot</font><br>Next Mode: {NEXTMODE} in {REMAININGTIME}<br>",
         PrimaryWeapons = new List<string> {
                         "weapon_aug", "weapon_sg556", "weapon_xm1014",
                         "weapon_ak47", "weapon_famas", "weapon_galilar",
@@ -198,7 +201,7 @@ public class CustomModes
         OnlyHS = false,
         KnifeDamage = true,
         RandomWeapons = false,
-        CenterMessageText = "<font class='fontSize-l' color='green'>Only Deagle</font>",
+        CenterMessageText = "<font class='fontSize-l' color='green'>Only Deagle</font><br>Next Mode: {NEXTMODE} in {REMAININGTIME}<br>",
         PrimaryWeapons = new List<string>(),
         SecondaryWeapons = new List<string> {
                         "weapon_deagle"
@@ -218,7 +221,7 @@ public class CustomModes
         OnlyHS = false,
         KnifeDamage = true,
         RandomWeapons = false,
-        CenterMessageText = "<font class='fontSize-l' color='blue'>Only Pistols</font>",
+        CenterMessageText = "<font class='fontSize-l' color='blue'>Only Pistols</font><br>Next Mode: {NEXTMODE} in {REMAININGTIME}<br>",
         PrimaryWeapons = new List<string>(),
         SecondaryWeapons = new List<string> {
                         "weapon_usp_silencer", "weapon_p250", "weapon_glock",
@@ -238,7 +241,7 @@ public class CustomModes
         OnlyHS = false,
         KnifeDamage = true,
         RandomWeapons = true,
-        CenterMessageText = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font>",
+        CenterMessageText = "<font class='fontSize-l' color='yellow'>Only SMG (Random Weapons)</font><br>Next Mode: {NEXTMODE} in {REMAININGTIME}<br>",
         PrimaryWeapons = new List<string> {
                         "weapon_p90", "weapon_bizon", "weapon_mp5sd",
                         "weapon_mp7", "weapon_mp9", "weapon_mac10",

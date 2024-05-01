@@ -262,7 +262,7 @@ namespace Deathmatch
         }
         public static void RemoveMapDefaulSpawns()
         {
-            if (!g_bDefaultMapSpawnDisabled)
+            if (!DefaultMapSpawnDisabled)
             {
                 if (IsCasualGamemode)
                 {
@@ -303,7 +303,7 @@ namespace Deathmatch
                     SendConsoleMessage($"[Deathmatch] Total {DMSpawns} default Spawns disabled!", ConsoleColor.Green);
 
                 }
-                g_bDefaultMapSpawnDisabled = true;
+                DefaultMapSpawnDisabled = true;
                 CreateCustomMapSpawns();
             }
         }

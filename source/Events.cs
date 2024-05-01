@@ -13,8 +13,8 @@ namespace Deathmatch
         [GameEventHandler]
         public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
         {
-            CCSPlayerController player = @event.Userid;
-            if (IsPlayerValid(player) && !playerData.ContainsPlayer(player))
+            var player = @event.Userid;
+            if (IsPlayerValid(player!) && !playerData.ContainsPlayer(player!))
             {
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                 DeathmatchPlayerData setupPlayerData = new DeathmatchPlayerData
@@ -32,7 +32,7 @@ namespace Deathmatch
                     OpenedMenu = 0,
                     LastSpawn = null!
                 };
-                playerData[player] = setupPlayerData;
+                playerData[player!] = setupPlayerData;
             }
             return HookResult.Continue;
         }
@@ -40,7 +40,7 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Post)]
         public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
         {
-            CCSPlayerController player = @event.Userid;
+            var player = @event.Userid;
             if (player != null && player.IsValid)
                 GivePlayerWeapons(player, false);
 
@@ -52,9 +52,9 @@ namespace Deathmatch
             if (@event.Userid == null || !@event.Userid.IsValid)
                 return HookResult.Continue;
 
-            CCSPlayerController attacker = @event.Attacker;
-            CCSPlayerController player = @event.Userid;
-            if (ActiveMode != null && playerData.ContainsPlayer(attacker))
+            var attacker = @event.Attacker;
+            var player = @event.Userid;
+            if (ActiveMode != null && attacker != null && playerData.ContainsPlayer(attacker))
             {
                 if (ActiveMode.OnlyHS)
                 {
@@ -80,8 +80,8 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
         {
-            CCSPlayerController player = @event.Userid;
-            CCSPlayerController attacker = @event.Attacker;
+            var player = @event.Userid;
+            var attacker = @event.Attacker;
             info.DontBroadcast = true;
 
             if (player == null || !player.IsValid)
@@ -106,6 +106,9 @@ namespace Deathmatch
                 if (player != null && player.IsValid && !player.PawnIsAlive)
                     PerformRespawn(player, player.Team, IsBot);
             }, TimerFlags.STOP_ON_MAPCHANGE);
+
+            if (attacker == null || !attacker.IsValid)
+                return HookResult.Continue;
 
             if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
             {
@@ -145,7 +148,7 @@ namespace Deathmatch
                     attacker.PlayerPawn.Value.Health += giveHP;
                     Utilities.SetStateChanged(attacker.PlayerPawn.Value, "CBaseEntity", "m_iHealth");
                 }
-                
+
                 if (ActiveMode != null && ActiveMode.Armor != 0)
                 {
                     string armor = ActiveMode.Armor == 1 ? "item_kevlar" : "item_assaultsuit";
@@ -168,7 +171,7 @@ namespace Deathmatch
         [GameEventHandler]
         public HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
         {
-            g_bIsActiveEditor = false;
+            IsActiveEditor = false;
             return HookResult.Continue;
         }
         private HookResult OnPlayerRadioMessage(CCSPlayerController? player, CommandInfo info)
@@ -187,8 +190,15 @@ namespace Deathmatch
         {
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
 
-            var player = new CCSPlayerController(new CCSPlayerPawn(hook.GetParam<CEntityInstance>(0).Handle).Controller.Value!.Handle);
-            var attacker = new CCSPlayerController(new CCSPlayerPawn(damageInfo.Attacker.Value!.Handle).Controller.Value!.Handle);
+            var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
+            CCSPlayerController? player = null;
+            if (playerPawn.Controller.Value != null)
+                player = playerPawn.Controller.Value.As<CCSPlayerController>();
+
+            var attackerHandle = damageInfo.Attacker;
+            CCSPlayerController? attacker = null;
+            if (attackerHandle.Value != null)
+                attacker = attackerHandle.Value.As<CCSPlayerController>();
 
             if (player == null || !player.IsValid || attacker == null || !attacker.IsValid || ActiveMode == null)
                 return HookResult.Continue;
@@ -198,7 +208,7 @@ namespace Deathmatch
                 damageInfo.Damage = 0;
                 return HookResult.Continue;
             }
-            if (!ActiveMode.KnifeDamage && damageInfo.Ability.IsValid && (damageInfo.Ability.Value!.DesignerName.Contains("knife") || damageInfo.Ability.Value!.DesignerName.Contains("bayonet")))
+            if (!ActiveMode.KnifeDamage && damageInfo.Ability.Value != null && damageInfo.Ability.IsValid && (damageInfo.Ability.Value.DesignerName.Contains("knife") || damageInfo.Ability.Value.DesignerName.Contains("bayonet")))
             {
                 attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
                 damageInfo.Damage = 0;
@@ -208,14 +218,21 @@ namespace Deathmatch
         private HookResult OnWeaponCanAcquire(DynamicHook hook)
         {
             var vdata = GetCSWeaponDataFromKeyFunc?.Invoke(-1, hook.GetParam<CEconItemView>(1).ItemDefinitionIndex.ToString());
-            var player = hook.GetParam<CCSPlayer_ItemServices>(0).Pawn.Value!.Controller.Value!.As<CCSPlayerController>();
+            var controller = hook.GetParam<CCSPlayer_ItemServices>(0).Pawn.Value.Controller.Value;
+
+            if (vdata == null)
+                return HookResult.Continue;
+
+            CCSPlayerController? player = null;
+            if (controller != null)
+                player = controller.As<CCSPlayerController>();
 
             if (player == null || !player.IsValid || !player.PawnIsAlive)
                 return HookResult.Continue;
 
             if (hook.GetParam<AcquireMethod>(2) == AcquireMethod.PickUp)
             {
-                if (!AllowedPrimaryWeaponsList.Contains(vdata!.Name!) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
+                if (!AllowedPrimaryWeaponsList.Contains(vdata.Name) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
                 {
                     if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet"))
                         return HookResult.Continue;
@@ -241,7 +258,7 @@ namespace Deathmatch
                 return HookResult.Stop;
             }
 
-            if (!AllowedPrimaryWeaponsList.Contains(vdata!.Name!) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
+            if (!AllowedPrimaryWeaponsList.Contains(vdata.Name) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
             {
                 if (!player.IsBot)
                 {
