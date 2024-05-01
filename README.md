@@ -1,9 +1,7 @@
 # CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum API version: 178 and only for Linux servers!<br>
+CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum CSS API version: 216 and only for Linux servers!<br>
 Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
 Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
-
-**Spawns do not work properly if you have a `ServerLanguage` other than `en`**
 
 ## [Documentation/Wiki](https://docs.sourcefactory.eu/cs2-free-plugins/deathmatch)
 ## [Discord Support Server](https://discord.gg/sourcefactory)
