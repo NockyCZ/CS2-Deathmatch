@@ -1,21 +1,22 @@
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
+using DeathmatchAPI.Helpers;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public Dictionary<string, ModeData> CustomModes = new();
-        public Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
+        public static Dictionary<string, ModeData> CustomModes = new();
+        public static Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
         public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         public static Dictionary<Vector, QAngle> spawnPositionsT = new();
         internal static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
-        public List<(string, bool, int)> PrefsMenuSounds = new();
-        public List<(string, bool, int)> PrefsMenuFunctions = new();
-        public List<string> AllowedPrimaryWeaponsList = new List<string>();
-        public List<string> AllowedSecondaryWeaponsList = new List<string>();
-        public List<CCSPlayerController> blockRandomWeaponsIntegeration = new List<CCSPlayerController>();
+        public static List<(string, bool, int)> PrefsMenuSounds = new();
+        public static List<(string, bool, int)> PrefsMenuFunctions = new();
+        public static List<string> AllowedPrimaryWeaponsList = new List<string>();
+        public static List<string> AllowedSecondaryWeaponsList = new List<string>();
+        public static List<CCSPlayerController> blockRandomWeaponsIntegeration = new List<CCSPlayerController>();
 
         readonly Dictionary<string, string> weaponSelectMapping = new Dictionary<string, string>
         {
@@ -25,14 +26,14 @@ namespace Deathmatch
             { "m4a1", "weapon_m4a1_silencer" }
         };
 
-        readonly HashSet<string> SecondaryWeaponsList = new HashSet<string>
+        readonly HashSet<string> SecondaryWeaponsList = new()
         {
             "weapon_hkp2000", "weapon_cz75a", "weapon_deagle", "weapon_elite",
             "weapon_fiveseven", "weapon_glock", "weapon_p250",
             "weapon_revolver", "weapon_tec9", "weapon_usp_silencer"
         };
 
-        readonly HashSet<string> PrimaryWeaponsList = new HashSet<string>
+        readonly HashSet<string> PrimaryWeaponsList = new()
         {
             "weapon_mag7", "weapon_nova", "weapon_sawedoff", "weapon_xm1014",
             "weapon_m249", "weapon_negev", "weapon_mac10", "weapon_mp5sd",
@@ -42,7 +43,7 @@ namespace Deathmatch
             "weapon_awp", "weapon_g3sg1", "weapon_scar20", "weapon_ssg08"
         };
 
-        readonly HashSet<string> RadioMessagesList = new HashSet<string>
+        readonly HashSet<string> RadioMessagesList = new()
         {
             "coverme", "takepoint", "holdpos", "followme",
             "regroup", "takingfire", "go", "fallback",

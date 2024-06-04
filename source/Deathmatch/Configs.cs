@@ -1,4 +1,5 @@
 using CounterStrikeSharp.API.Core;
+using DeathmatchAPI.Helpers;
 using System.Text.Json.Serialization;
 using static Deathmatch.Deathmatch;
 
@@ -30,10 +31,11 @@ public class Gameplay
     [JsonPropertyName("Random Selection Of Modes")] public bool RandomSelectionOfModes { get; set; } = true;
     [JsonPropertyName("Map Start Custom Mode")] public int MapStartMode { get; set; } = 0;
     [JsonPropertyName("New Mode Countdown")] public int NewModeCountdown { get; set; } = 10;
+    [JsonPropertyName("Hud Type")] public int HudType { get; set; } = 1;
     [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
     [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
-    [JsonPropertyName("Contains Restricted Weapons As Default Weapons")] public bool RemoveRestrictedWeapons { get; set; } = true;
+    [JsonPropertyName("Include Restricted Weapons As Defaults")] public bool RemoveRestrictedWeapons { get; set; } = true;
     [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
     [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;

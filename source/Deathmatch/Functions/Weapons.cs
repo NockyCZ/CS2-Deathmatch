@@ -74,63 +74,78 @@ namespace Deathmatch
             return false;
         }
 
-        public string GetWeaponFromSlot(CCSPlayerController player, int slot)
+        public CBasePlayerWeapon? GetWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
         {
             if (player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null)
-                return null!;
+                return null;
 
-            foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)
-            {
-                if (weapon != null && weapon.IsValid)
-                {
-                    if (slot == 1)
-                    {
-                        if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return weapon.Value!.DesignerName;
-                        }
-                    }
-                    else if (slot == 2)
-                    {
-                        if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                        {
-                            return weapon.Value!.DesignerName;
-                        }
-                    }
-                }
-            }
-            return null!;
+            return player.PlayerPawn.Value.WeaponServices.MyWeapons
+                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot)
+                .FirstOrDefault();
         }
 
-        public int IsHaveWeaponFromSlot(CCSPlayerController player, int slot)
+        public void GiveOrReplaceWeapons(CCSPlayerController player, string PrimaryWeapon, string SecondaryWeapon)
         {
-            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
-                return 3;
+            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PawnIsAlive)
+                return;
 
-            foreach (var weapon in player.PlayerPawn.Value.WeaponServices.MyWeapons)
+            var weaponServices = player.PlayerPawn.Value.WeaponServices;
+            if (weaponServices == null)
+                return;
+            var weaponsList = weaponServices.MyWeapons.Select(weapon => weapon.Value?.As<CCSWeaponBase>()).ToList();
+            if (weaponsList == null)
+                return;
+
+            var weapon = weaponsList
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_RIFLE)
+                .FirstOrDefault();
+
+            if (weapon == null)
             {
-                if (weapon != null && weapon.IsValid)
+                if (string.IsNullOrEmpty(PrimaryWeapon))
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
+                else
+                    player.GiveNamedItem(PrimaryWeapon);
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(PrimaryWeapon))
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
+                else
                 {
-                    switch (slot)
-                    {
-                        case 0:
-                            if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                                return 2;
-                            else if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                                return 1;
-                            break;
-                        case 1:
-                            if (PrimaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                                return 1;
-                            break;
-                        case 2:
-                            if (SecondaryWeaponsList.Contains(weapon.Value!.DesignerName))
-                                return 2;
-                            break;
-                    }
+                    player.RemoveItemByDesignerName(weapon.DesignerName, false);
+                    player.GiveNamedItem(PrimaryWeapon);
                 }
             }
-            return 3;
+            
+            weapon = weaponsList
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_PISTOL)
+                .FirstOrDefault();
+
+            if (weapon == null)
+            {
+                if (string.IsNullOrEmpty(SecondaryWeapon))
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
+                else
+                    player.GiveNamedItem(SecondaryWeapon);
+            }
+            else
+            {
+                if (string.IsNullOrEmpty(SecondaryWeapon))
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
+                else
+                {
+                    player.RemoveItemByDesignerName(weapon.DesignerName, false);
+                    player.GiveNamedItem(SecondaryWeapon);
+                }
+            }
+
+            weapon = weaponsList
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_KNIFE)
+                .FirstOrDefault();
+            if (weapon == null)
+                player.GiveNamedItem("weapon_knife");
         }
 
         private string GetRandomWeaponFromList(List<string> weaponsList, bool isVIP, CsTeam team)
@@ -143,8 +158,7 @@ namespace Deathmatch
                         weaponsList.Remove(weapon);
                 }
             }
-            Random rand = new Random();
-            int index = rand.Next(weaponsList.Count);
+            int index = Random.Next(weaponsList.Count);
             return weaponsList[index];
         }
 

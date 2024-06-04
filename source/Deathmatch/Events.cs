@@ -5,6 +5,7 @@ using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Admin;
+using System.Runtime.InteropServices;
 
 namespace Deathmatch
 {
@@ -14,7 +15,7 @@ namespace Deathmatch
         public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
         {
             var player = @event.Userid;
-            if (IsPlayerValid(player!) && !playerData.ContainsPlayer(player!))
+            if (IsPlayerValid(player!) && !playerData.ContainsPlayer(player))
             {
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                 DeathmatchPlayerData setupPlayerData = new DeathmatchPlayerData
@@ -34,6 +35,15 @@ namespace Deathmatch
                 };
                 playerData[player!] = setupPlayerData;
             }
+            return HookResult.Continue;
+        }
+        [GameEventHandler(HookMode.Pre)]
+        public HookResult OnPlayerConnectDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
+        {
+            var player = @event.Userid;
+            if (playerData.ContainsPlayer(player))
+                playerData.RemovePlayer(player);
+
             return HookResult.Continue;
         }
 
@@ -174,6 +184,97 @@ namespace Deathmatch
             IsActiveEditor = false;
             return HookResult.Continue;
         }
+
+        [GameEventHandler(HookMode.Post)]
+        public HookResult OnItemPurcharsed(EventItemPurchase @event, GameEventInfo info)
+        {
+            if (IsLinuxServer)
+                return HookResult.Continue;
+
+            var player = @event.Userid;
+            if (player != null && player.IsValid && playerData.ContainsPlayer(player))
+            {
+                var weaponName = @event.Weapon;
+                if (!IsCasualGamemode && blockRandomWeaponsIntegeration.Contains(player))
+                {
+                    player.RemoveItemByDesignerName(weaponName, true);
+                    return HookResult.Continue;
+                }
+
+                if (ActiveMode != null && ActiveMode.RandomWeapons)
+                {
+                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
+                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
+                    player.RemoveItemByDesignerName(weaponName, true);
+                    return HookResult.Continue;
+                }
+                if (!AllowedPrimaryWeaponsList.Contains(weaponName) && !AllowedSecondaryWeaponsList.Contains(weaponName))
+                {
+                    if (!player.IsBot)
+                    {
+                        if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
+                            player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+
+                        string replacedweaponName = Localizer[weaponName];
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", replacedweaponName]}");
+                    }
+                    player.RemoveWeapons();
+                    GivePlayerWeapons(player, false, false);
+                    return HookResult.Continue;
+                }
+
+                string localizerWeaponName = Localizer[weaponName];
+                bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
+                if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team))
+                {
+                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
+                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+
+                    var restrictInfo = GetRestrictData(weaponName, IsVIP, player.Team);
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
+                    player.RemoveItemByDesignerName(weaponName, true);
+                    return HookResult.Continue;
+                }
+
+                bool IsPrimary = AllowedPrimaryWeaponsList.Contains(weaponName);
+                if (IsPrimary)
+                {
+                    if (weaponName == playerData[player].PrimaryWeapon)
+                    {
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
+                        return HookResult.Continue;
+                    }
+                    if (!Config.Gameplay.SwitchWeapons)
+                    {
+                        player.RemoveWeapons();
+                        GivePlayerWeapons(player, false, false);
+                        return HookResult.Continue;
+                    }
+                    playerData[player].PrimaryWeapon = weaponName;
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
+                }
+                else
+                {
+                    if (weaponName == playerData[player].SecondaryWeapon)
+                    {
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
+                        return HookResult.Continue;
+                    }
+                    if (!Config.Gameplay.SwitchWeapons)
+                    {
+                        player.RemoveWeapons();
+                        GivePlayerWeapons(player, false, false);
+                        return HookResult.Continue;
+                    }
+                    playerData[player].SecondaryWeapon = weaponName;
+                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
+                }
+            }
+            return HookResult.Continue;
+        }
+
         private HookResult OnPlayerRadioMessage(CCSPlayerController? player, CommandInfo info)
         {
             if (Config.General.BlockRadioMessage)
@@ -186,6 +287,7 @@ namespace Deathmatch
         {
             return HookResult.Stop;
         }
+
         private HookResult OnTakeDamage(DynamicHook hook)
         {
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
@@ -215,6 +317,7 @@ namespace Deathmatch
             }
             return HookResult.Continue;
         }
+
         private HookResult OnWeaponCanAcquire(DynamicHook hook)
         {
             var vdata = GetCSWeaponDataFromKeyFunc?.Invoke(-1, hook.GetParam<CEconItemView>(1).ItemDefinitionIndex.ToString());
@@ -223,9 +326,10 @@ namespace Deathmatch
             if (vdata == null)
                 return HookResult.Continue;
 
-            CCSPlayerController? player = null;
-            if (controller != null)
-                player = controller.As<CCSPlayerController>();
+            if (controller == null)
+                return HookResult.Continue;
+
+            var player = controller.As<CCSPlayerController>();
 
             if (player == null || !player.IsValid || !player.PawnIsAlive)
                 return HookResult.Continue;
@@ -234,7 +338,7 @@ namespace Deathmatch
             {
                 if (!AllowedPrimaryWeaponsList.Contains(vdata.Name) && !AllowedSecondaryWeaponsList.Contains(vdata.Name))
                 {
-                    if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet"))
+                    if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet") || (ActiveMode != null && ActiveMode.Utilities != null && ActiveMode.Utilities.Contains(vdata.Name)))
                         return HookResult.Continue;
 
                     hook.SetReturn(AcquireResult.AlreadyOwned);
@@ -298,7 +402,9 @@ namespace Deathmatch
                     }
                     playerData[player].PrimaryWeapon = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
-                    if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 1) == 1)
+
+                    var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
+                    if (!Config.Gameplay.SwitchWeapons && weapon != null)
                     {
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
@@ -314,7 +420,9 @@ namespace Deathmatch
                     }
                     playerData[player].SecondaryWeapon = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
-                    if (!Config.Gameplay.SwitchWeapons && IsHaveWeaponFromSlot(player, 2) == 2)
+
+                    var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL);
+                    if (!Config.Gameplay.SwitchWeapons && weapon != null)
                     {
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;

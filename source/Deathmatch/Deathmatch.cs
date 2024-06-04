@@ -8,6 +8,10 @@ using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Menu;
 using Newtonsoft.Json;
+using CounterStrikeSharp.API.Core.Capabilities;
+using DeathmatchAPI.Helpers;
+using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
+using System.Runtime.InteropServices;
 
 namespace Deathmatch;
 
@@ -16,19 +20,27 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.3";
+    public override string ModuleVersion => "1.1.4";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
         Config = config;
+        CheckedEnemiesDistance = Config.Gameplay.DistanceRespawn;
     }
     public override void Load(bool hotReload)
     {
-        GetCSWeaponDataFromKeyFunc = new(GameData.GetSignature("GetCSWeaponDataFromKey"));
-        CCSPlayer_CanAcquireFunc = new(GameData.GetSignature("CCSPlayer_CanAcquire"));
-        CCSPlayer_CanAcquireFunc.Hook(OnWeaponCanAcquire, HookMode.Pre);
-        VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
+        var API = new Deathmatch();
+        Capabilities.RegisterPluginCapability(DeathmatchAPI, () => API);
 
+        IsLinuxServer = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+        if (IsLinuxServer)
+        {
+            GetCSWeaponDataFromKeyFunc = new(GameData.GetSignature("GetCSWeaponDataFromKey"));
+            CCSPlayer_CanAcquireFunc = new(GameData.GetSignature("CCSPlayer_CanAcquire"));
+            CCSPlayer_CanAcquireFunc.Hook(OnWeaponCanAcquire, HookMode.Pre);
+        }
+
+        VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
         LoadCustomModes();
         LoadWeaponsRestrict();
 
@@ -56,12 +68,15 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             DefaultMapSpawnDisabled = false;
             Server.NextFrame(() =>
             {
-                SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
-                RemoveEntities();
-                SetupDeathMatchConfigValues();
-                SetupDeathmatchMenus();
-                LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
-                LoadCustomConfigFile();
+                AddTimer(2.0f, () =>
+                {
+                    LoadCustomConfigFile();
+                    SetupDeathMatchConfigValues();
+                    SetupDeathmatchMenus();
+                    SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
+                    RemoveEntities();
+                    LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
+                });
 
                 if (Config.Gameplay.IsCustomModes)
                 {
@@ -109,32 +124,44 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         });
         RegisterListener<Listeners.OnTick>(() =>
         {
-            if (IsActiveEditor)
+            if (VisibleHud)
             {
-                foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV && AdminManager.PlayerHasPermissions(p, "@css/root")))
+                if (IsActiveEditor)
                 {
-                    string CTSpawns = $"<font class='fontSize-m' color='cyan'>CT Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsCT.Count}</font>";
-                    string TSpawns = $"<font class='fontSize-m' color='orange'>T Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsT.Count}</font>";
-                    p.PrintToCenterHtml($"<font class='fontSize-l' color='red'>Spawns Editor</font><br>{CTSpawns}<br>{TSpawns}<br>");
-                }
-            }
-            else
-            {
-                foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
-                {
-                    if (ActiveMode != null && !string.IsNullOrEmpty(ModeCenterMessage) && MenuManager.GetActiveMenu(p) == null)
+                    foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV && AdminManager.PlayerHasPermissions(p, "@css/root")))
                     {
-                        p.PrintToCenterHtml(ModeCenterMessage);
+                        string CTSpawns = $"<font class='fontSize-m' color='cyan'>CT Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsCT.Count}</font>";
+                        string TSpawns = $"<font class='fontSize-m' color='orange'>T Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsT.Count}</font>";
+                        p.PrintToCenterHtml($"<font class='fontSize-l' color='red'>Spawns Editor</font><br>{CTSpawns}<br>{TSpawns}<br>");
                     }
-                    if (Config.General.HideModeRemainingTime && RemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
+                }
+                else
+                {
+                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
                     {
-                        if (RemainingTime == 0)
+                        if (ActiveMode != null && !string.IsNullOrEmpty(ActiveMode.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
                         {
-                            p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
+                            if (Config.Gameplay.HudType == 1)
+                                p.PrintToCenterHtml(ModeCenterMessage);
+                            else
+                                p.PrintToCenter(ModeCenterMessage);
                         }
-                        else
+                        if (Config.General.HideModeRemainingTime && RemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
                         {
-                            p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime]}");
+                            if (RemainingTime == 0)
+                            {
+                                if (Config.Gameplay.HudType == 1)
+                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
+                                else
+                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
+                            }
+                            else
+                            {
+                                if (Config.Gameplay.HudType == 1)
+                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime]}");
+                                else
+                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
+                            }
                         }
                     }
                 }
@@ -145,7 +172,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
     public override void Unload(bool hotReload)
     {
         VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
-        CCSPlayer_CanAcquireFunc?.Unhook(OnWeaponCanAcquire, HookMode.Pre);
+
+        if (IsLinuxServer)
+            CCSPlayer_CanAcquireFunc?.Unhook(OnWeaponCanAcquire, HookMode.Pre);
+        //else
+        //    VirtualFunctions.CCSPlayer_WeaponServices_CanUseFunc.Unhook(OnWeaponCanUse, HookMode.Pre);
     }
 
     public void SetupCustomMode(string modeId)
@@ -176,6 +207,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             ModeCenterMessage = ModeCenterMessage.Replace("{REMAININGTIME}", RemainingTime.ToString());
         }
         SetupDeathmatchConfiguration(ActiveMode, bNewmode);
+
+        Server.NextFrame(() =>
+        {
+            DeathmatchAPI.Get()?.TriggerEvent(new OnCustomModeStarted(ActiveCustomMode));
+        });
     }
 
     public void SetupDeathmatchConfiguration(ModeData mode, bool isNewMode)
@@ -319,11 +355,9 @@ sv_cheats 0
             }
         }
     }
-
     public void SetupDeathMatchConfigValues()
     {
         var gameType = ConVar.Find("game_type")!.GetPrimitiveValue<int>();
-
         IsCasualGamemode = gameType != 1;
 
         var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
@@ -348,11 +382,10 @@ sv_cheats 0
         {
             if (Config.Gameplay.RandomSelectionOfModes)
             {
-                Random random = new Random();
                 int iRandomMode;
                 do
                 {
-                    iRandomMode = random.Next(0, CustomModes.Count);
+                    iRandomMode = Random.Next(0, CustomModes.Count);
                 } while (iRandomMode == ActiveCustomMode);
                 return iRandomMode;
             }

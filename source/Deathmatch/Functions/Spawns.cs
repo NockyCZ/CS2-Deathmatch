@@ -31,8 +31,7 @@ namespace Deathmatch
 
             if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance)
             {
-                Random random = new Random();
-                var randomSpawn = spawnsDictionary.ElementAt(random.Next(spawnsDictionary.Count));
+                var randomSpawn = spawnsDictionary.ElementAt(Random.Next(spawnsDictionary.Count));
                 if (!IsBot)
                     playerData[player].LastSpawn = randomSpawn.Key;
 
@@ -69,11 +68,10 @@ namespace Deathmatch
                 .Select(p => p.PlayerPawn.Value!.AbsOrigin)
                 .ToList();
 
-            var availableSpawns = new Dictionary<Vector, QAngle>();
+            var availableSpawns = new List<KeyValuePair<Vector, QAngle>>();
             int spawnCount = 0;
             foreach (KeyValuePair<Vector, QAngle> spawn in spawnsList)
             {
-
                 spawnCount++;
                 double closestDistance = 4000;
                 foreach (var playerPos in playerPositions)
@@ -89,22 +87,21 @@ namespace Deathmatch
                         }
                     }
                 }
-                if (closestDistance > Config.Gameplay.DistanceRespawn)
+                if (closestDistance > CheckedEnemiesDistance)
                 {
                     //Console.WriteLine($"closestDistance {closestDistance} > DistanceRespawn {Config.Gameplay.DistanceRespawn}");
-                    availableSpawns.Add(spawn.Key, spawn.Value);
+                    availableSpawns.Add(spawn);
                 }
             }
 
-            Random random = new Random();
             if (availableSpawns.Count > 0)
             {
                 //SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, available spawns found: {availableSpawns.Count})", ConsoleColor.DarkYellow);
-                var randomAvailableSpawn = availableSpawns.ElementAt(random.Next(availableSpawns.Count));
+                var randomAvailableSpawn = availableSpawns.ElementAt(Random.Next(availableSpawns.Count));
                 return randomAvailableSpawn;
             }
             SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected. (T {spawnPositionsT.Count()} : CT {spawnPositionsCT.Count()})", ConsoleColor.DarkYellow);
-            var randomSpawn = spawnsList.ElementAt(random.Next(spawnsList.Count));
+            var randomSpawn = spawnsList.ElementAt(Random.Next(spawnsList.Count));
             return randomSpawn;
         }
 
@@ -150,17 +147,24 @@ namespace Deathmatch
 
         public bool RemoveSpawnPoint(string filepath, string posValue)
         {
-            if (!File.Exists(filepath))
+            try
             {
-                return false;
-            }
-            string jsonContent = File.ReadAllText(filepath);
-            JObject jsonData = JObject.Parse(jsonContent);
+                if (!File.Exists(filepath))
+                {
+                    return false;
+                }
+                string jsonContent = File.ReadAllText(filepath);
+                JObject jsonData = JObject.Parse(jsonContent);
 
-            JArray spawnpointsArray = (JArray)jsonData["spawnpoints"]!;
-            RemoveSpawnpointByPos(spawnpointsArray, posValue);
-            File.WriteAllText(filepath, jsonData.ToString());
-            return true;
+                JArray spawnpointsArray = (JArray)jsonData["spawnpoints"]!;
+                RemoveSpawnpointByPos(spawnpointsArray, posValue);
+                File.WriteAllText(filepath, jsonData.ToString());
+                return true;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"An error occurred while removing a spawn point: {ex.Message}");
+            }
         }
 
         static void RemoveSpawnpointByPos(JArray spawnpointsArray, string posToRemove)
@@ -177,7 +181,7 @@ namespace Deathmatch
         public string GetNearestSpawnPoint(Vector? playerPos)
         {
             if (playerPos == null)
-                return "Spawn point cannot be deleted!";
+                return "Spawn point cannot be deleted! Your Position is not valid!";
 
             double lowestDistance = float.MaxValue;
             Vector? nearestSpawn = null;
@@ -213,7 +217,7 @@ namespace Deathmatch
             }
             else
             {
-                return "Spawn point cannot be deleted!";
+                return "Spawn point cannot be deleted! (No spawn found)";
             }
         }
         public void ShowAllSpawnPoints()
@@ -314,12 +318,7 @@ namespace Deathmatch
 
             foreach (var spawn in spawnPositionsCT)
             {
-                CBaseEntity entity;
-                if (IsCasualGamemode)
-                    entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerCT)!;
-                else
-                    entity = Utilities.CreateEntityByName<CInfoDeathmatchSpawn>(infoPlayerCT)!;
-
+                var entity = Utilities.CreateEntityByName<SpawnPoint>(infoPlayerCT);
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for CT", ConsoleColor.DarkYellow);
@@ -331,11 +330,7 @@ namespace Deathmatch
 
             foreach (var spawn in spawnPositionsT)
             {
-                CBaseEntity entity;
-                if (IsCasualGamemode)
-                    entity = Utilities.CreateEntityByName<CInfoPlayerTerrorist>(infoPlayerT)!;
-                else
-                    entity = Utilities.CreateEntityByName<CInfoDeathmatchSpawn>(infoPlayerT)!;
+                var entity = Utilities.CreateEntityByName<SpawnPoint>(infoPlayerT);
                 if (entity == null)
                 {
                     SendConsoleMessage($"[Deathmatch] Failed to create spawn point for T", ConsoleColor.DarkYellow);
@@ -363,6 +358,7 @@ namespace Deathmatch
                 }
                 else
                 {
+                    SendConsoleMessage($"[Deathmatch] Loading Custom Map Spawns..", ConsoleColor.DarkYellow);
 
                     var jsonContent = File.ReadAllText(filePath);
                     JObject jsonData = JsonConvert.DeserializeObject<JObject>(jsonContent)!;
@@ -383,7 +379,7 @@ namespace Deathmatch
                         }
                     }
 
-                    SendConsoleMessage($"[Deathmatch] Total Loaded Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
+                    SendConsoleMessage($"[Deathmatch] Total Loaded Custom Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
                     if (mapstart)
                         RemoveMapDefaulSpawns();
                 }
@@ -430,39 +426,43 @@ namespace Deathmatch
         {
             if (IsCasualGamemode)
             {
-                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist"))
+                SendConsoleMessage($"[Deathmatch] Loading Default Map Spawns..", ConsoleColor.DarkYellow);
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist"))
                 {
                     if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
-                        return;
+                        continue;
+
                     spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                 }
-                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist"))
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist"))
                 {
                     if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
-                        return;
+                        continue;
                     spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                 }
             }
             else
             {
+                SendConsoleMessage($"[Deathmatch] Loading Default Deathmatch Map Spawns..", ConsoleColor.DarkYellow);
                 int randomizer = 0;
-                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn"))
+                foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"))
                 {
                     randomizer++;
                     if (randomizer % 2 == 0)
                     {
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
-                            return;
+                            continue;
                         spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                     }
                     else
                     {
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
-                            return;
+                            continue;
                         spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
                     }
                 }
             }
+            SendConsoleMessage($"[Deathmatch] Total Loaded Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
         }
     }
 }
