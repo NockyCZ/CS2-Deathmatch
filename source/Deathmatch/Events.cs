@@ -86,6 +86,22 @@ namespace Deathmatch
                             attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
+
+                if (!IsLinuxServer)
+                {
+                    if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
+                    {
+                        player!.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
+                        player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
+                        return HookResult.Continue;
+                    }
+                    if (!ActiveMode.KnifeDamage && (@event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet")))
+                    {
+                        attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
+                        player!.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
+                        player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
+                    }
+                }
             }
             return HookResult.Continue;
         }
@@ -293,6 +309,9 @@ namespace Deathmatch
 
         private HookResult OnTakeDamage(DynamicHook hook)
         {
+            //if (!IsLinuxServer)
+            //    return HookResult.Continue;
+
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
 
             var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
