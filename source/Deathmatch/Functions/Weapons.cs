@@ -6,9 +6,8 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team)
+        public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
-            bool bPrimary = PrimaryWeaponsList.Contains(weaponName);
             if (bPrimary)
             {
                 if (AllowedPrimaryWeaponsList.Count == 1)
@@ -19,6 +18,7 @@ namespace Deathmatch
                 if (AllowedSecondaryWeaponsList.Count == 1)
                     return false;
             }
+            
             if (RestrictedWeapons.ContainsKey(weaponName))
             {
                 int restrictValue = GetWeaponRestrict(weaponName, isVIP, team);
@@ -85,88 +85,18 @@ namespace Deathmatch
                 .FirstOrDefault();
         }
 
-        public void GiveOrReplaceWeapons(CCSPlayerController player, string PrimaryWeapon, string SecondaryWeapon)
-        {
-            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PawnIsAlive)
-                return;
-
-            var weaponServices = player.PlayerPawn.Value.WeaponServices;
-            if (weaponServices == null)
-                return;
-            var weaponsList = weaponServices.MyWeapons.Select(weapon => weapon.Value?.As<CCSWeaponBase>()).ToList();
-            if (weaponsList == null)
-                return;
-
-            var weapon = weaponsList
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_RIFLE)
-                .FirstOrDefault();
-
-            if (weapon == null)
-            {
-                if (string.IsNullOrEmpty(PrimaryWeapon))
-                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
-                else
-                    player.GiveNamedItem(PrimaryWeapon);
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(PrimaryWeapon))
-                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
-                else
-                {
-                    player.RemoveItemByDesignerName(weapon.DesignerName, false);
-                    player.GiveNamedItem(PrimaryWeapon);
-                }
-            }
-            
-            weapon = weaponsList
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_PISTOL)
-                .FirstOrDefault();
-
-            if (weapon == null)
-            {
-                if (string.IsNullOrEmpty(SecondaryWeapon))
-                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
-                else
-                    player.GiveNamedItem(SecondaryWeapon);
-            }
-            else
-            {
-                if (string.IsNullOrEmpty(SecondaryWeapon))
-                    player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SetupWeaponsCommand"]}");
-                else
-                {
-                    player.RemoveItemByDesignerName(weapon.DesignerName, false);
-                    player.GiveNamedItem(SecondaryWeapon);
-                }
-            }
-
-            weapon = weaponsList
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == gear_slot_t.GEAR_SLOT_KNIFE)
-                .FirstOrDefault();
-            if (weapon == null)
-                player.GiveNamedItem("weapon_knife");
-        }
-
-        private string GetRandomWeaponFromList(List<string> weaponsList, bool isVIP, CsTeam team)
+        private string GetRandomWeaponFromList(List<string> weaponsList, bool isVIP, CsTeam team, bool bPrimary)
         {
             if (Config.Gameplay.RemoveRestrictedWeapons)
-            {
-                foreach (var weapon in weaponsList)
-                {
-                    if (CheckIsWeaponRestricted(weapon, isVIP, team))
-                        weaponsList.Remove(weapon);
-                }
-            }
+                weaponsList.RemoveAll(weapon => CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary));
+
             int index = Random.Next(weaponsList.Count);
             return weaponsList[index];
         }
 
         public int GetWeaponRestrict(string weaponName, bool isVIP, CsTeam team)
         {
-            if (!RestrictedWeapons.ContainsKey(weaponName))
-                return 0;
-            if (!RestrictedWeapons[weaponName].ContainsKey(ActiveCustomMode.ToString()))
+            if (!RestrictedWeapons.ContainsKey(weaponName) || !RestrictedWeapons[weaponName].ContainsKey(ActiveCustomMode.ToString()))
                 return 0;
 
             var restrictInfo = RestrictedWeapons[weaponName][ActiveCustomMode.ToString()][isVIP ? RestrictType.VIP : RestrictType.NonVIP];
