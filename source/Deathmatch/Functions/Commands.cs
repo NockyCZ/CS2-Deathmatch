@@ -182,7 +182,7 @@ namespace Deathmatch
             }
             var position = player.PlayerPawn.Value!.AbsOrigin;
             var angle = player.PlayerPawn.Value.AbsRotation;
-            AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", $"{position}", $"{angle}", "ct");
+            AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", position!, angle!, "ct");
             info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn for the CT team has been added. (Total: {ChatColors.Green}{spawnPositionsCT.Count}{ChatColors.Default})");
         }
 
@@ -203,7 +203,7 @@ namespace Deathmatch
             }
             var position = player.PlayerPawn.Value!.AbsOrigin;
             var angle = player.PlayerPawn.Value.AbsRotation;
-            AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", $"{position}", $"{angle}", "t");
+            AddNewSpawnPoint(ModuleDirectory + $"/spawns/{Server.MapName}.json", position!, angle!, "t");
             info.ReplyToCommand($"{Localizer["Chat.Prefix"]} Spawn for the T team has been added. (Total: {ChatColors.Green}{spawnPositionsT.Count}{ChatColors.Default})");
         }
 

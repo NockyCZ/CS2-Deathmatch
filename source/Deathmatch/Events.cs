@@ -6,16 +6,17 @@ using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Admin;
 using System.Runtime.InteropServices;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        [GameEventHandler]
+        [GameEventHandler(HookMode.Post)]
         public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
         {
             var player = @event.Userid;
-            if (IsPlayerValid(player!) && !playerData.ContainsPlayer(player))
+            if (player != null && player.IsValid && !player.IsBot && !player.IsHLTV && player.SteamID.ToString().Length == 17 && !playerData.ContainsPlayer(player))
             {
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                 DeathmatchPlayerData setupPlayerData = new DeathmatchPlayerData
@@ -31,9 +32,9 @@ namespace Deathmatch
                     HudMessages = Config.PlayersPreferences.HudMessages.Enabled ? ((Config.PlayersPreferences.HudMessages.OnlyVIP && IsVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false) || (!Config.PlayersPreferences.HudMessages.OnlyVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false)) : false,
                     SpawnProtection = false,
                     OpenedMenu = 0,
-                    LastSpawn = null!
+                    LastSpawn = new Vector()
                 };
-                playerData[player!] = setupPlayerData;
+                playerData[player] = setupPlayerData;
             }
             return HookResult.Continue;
         }
@@ -41,7 +42,7 @@ namespace Deathmatch
         public HookResult OnPlayerConnectDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
         {
             var player = @event.Userid;
-            if (playerData.ContainsPlayer(player))
+            if (player != null && player.IsValid && playerData.ContainsPlayer(player))
                 playerData.RemovePlayer(player);
 
             return HookResult.Continue;
@@ -59,16 +60,17 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnPlayerHurt(EventPlayerHurt @event, GameEventInfo info)
         {
-            if (@event.Userid == null || !@event.Userid.IsValid)
-                return HookResult.Continue;
-
             var attacker = @event.Attacker;
             var player = @event.Userid;
+
+            if (player == null || !player.IsValid)
+                return HookResult.Continue;
+
             if (ActiveMode != null && attacker != null && playerData.ContainsPlayer(attacker))
             {
                 if (ActiveMode.OnlyHS)
                 {
-                    if (@event.Hitgroup == 1 && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")) && playerData[attacker].HitSound)
+                    if (@event.Hitgroup == 1 && playerData[attacker].HitSound && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                         attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                 }
                 else
@@ -84,9 +86,26 @@ namespace Deathmatch
                             attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
+
+                if (!IsLinuxServer)
+                {
+                    if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
+                    {
+                        player!.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
+                        player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
+                        return HookResult.Continue;
+                    }
+                    if (!ActiveMode.KnifeDamage && (@event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet")))
+                    {
+                        attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
+                        player!.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
+                        player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
+                    }
+                }
             }
             return HookResult.Continue;
         }
+
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
         {
@@ -221,13 +240,14 @@ namespace Deathmatch
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", replacedweaponName]}");
                     }
                     player.RemoveWeapons();
-                    GivePlayerWeapons(player, false, false);
+                    GivePlayerWeapons(player, false, false, true);
                     return HookResult.Continue;
                 }
 
                 string localizerWeaponName = Localizer[weaponName];
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-                if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team))
+                bool IsPrimary = AllowedPrimaryWeaponsList.Contains(weaponName);
+                if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team, IsPrimary))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -238,7 +258,6 @@ namespace Deathmatch
                     return HookResult.Continue;
                 }
 
-                bool IsPrimary = AllowedPrimaryWeaponsList.Contains(weaponName);
                 if (IsPrimary)
                 {
                     if (weaponName == playerData[player].PrimaryWeapon)
@@ -249,7 +268,7 @@ namespace Deathmatch
                     if (!Config.Gameplay.SwitchWeapons)
                     {
                         player.RemoveWeapons();
-                        GivePlayerWeapons(player, false, false);
+                        GivePlayerWeapons(player, false, false, true);
                         return HookResult.Continue;
                     }
                     playerData[player].PrimaryWeapon = weaponName;
@@ -265,7 +284,7 @@ namespace Deathmatch
                     if (!Config.Gameplay.SwitchWeapons)
                     {
                         player.RemoveWeapons();
-                        GivePlayerWeapons(player, false, false);
+                        GivePlayerWeapons(player, false, false, true);
                         return HookResult.Continue;
                     }
                     playerData[player].SecondaryWeapon = weaponName;
@@ -290,6 +309,9 @@ namespace Deathmatch
 
         private HookResult OnTakeDamage(DynamicHook hook)
         {
+            //if (!IsLinuxServer)
+            //    return HookResult.Continue;
+
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
 
             var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
@@ -380,7 +402,9 @@ namespace Deathmatch
             {
                 string localizerWeaponName = Localizer[vdata.Name];
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-                if (CheckIsWeaponRestricted(vdata.Name, IsVIP, player.Team))
+
+                bool IsPrimary = AllowedPrimaryWeaponsList.Contains(vdata.Name);
+                if (CheckIsWeaponRestricted(vdata.Name, IsVIP, player.Team, IsPrimary))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -391,7 +415,6 @@ namespace Deathmatch
                     return HookResult.Stop;
                 }
 
-                bool IsPrimary = AllowedPrimaryWeaponsList.Contains(vdata.Name);
                 if (IsPrimary)
                 {
                     if (vdata.Name == playerData[player].PrimaryWeapon)

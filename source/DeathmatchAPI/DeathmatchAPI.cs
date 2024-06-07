@@ -1,4 +1,5 @@
-﻿using DeathmatchAPI.Events;
+﻿using CounterStrikeSharp.API.Modules.Utils;
+using DeathmatchAPI.Events;
 using DeathmatchAPI.Helpers;
 
 namespace DeathmatchAPI;
@@ -12,9 +13,9 @@ public interface IDeathmatchAPI
 
     /*
         Team String - Available values: ct | t
-        Spawns Dictionary - Vector & QAngle to string 
+        Spawns Dictionary - Vector & QAngle
     */
-    public void SetupCustomSpawns(string team, Dictionary<string, string> spawns);
+    public void SetupCustomSpawns(string team, Dictionary<Vector, QAngle> spawns);
     public void SwapHudMessageVisibility(bool visible);
     public int GetActiveModeId();
     public int GetActiveModeRemainingTime();

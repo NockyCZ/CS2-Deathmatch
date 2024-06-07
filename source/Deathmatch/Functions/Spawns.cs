@@ -39,7 +39,7 @@ namespace Deathmatch
                 player.PlayerPawn.Value.Teleport(randomSpawn.Key, randomSpawn.Value, new Vector(0, 0, 0));
                 spawnsDictionary.Remove(randomSpawn.Key);
 
-                AddTimer(5.0f, () =>
+                AddTimer(10.0f, () =>
                 {
                     if (!spawnsDictionary.ContainsKey(randomSpawn.Key))
                         spawnsDictionary.Add(randomSpawn.Key, randomSpawn.Value);
@@ -76,15 +76,15 @@ namespace Deathmatch
                 double closestDistance = 4000;
                 foreach (var playerPos in playerPositions)
                 {
-                    if (playerPos != null)
+                    if (playerPos == null)
+                        continue;
+
+                    double distance = GetDistance(playerPos, spawn.Key);
+                    //Console.WriteLine($"Distance {distance} | {closestDistance}");
+                    if (distance < closestDistance)
                     {
-                        double distance = GetDistance(playerPos, spawn.Key);
-                        //Console.WriteLine($"Distance {distance} | {closestDistance}");
-                        if (distance < closestDistance)
-                        {
-                            //Console.WriteLine($"ClosestDistance Distance {distance}");
-                            closestDistance = distance;
-                        }
+                        //Console.WriteLine($"ClosestDistance Distance {distance}");
+                        closestDistance = distance;
                     }
                 }
                 if (closestDistance > CheckedEnemiesDistance)
@@ -105,15 +105,25 @@ namespace Deathmatch
             return randomSpawn;
         }
 
-        public void AddNewSpawnPoint(string filepath, string posValue, string angleValue, string team)
+        public void AddNewSpawnPoint(string filepath, Vector posValue, QAngle angleValue, string team)
         {
+            string FormatValue(float value)
+            {
+                return value.ToString("N2", CultureInfo.InvariantCulture);
+            }
+
+            string formattedPosValue = $"{FormatValue(posValue.X)} {FormatValue(posValue.Y)} {FormatValue(posValue.Z)}";
+            string formattedAngleValue = $"{FormatValue(angleValue.X)} {FormatValue(angleValue.Y)} {FormatValue(angleValue.Z)}";
+
+            //Server.PrintToChatAll($"Edited: {formattedPosValue} | {formattedAngleValue}");
+            //Server.PrintToChatAll($"Default: {posValue} | {angleValue}");
             if (!File.Exists(filepath))
             {
                 JObject newRow = new JObject
                 {
                     { "team", team },
-                    { "pos", posValue },
-                    { "angle", angleValue }
+                    { "pos", formattedPosValue },
+                    { "angle", formattedAngleValue }
                 };
 
                 JObject jsonData = new JObject
@@ -130,8 +140,8 @@ namespace Deathmatch
                 JObject newRow = new JObject
                 {
                     { "team", team },
-                    { "pos", posValue },
-                    { "angle", angleValue }
+                    { "pos", formattedPosValue },
+                    { "angle", formattedAngleValue }
                 };
 
                 JArray spawnpointsArray = (JArray)jsonData["spawnpoints"]!;

@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API.Modules.Utils;
 using DeathmatchAPI;
 using DeathmatchAPI.Events;
 using DeathmatchAPI.Helpers;
@@ -41,14 +42,14 @@ public partial class Deathmatch : IDeathmatchAPI
         CheckedEnemiesDistance = distance;
     }
 
-    public void SetupCustomSpawns(string team, Dictionary<string, string> spawns)
+    public void SetupCustomSpawns(string team, Dictionary<Vector, QAngle> spawns)
     {
         if (team.Equals("ct"))
         {
             spawnPositionsCT.Clear();
             foreach (var spawn in spawns)
             {
-                spawnPositionsCT.Add(ParseVector(spawn.Key), ParseQAngle(spawn.Value));
+                spawnPositionsCT.Add(spawn.Key, spawn.Value);
             }
         }
         else if (team.Equals("t"))
@@ -56,7 +57,7 @@ public partial class Deathmatch : IDeathmatchAPI
             spawnPositionsT.Clear();
             foreach (var spawn in spawns)
             {
-                spawnPositionsT.Add(ParseVector(spawn.Key), ParseQAngle(spawn.Value));
+                spawnPositionsT.Add(spawn.Key, spawn.Value);
             }
         }
         else
