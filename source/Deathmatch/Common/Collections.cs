@@ -14,8 +14,8 @@ namespace Deathmatch
         internal static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
         public static List<(string, bool, int)> PrefsMenuSounds = new();
         public static List<(string, bool, int)> PrefsMenuFunctions = new();
-        public static List<string> AllowedPrimaryWeaponsList = new List<string>();
-        public static List<string> AllowedSecondaryWeaponsList = new List<string>();
+        //public static List<string> AllowedPrimaryWeaponsList = new List<string>();
+        //public static List<string> AllowedSecondaryWeaponsList = new List<string>();
         public static List<CCSPlayerController> blockRandomWeaponsIntegeration = new List<CCSPlayerController>();
 
         readonly Dictionary<string, string> weaponSelectMapping = new Dictionary<string, string>

@@ -12,6 +12,7 @@ using CounterStrikeSharp.API.Core.Capabilities;
 using DeathmatchAPI.Helpers;
 using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
 using System.Runtime.InteropServices;
+using static CounterStrikeSharp.API.Core.Listeners;
 
 namespace Deathmatch;
 
@@ -20,7 +21,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.5";
+    public override string ModuleVersion => "1.1.6";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -32,7 +33,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         var API = new Deathmatch();
         Capabilities.RegisterPluginCapability(DeathmatchAPI, () => API);
         IsLinuxServer = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-        
         if (IsLinuxServer)
         {
             GetCSWeaponDataFromKeyFunc = new(GameData.GetSignature("GetCSWeaponDataFromKey"));
@@ -61,9 +61,10 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             AddCustomCommands(cmd, "", 3);
         foreach (string radioName in RadioMessagesList)
             AddCommandListener(radioName, OnPlayerRadioMessage);
+
         AddCommandListener("autobuy", OnRandomWeapons);
 
-        RegisterListener<Listeners.OnMapStart>(mapName =>
+        RegisterListener<OnMapStart>(mapName =>
         {
             DefaultMapSpawnDisabled = false;
             Server.NextFrame(() =>
@@ -122,7 +123,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
             });
         });
-        RegisterListener<Listeners.OnTick>(() =>
+        RegisterListener<OnTick>(() =>
         {
             if (VisibleHud)
             {
@@ -157,10 +158,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             }
                             else
                             {
+                                var NextModeData = CustomModes[NextMode.ToString()];
                                 if (Config.Gameplay.HudType == 1)
-                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime]}");
+                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                                 else
-                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
+                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                             }
                         }
                     }
@@ -185,17 +187,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
     {
         ActiveMode = CustomModes[modeId];
         bool bNewmode = true;
-
-        if (ActiveMode.SecondaryWeapons != null && ActiveMode.SecondaryWeapons.Count() > 0)
-            AllowedSecondaryWeaponsList = new(ActiveMode.SecondaryWeapons);
-        else
-            AllowedSecondaryWeaponsList.Clear();
-
-        if (ActiveMode.PrimaryWeapons != null && ActiveMode.PrimaryWeapons.Count() > 0)
-            AllowedPrimaryWeaponsList = new(ActiveMode.PrimaryWeapons);
-        else
-            AllowedPrimaryWeaponsList.Clear();
-
         if (modeId.Equals(ActiveCustomMode.ToString()))
             bNewmode = false;
 
@@ -225,7 +216,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
         Server.ExecuteCommand($"mp_free_armor {mode.Armor};mp_damage_headshot_only {mode.OnlyHS};mp_ct_default_primary \"\";mp_t_default_primary \"\";mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
 
-        if (mode.ExecuteCommands != null && mode.ExecuteCommands.Count > 0)
+        if (mode.ExecuteCommands.Count > 0)
         {
             foreach (var cmd in mode.ExecuteCommands)
                 Server.ExecuteCommand(cmd);
@@ -361,11 +352,17 @@ sv_cheats 0
     {
         var gameType = ConVar.Find("game_type")!.GetPrimitiveValue<int>();
         IsCasualGamemode = gameType != 1;
+        if (!IsLinuxServer && !IsCasualGamemode)
+        {
+            SendConsoleMessage("======= Deathmatch WARNING =======", ConsoleColor.Red);
+            SendConsoleMessage("Your server is running on Windows, the Deathmatch plugin does not work properly if you have deathmatch game mode (game_type 1 and game_mode 2)", ConsoleColor.DarkYellow);
+            SendConsoleMessage("Please use game mode Casual!", ConsoleColor.DarkYellow);
+            SendConsoleMessage("======= Deathmatch WARNING =======", ConsoleColor.Red);
+        }
 
         var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
-        var time = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>();
         var iFFA = Config.Gameplay.IsFFA ? 1 : 0;
-        Server.ExecuteCommand($"mp_teammates_are_enemies {iFFA};sv_hide_roundtime_until_seconds {iHideSecond};mp_roundtime_defuse {time};mp_roundtime {time};mp_roundtime_deployment {time};mp_roundtime_hostage {time};mp_respawn_on_death_ct 1;mp_respawn_on_death_t 1");
+        Server.ExecuteCommand($"mp_maxrounds 0;mp_timelimit {Config.Gameplay.GameLength};mp_teammates_are_enemies {iFFA};sv_hide_roundtime_until_seconds {iHideSecond};mp_roundtime_defuse {Config.Gameplay.GameLength};mp_roundtime {Config.Gameplay.GameLength};mp_roundtime_deployment {Config.Gameplay.GameLength};mp_roundtime_hostage {Config.Gameplay.GameLength};mp_respawn_on_death_ct 1;mp_respawn_on_death_t 1");
 
         if (Config.Gameplay.AllowBuyMenu)
             Server.ExecuteCommand("mp_buy_anywhere 1;mp_buytime 60000;mp_buy_during_immunity 0");

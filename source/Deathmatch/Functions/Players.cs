@@ -12,13 +12,16 @@ namespace Deathmatch
     {
         public void SetupPlayerWeapons(CCSPlayerController player, string weaponName, CommandInfo info)
         {
+            if (ActiveMode == null)
+                return;
+
             if (string.IsNullOrEmpty(weaponName))
             {
                 string primaryWeapons = "";
                 string secondaryWeapons = "";
-                if (AllowedPrimaryWeaponsList.Count != 0)
+                if (ActiveMode.PrimaryWeapons.Count != 0)
                 {
-                    foreach (string weapon in AllowedPrimaryWeaponsList)
+                    foreach (string weapon in ActiveMode.PrimaryWeapons)
                     {
                         if (string.IsNullOrEmpty(primaryWeapons))
                             primaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
@@ -28,9 +31,9 @@ namespace Deathmatch
                     info.ReplyToCommand($"{Localizer["Chat.ListOfAllowedWeapons"]}");
                     info.ReplyToCommand($"{ChatColors.DarkRed}• {primaryWeapons.ToUpper()}");
                 }
-                if (AllowedSecondaryWeaponsList.Count != 0)
+                if (ActiveMode.SecondaryWeapons.Count != 0)
                 {
-                    foreach (string weapon in AllowedSecondaryWeaponsList)
+                    foreach (string weapon in ActiveMode.SecondaryWeapons)
                     {
                         if (string.IsNullOrEmpty(secondaryWeapons))
                             secondaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
@@ -92,7 +95,7 @@ namespace Deathmatch
             }
 
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-            if (AllowedPrimaryWeaponsList.Contains(weaponName))
+            if (ActiveMode.PrimaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
                 if (weaponName == playerData[player].PrimaryWeapon)
@@ -130,7 +133,7 @@ namespace Deathmatch
                 }
                 return;
             }
-            else if (AllowedSecondaryWeaponsList.Contains(weaponName))
+            else if (ActiveMode.SecondaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
                 if (weaponName == playerData[player].SecondaryWeapon)
@@ -183,7 +186,7 @@ namespace Deathmatch
             string SecondaryWeapon = "";
             if (playerData.ContainsPlayer(player) && player.PlayerPawn.Value != null)
             {
-                if (player.InGameMoneyServices != null)
+                if (player.InGameMoneyServices != null && giveUtilities)
                     player.InGameMoneyServices.Account = Config.Gameplay.AllowBuyMenu ? 16000 : 0;
 
                 if (!bNewMode)
@@ -191,6 +194,9 @@ namespace Deathmatch
                     var timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.ProtectionTimeVIP : Config.PlayersSettings.ProtectionTime;
                     if (timer > 0.1)
                     {
+                        if (!playerData.ContainsPlayer(player))
+                            return;
+
                         if (string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
                         {
                             Color transparentColor = ColorTranslator.FromHtml(Config.Gameplay.SpawnProtectionColor);
@@ -219,45 +225,49 @@ namespace Deathmatch
                     return;
 
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
+                playerData[player].LastPrimaryWeapon = "";
+                playerData[player].LastSecondaryWeapon = "";
 
-                if (AllowedPrimaryWeaponsList.Count != 0)
+                if (ActiveMode.PrimaryWeapons.Count != 0)
                 {
                     PrimaryWeapon = playerData[player].PrimaryWeapon;
                     if (ActiveMode.RandomWeapons)
                     {
-                        PrimaryWeapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList, IsVIP, player.Team, true);
+                        PrimaryWeapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, IsVIP, player.Team, true);
+                        playerData[player].LastPrimaryWeapon = PrimaryWeapon;
                     }
-                    else if (string.IsNullOrEmpty(PrimaryWeapon) || !AllowedPrimaryWeaponsList.Contains(PrimaryWeapon))
+                    else if (string.IsNullOrEmpty(PrimaryWeapon) || !ActiveMode.PrimaryWeapons.Contains(PrimaryWeapon))
                     {
-                        PrimaryWeapon = AllowedPrimaryWeaponsList.Count switch
+                        PrimaryWeapon = ActiveMode.PrimaryWeapons.Count switch
                         {
-                            1 => AllowedPrimaryWeaponsList[0],
+                            1 => ActiveMode.PrimaryWeapons[0],
                             _ => Config.Gameplay.DefaultModeWeapons switch
                             {
-                                2 => GetRandomWeaponFromList(AllowedPrimaryWeaponsList, IsVIP, player.Team, true),
-                                1 => AllowedPrimaryWeaponsList[0],
+                                2 => GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, IsVIP, player.Team, true),
+                                1 => ActiveMode.PrimaryWeapons[0],
                                 _ => ""
                             }
                         };
                     }
                 }
 
-                if (AllowedSecondaryWeaponsList.Count != 0)
+                if (ActiveMode.SecondaryWeapons.Count != 0)
                 {
                     SecondaryWeapon = playerData[player].SecondaryWeapon;
                     if (ActiveMode.RandomWeapons)
                     {
-                        SecondaryWeapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList, IsVIP, player.Team, false);
+                        SecondaryWeapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, IsVIP, player.Team, false);
+                        playerData[player].LastSecondaryWeapon = SecondaryWeapon;
                     }
-                    else if (string.IsNullOrEmpty(SecondaryWeapon) || !AllowedSecondaryWeaponsList.Contains(SecondaryWeapon))
+                    else if (string.IsNullOrEmpty(SecondaryWeapon) || !ActiveMode.SecondaryWeapons.Contains(SecondaryWeapon))
                     {
-                        SecondaryWeapon = AllowedSecondaryWeaponsList.Count switch
+                        SecondaryWeapon = ActiveMode.SecondaryWeapons.Count switch
                         {
-                            1 => AllowedSecondaryWeaponsList[0],
+                            1 => ActiveMode.SecondaryWeapons[0],
                             _ => Config.Gameplay.DefaultModeWeapons switch
                             {
-                                2 => GetRandomWeaponFromList(AllowedSecondaryWeaponsList, IsVIP, player.Team, false),
-                                1 => AllowedSecondaryWeaponsList[0],
+                                2 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, IsVIP, player.Team, false),
+                                1 => ActiveMode.SecondaryWeapons[0],
                                 _ => ""
                             }
                         };
@@ -273,7 +283,7 @@ namespace Deathmatch
                 if (giveKnife)
                     player.GiveNamedItem("weapon_knife");
 
-                if (giveUtilities && ActiveMode.Utilities != null && ActiveMode.Utilities.Count() > 0)
+                if (giveUtilities && ActiveMode.Utilities.Count() > 0)
                 {
                     foreach (var item in ActiveMode.Utilities)
                         player.GiveNamedItem(item);
@@ -283,23 +293,36 @@ namespace Deathmatch
 
             AddTimer(0.2f, () =>
             {
-                if (player == null || !player.IsValid || GameRules().WarmupPeriod)
+                if (player == null || !player.IsValid || ActiveMode == null)
                     return;
 
                 if (player.InGameMoneyServices != null)
                     player.InGameMoneyServices.Account = 0;
 
-                if (AllowedPrimaryWeaponsList.Count != 0)
+                if (ActiveMode.PrimaryWeapons.Count != 0)
                 {
-                    PrimaryWeapon = GetRandomWeaponFromList(AllowedPrimaryWeaponsList, false, player.Team, true);
-                    if (!string.IsNullOrEmpty(PrimaryWeapon))
-                        player.GiveNamedItem(PrimaryWeapon);
+                    //var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
+                    //if (weapon != null)
+                    //    weapon.Remove();
+                    if (!IsHaveWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE))
+                    {
+                        PrimaryWeapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, false, player.Team, true);
+                        if (!string.IsNullOrEmpty(PrimaryWeapon))
+                            player.GiveNamedItem(PrimaryWeapon);
+                    }
                 }
-                if (AllowedSecondaryWeaponsList.Count != 0)
+                if (ActiveMode.SecondaryWeapons.Count != 0)
                 {
-                    SecondaryWeapon = GetRandomWeaponFromList(AllowedSecondaryWeaponsList, false, player.Team, false);
-                    if (!string.IsNullOrEmpty(SecondaryWeapon))
-                        player.GiveNamedItem(SecondaryWeapon);
+                    //var weapon = GetWeaponFromSlot(player, slot: gear_slot_t.GEAR_SLOT_PISTOL);
+                    //if (weapon != null)
+                    //    weapon.Remove();
+
+                    if (!IsHaveWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL))
+                    {
+                        SecondaryWeapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, false, player.Team, false);
+                        if (!string.IsNullOrEmpty(SecondaryWeapon))
+                            player.GiveNamedItem(SecondaryWeapon);
+                    }
                 }
             }, TimerFlags.STOP_ON_MAPCHANGE);
         }

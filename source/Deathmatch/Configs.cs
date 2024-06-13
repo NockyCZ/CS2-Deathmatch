@@ -28,6 +28,7 @@ public class Gameplay
 {
     [JsonPropertyName("Free For All")] public bool IsFFA { get; set; } = true;
     [JsonPropertyName("Custom Modes")] public bool IsCustomModes { get; set; } = true;
+    [JsonPropertyName("Game Length")] public int GameLength { get; set; } = 30;
     [JsonPropertyName("Random Selection Of Modes")] public bool RandomSelectionOfModes { get; set; } = true;
     [JsonPropertyName("Map Start Custom Mode")] public int MapStartMode { get; set; } = 0;
     [JsonPropertyName("New Mode Countdown")] public int NewModeCountdown { get; set; } = 10;

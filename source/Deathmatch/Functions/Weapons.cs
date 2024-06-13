@@ -8,17 +8,20 @@ namespace Deathmatch
     {
         public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
+            if (ActiveMode == null)
+                return false;
+
             if (bPrimary)
             {
-                if (AllowedPrimaryWeaponsList.Count == 1)
+                if (ActiveMode.PrimaryWeapons.Count == 1)
                     return false;
             }
             else
             {
-                if (AllowedSecondaryWeaponsList.Count == 1)
+                if (ActiveMode.SecondaryWeapons.Count == 1)
                     return false;
             }
-            
+
             if (RestrictedWeapons.ContainsKey(weaponName))
             {
                 int restrictValue = GetWeaponRestrict(weaponName, isVIP, team);
@@ -85,13 +88,56 @@ namespace Deathmatch
                 .FirstOrDefault();
         }
 
+        public bool IsHaveWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
+        {
+            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+                return false;
+
+            return player.PlayerPawn.Value.WeaponServices.MyWeapons
+                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot)
+                .Count() > 0;
+        }
+
+        public void RemovePlayerWeapon(CCSPlayerController player, string weaponName)
+        {
+            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+                return;
+
+            switch (weaponName)
+            {
+                case "weapon_m4a1_silencer":
+                    weaponName = "weapon_m4a1";
+                    break;
+
+                case "weapon_usp_silencer":
+                    weaponName = "weapon_hkp2000";
+                    break;
+
+                case "weapon_mp5sd":
+                    weaponName = "weapon_mp7";
+                    break;
+            }
+
+            var weapon = player.PlayerPawn.Value.WeaponServices.MyWeapons
+                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
+                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.DesignerName.Contains(weaponName)).FirstOrDefault();
+
+            if (weapon != null)
+                weapon.Remove();
+        }
+
         private string GetRandomWeaponFromList(List<string> weaponsList, bool isVIP, CsTeam team, bool bPrimary)
         {
-            if (Config.Gameplay.RemoveRestrictedWeapons)
-                weaponsList.RemoveAll(weapon => CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary));
+            if (weaponsList.Count > 0)
+            {
+                if (!ActiveMode!.RandomWeapons && Config.Gameplay.RemoveRestrictedWeapons)
+                    weaponsList.RemoveAll(weapon => CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary));
 
-            int index = Random.Next(weaponsList.Count);
-            return weaponsList[index];
+                int index = Random.Next(weaponsList.Count);
+                return weaponsList[index];
+            }
+            return "";
         }
 
         public int GetWeaponRestrict(string weaponName, bool isVIP, CsTeam team)

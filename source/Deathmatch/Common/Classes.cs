@@ -6,18 +6,20 @@ namespace Deathmatch
     {
         public class DeathmatchPlayerData
         {
-            public required string PrimaryWeapon { get; set; }
-            public required string SecondaryWeapon { get; set; }
-            public required bool SpawnProtection { get; set; }
-            public required int KillStreak { get; set; }
+            public string PrimaryWeapon { get; set; } = "";
+            public string SecondaryWeapon { get; set; } = "";
+            public string LastPrimaryWeapon { get; set; } = "";
+            public string LastSecondaryWeapon { get; set; } = "";
+            public bool SpawnProtection { get; set; } = false;
+            public int KillStreak { get; set; } = 0;
             public required bool KillSound { get; set; }
             public required bool HSKillSound { get; set; }
             public required bool KnifeKillSound { get; set; }
             public required bool HitSound { get; set; }
             public required bool OnlyHS { get; set; }
             public required bool HudMessages { get; set; }
-            public required Vector LastSpawn { get; set; }
-            public required int OpenedMenu { get; set; }
+            public Vector LastSpawn { get; set; } = new Vector();
+            public int OpenedMenu { get; set; } = 0;
         }
 
         public class RestrictData

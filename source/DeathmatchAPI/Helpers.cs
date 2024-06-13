@@ -9,8 +9,8 @@ public class ModeData
     public required bool KnifeDamage { get; set; }
     public required bool RandomWeapons { get; set; }
     public required string CenterMessageText { get; set; }
-    public List<string>? PrimaryWeapons { get; set; }
-    public List<string>? SecondaryWeapons { get; set; }
-    public List<string>? Utilities { get; set; }
-    public List<string>? ExecuteCommands { get; set; }
+    public List<string> PrimaryWeapons { get; set; } = new();
+    public List<string> SecondaryWeapons { get; set; } = new();
+    public List<string> Utilities { get; set; } = new();
+    public List<string> ExecuteCommands { get; set; } = new();
 }
