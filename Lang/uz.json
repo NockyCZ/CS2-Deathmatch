@@ -13,7 +13,7 @@
   "Chat.ListOfAllowedSecondaryWeapons": "RUXSAT BERILGAN IKKINCHI QUROLLAR:",
   "Chat.SetupWeaponsCommand": "Siz qurollarni {green}/gun{default} buyrugʻi orqali olishingiz mumkin",
   "Hud.KnifeDamageIsDisabled": "Ushbu rejimda pichoq bilan zararlanish oʻchirilgan!",
-  "Hud.NewModeStarting": "Yangi rejim {0} soniyadan keyin boshlanadi!",
+  "Hud.NewModeStarting": "Yangi rejim {0} soniyadan keyin boshlanadi! ({1})",
   "Hud.NewModeStarted": "Yangi rejim boshlandi!",
   "Menu.Title": "Deathmatch menyusi",
   "Menu.SoundsTitle": "Deathmatch menyusi • Ovozlar",
