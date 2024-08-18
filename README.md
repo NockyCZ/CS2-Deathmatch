@@ -1,10 +1,11 @@
 # CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp). Minimum CSS API version: 216<br>
+CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).<br>
 Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
-Set the map duration according to `mp_timelimit`, the roundtime is also determined by this cvar.
+If you have a Windows server, you cannot use DM cvars (like game_mode and game_type)
 
 ## [Documentation/Wiki](https://docs.sourcefactory.eu/cs2-plugins/deathmatch)
-## [Discord Support Server](https://discord.gg/sourcefactory)
+### Discord Support Server
+[<img src="https://discordapp.com/api/guilds/1149315368465211493/widget.png?style=banner2">](https://discord.gg/Tzmq98gwqF)
 
 ### Main features
 - [x] [Weapon Selection](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/weapons-selection)
