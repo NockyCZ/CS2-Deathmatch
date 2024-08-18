@@ -496,7 +496,6 @@ namespace Deathmatch
             if (playerData.ContainsPlayer(player))
             {
                 var time = Server.CurrentTime - playerData[player].BlockRandomWeaponsIntegeration;
-                Server.PrintToChatAll($"time: {time}");
                 return time < 0.2;
             }
             return true;
