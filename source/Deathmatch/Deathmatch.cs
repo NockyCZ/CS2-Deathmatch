@@ -21,7 +21,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.7";
+    public override string ModuleVersion => "1.1.7a";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -67,6 +67,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         AddCommandListener("autobuy", OnRandomWeapons);
 
         bool mapLoaded = false;
+        RegisterListener<OnMapEnd>(() => { mapLoaded = false; });
         RegisterListener<OnMapStart>(mapName =>
         {
             if (!mapLoaded)
