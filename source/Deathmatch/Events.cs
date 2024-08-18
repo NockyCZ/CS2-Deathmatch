@@ -5,8 +5,6 @@ using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Admin;
-using System.Runtime.InteropServices;
-using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Deathmatch
 {
@@ -27,6 +25,7 @@ namespace Deathmatch
                     HitSound = Config.PlayersPreferences.HitSound.Enabled ? ((Config.PlayersPreferences.HitSound.OnlyVIP && IsVIP ? Config.PlayersPreferences.HitSound.DefaultValue : false) || (!Config.PlayersPreferences.HitSound.OnlyVIP ? Config.PlayersPreferences.HitSound.DefaultValue : false)) : false,
                     OnlyHS = Config.PlayersPreferences.OnlyHS.Enabled ? ((Config.PlayersPreferences.OnlyHS.OnlyVIP && IsVIP ? Config.PlayersPreferences.OnlyHS.DefaultValue : false) || (!Config.PlayersPreferences.OnlyHS.OnlyVIP ? Config.PlayersPreferences.OnlyHS.DefaultValue : false)) : false,
                     HudMessages = Config.PlayersPreferences.HudMessages.Enabled ? ((Config.PlayersPreferences.HudMessages.OnlyVIP && IsVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false) || (!Config.PlayersPreferences.HudMessages.OnlyVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false)) : false,
+                    BlockRandomWeaponsIntegeration = Server.CurrentTime,
                 };
                 playerData[player] = setupPlayerData;
             }
@@ -47,29 +46,32 @@ namespace Deathmatch
         {
             var player = @event.Userid;
             if (player != null && player.IsValid)
+            {
                 GivePlayerWeapons(player, false);
+            }
 
             return HookResult.Continue;
         }
+
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnPlayerHurt(EventPlayerHurt @event, GameEventInfo info)
         {
             var attacker = @event.Attacker;
             var player = @event.Userid;
 
-            if (player == null || !player.IsValid)
+            if (player == null || !player.IsValid || attacker == player)
                 return HookResult.Continue;
 
-            if (ActiveMode != null && attacker != null && playerData.ContainsPlayer(attacker))
+            if (ActiveMode != null && playerData.ContainsPlayer(attacker))
             {
                 if (ActiveMode.OnlyHS)
                 {
                     if (@event.Hitgroup == 1 && playerData[attacker].HitSound && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
-                        attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
+                        attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                 }
                 else
                 {
-                    if (@event.Hitgroup != 1 && player.IsValid && player != null && player.PlayerPawn.IsValid)
+                    if (@event.Hitgroup != 1 && player.PlayerPawn.IsValid)
                     {
                         if (playerData[attacker].OnlyHS)
                         {
@@ -77,7 +79,7 @@ namespace Deathmatch
                             player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
                         }
                         else if (playerData[attacker].HitSound && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
-                            attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
+                            attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
 
@@ -91,7 +93,7 @@ namespace Deathmatch
                     }
                     if (!ActiveMode.KnifeDamage && (@event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet")))
                     {
-                        attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
+                        attacker!.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
                         player!.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
                         player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
                     }
@@ -130,10 +132,7 @@ namespace Deathmatch
                     PerformRespawn(player, player.Team, IsBot);
             }, TimerFlags.STOP_ON_MAPCHANGE);
 
-            if (attacker == null || !attacker.IsValid)
-                return HookResult.Continue;
-
-            if (attacker != player && playerData.ContainsPlayer(attacker) && attacker.PlayerPawn.Value != null)
+            if (attacker != player && playerData.ContainsPlayer(attacker) && attacker!.PlayerPawn.Value != null)
             {
                 playerData[attacker].KillStreak++;
                 bool IsVIP = AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag);
@@ -219,11 +218,11 @@ namespace Deathmatch
                     return HookResult.Continue;
                 }
 
-                if (!IsCasualGamemode && blockRandomWeaponsIntegeration.Contains(player))
+                /*if (!IsCasualGamemode && IsHaveBlockedRandomWeaponsIntegration(player))
                 {
                     RemovePlayerWeapon(player, weaponName);
                     return HookResult.Continue;
-                }
+                }*/
 
                 if (ActiveMode.RandomWeapons && playerData.ContainsPlayer(player))
                 {
@@ -235,25 +234,22 @@ namespace Deathmatch
 
                     var weapon = IsPrimary ? playerData[player].LastPrimaryWeapon : playerData[player].LastSecondaryWeapon;
 
-                    Server.NextFrame(() =>
+                    if (string.IsNullOrEmpty(weapon))
                     {
-                        if (string.IsNullOrEmpty(weapon))
-                        {
-                            weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, false, player.Team, false);
-                            if (!string.IsNullOrEmpty(weapon))
-                            {
-                                player.GiveNamedItem(weapon);
-                                if (IsPrimary)
-                                    playerData[player].LastPrimaryWeapon = weapon;
-                                else
-                                    playerData[player].LastSecondaryWeapon = weapon;
-                            }
-                        }
-                        else
+                        weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, false, player.Team, false);
+                        if (!string.IsNullOrEmpty(weapon))
                         {
                             player.GiveNamedItem(weapon);
+                            if (IsPrimary)
+                                playerData[player].LastPrimaryWeapon = weapon;
+                            else
+                                playerData[player].LastSecondaryWeapon = weapon;
                         }
-                    });
+                    }
+                    else
+                    {
+                        player.GiveNamedItem(weapon);
+                    }
                     return HookResult.Continue;
                 }
 
@@ -276,7 +272,7 @@ namespace Deathmatch
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
 
-                    var restrictInfo = GetRestrictData(weaponName, IsVIP, player.Team);
+                    var restrictInfo = GetRestrictData(weaponName, player.Team);
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", replacedweaponName, restrictInfo.Item1, restrictInfo.Item2]}");
                     player.RemoveWeapons();
                     GivePlayerWeapons(player, false, false, true);
@@ -343,7 +339,20 @@ namespace Deathmatch
         {
             if (Config.General.BlockRadioMessage)
                 return HookResult.Handled;
+            return HookResult.Continue;
+        }
 
+        private HookResult OnPlayerChatwheel(CCSPlayerController? player, CommandInfo info)
+        {
+            if (Config.General.BlockPlayerChatWheel)
+                return HookResult.Handled;
+            return HookResult.Continue;
+        }
+
+        private HookResult OnPlayerPing(CCSPlayerController? player, CommandInfo info)
+        {
+            if (Config.General.BlockPlayerPing)
+                return HookResult.Handled;
             return HookResult.Continue;
         }
 
@@ -354,31 +363,27 @@ namespace Deathmatch
 
         private HookResult OnTakeDamage(DynamicHook hook)
         {
-            //if (!IsLinuxServer)
-            //    return HookResult.Continue;
-
-            var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
-
-            var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
-            CCSPlayerController? player = null;
-            if (playerPawn.Controller.Value != null)
-                player = playerPawn.Controller.Value.As<CCSPlayerController>();
-
-            var attackerHandle = damageInfo.Attacker;
-            CCSPlayerController? attacker = null;
-            if (attackerHandle.Value != null)
-                attacker = attackerHandle.Value.As<CCSPlayerController>();
-
-            if (player == null || !player.IsValid || attacker == null || !attacker.IsValid || ActiveMode == null)
+            if (ActiveMode == null)
                 return HookResult.Continue;
 
+            var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
+            var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
+            if (playerPawn.Controller.Value == null)
+                return HookResult.Continue;
+            var player = playerPawn.Controller.Value.As<CCSPlayerController>();
             if (playerData.ContainsPlayer(player) && playerData[player].SpawnProtection)
             {
                 damageInfo.Damage = 0;
                 return HookResult.Continue;
             }
-            if (!ActiveMode.KnifeDamage && damageInfo.Ability.Value != null && damageInfo.Ability.IsValid && (damageInfo.Ability.Value.DesignerName.Contains("knife") || damageInfo.Ability.Value.DesignerName.Contains("bayonet")))
+
+            if (!ActiveMode.KnifeDamage && damageInfo.Ability.Value != null && (damageInfo.Ability.Value.DesignerName.Contains("knife") || damageInfo.Ability.Value.DesignerName.Contains("bayonet")))
             {
+                var attackerHandle = damageInfo.Attacker;
+                if (attackerHandle.Value == null)
+                    return HookResult.Continue;
+
+                var attacker = attackerHandle.Value.As<CCSPlayerController>();
                 attacker.PrintToCenter(Localizer["Hud.KnifeDamageIsDisabled"]);
                 damageInfo.Damage = 0;
             }
@@ -400,8 +405,8 @@ namespace Deathmatch
                 return HookResult.Continue;
 
             var player = controller.As<CCSPlayerController>();
-
-            if (player == null || !player.IsValid || !player.PawnIsAlive)
+            
+            if (player == null || !player.IsValid)
                 return HookResult.Continue;
 
             if (hook.GetParam<AcquireMethod>(2) == AcquireMethod.PickUp)
@@ -417,7 +422,7 @@ namespace Deathmatch
                 return HookResult.Continue;
             }
 
-            if (!IsCasualGamemode && blockRandomWeaponsIntegeration.Contains(player))
+            if (!IsCasualGamemode && IsHaveBlockedRandomWeaponsIntegration(player))
             {
                 hook.SetReturn(AcquireResult.AlreadyPurchased);
                 return HookResult.Stop;
@@ -457,7 +462,7 @@ namespace Deathmatch
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
 
-                    var restrictInfo = GetRestrictData(vdata.Name, IsVIP, player.Team);
+                    var restrictInfo = GetRestrictData(vdata.Name, player.Team);
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, restrictInfo.Item1, restrictInfo.Item2]}");
                     hook.SetReturn(AcquireResult.NotAllowedByMode);
                     return HookResult.Stop;

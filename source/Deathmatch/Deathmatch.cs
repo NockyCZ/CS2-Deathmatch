@@ -21,7 +21,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.6";
+    public override string ModuleVersion => "1.1.7";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -62,19 +62,23 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         foreach (string radioName in RadioMessagesList)
             AddCommandListener(radioName, OnPlayerRadioMessage);
 
+        AddCommandListener("playerchatwheel", OnPlayerChatwheel);
+        AddCommandListener("player_ping", OnPlayerPing);
         AddCommandListener("autobuy", OnRandomWeapons);
 
+        bool mapLoaded = false;
         RegisterListener<OnMapStart>(mapName =>
         {
-            DefaultMapSpawnDisabled = false;
-            Server.NextFrame(() =>
+            if (!mapLoaded)
             {
-                AddTimer(2.0f, () =>
+                mapLoaded = true;
+                DefaultMapSpawnDisabled = false;
+                AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
-                    SetupDeathMatchConfigValues();
                     SetupDeathmatchMenus();
                     SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
+                    SetupDeathMatchConfigValues();
                     RemoveEntities();
                     LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
                 });
@@ -95,7 +99,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && CustomModes.ContainsKey(NextMode.ToString()))
                             {
                                 var time = TimeSpan.FromSeconds(RemainingTime);
-                                var formattedTime = RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
+                                var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";//RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
 
                                 var NextModeData = CustomModes[NextMode.ToString()];
                                 ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{REMAININGTIME}", formattedTime);
@@ -107,7 +111,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 if (Config.General.ForceMapEnd)
                 {
                     bool RoundTerminated = false;
-                    var timelimit = ConVar.Find("mp_timelimit")!.GetPrimitiveValue<float>() * 60;
+                    var timelimit = Config.Gameplay.GameLength * 60;
                     AddTimer(10.0f, () =>
                     {
                         var gameStart = GameRules().GameStartTime;
@@ -121,7 +125,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
                     }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
-            });
+            }
         });
         RegisterListener<OnTick>(() =>
         {
@@ -129,7 +133,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             {
                 if (IsActiveEditor)
                 {
-                    foreach (var p in Utilities.GetPlayers().Where(p => p.IsValid && !p.IsBot && !p.IsHLTV && AdminManager.PlayerHasPermissions(p, "@css/root")))
+                    foreach (var p in Utilities.GetPlayers().Where(p => !p.IsBot && !p.IsHLTV && AdminManager.PlayerHasPermissions(p, "@css/root")))
                     {
                         string CTSpawns = $"<font class='fontSize-m' color='cyan'>CT Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsCT.Count}</font>";
                         string TSpawns = $"<font class='fontSize-m' color='orange'>T Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsT.Count}</font>";
@@ -138,8 +142,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
                 else
                 {
-                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
+                    foreach (var p in GetAllDeathmatchPlayers())
                     {
+                        if (!playerData[p].HudMessages)
+                            continue;
+
                         if (ActiveMode != null && !string.IsNullOrEmpty(ActiveMode.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
                         {
                             if (Config.Gameplay.HudType == 1)
@@ -179,8 +186,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             CCSPlayer_CanAcquireFunc?.Unhook(OnWeaponCanAcquire, HookMode.Pre);
             VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
         }
-        //else
-        //    VirtualFunctions.CCSPlayer_WeaponServices_CanUseFunc.Unhook(OnWeaponCanUse, HookMode.Pre);
     }
 
     public void SetupCustomMode(string modeId)
@@ -222,7 +227,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 Server.ExecuteCommand(cmd);
         }
 
-        foreach (var p in Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.PawnIsAlive))
+        foreach (var p in Utilities.GetPlayers().Where(p => p.PawnIsAlive))
         {
             p.RemoveWeapons();
             GivePlayerWeapons(p, true);

@@ -1,4 +1,3 @@
-using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 
@@ -8,120 +7,74 @@ namespace Deathmatch
     {
         public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
-            if (ActiveMode == null)
+            if (ActiveMode == null || GetAllDeathmatchPlayers().Count < 2)
                 return false;
 
-            if (bPrimary)
-            {
-                if (ActiveMode.PrimaryWeapons.Count == 1)
-                    return false;
-            }
-            else
-            {
-                if (ActiveMode.SecondaryWeapons.Count == 1)
-                    return false;
-            }
+            var weaponsList = bPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons;
+            if (weaponsList.Count == 1)
+                return false;
 
-            if (RestrictedWeapons.ContainsKey(weaponName))
-            {
-                int restrictValue = GetWeaponRestrict(weaponName, isVIP, team);
-                int matchingCount = 0;
+            if (!RestrictedWeapons.ContainsKey(weaponName))
+                return false;
 
-                if (Config.WeaponsRestrict.Global)
-                {
-                    if (restrictValue == 0)
-                        return false;
-                    else if (restrictValue < 0)
-                        return true;
+            int restrictValue = GetWeaponRestrict(weaponName, isVIP, team);
+            if (restrictValue == 0)
+                return false;
 
-                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)))
-                    {
-                        if (playerData.ContainsPlayer(p))
-                        {
-                            if (bPrimary)
-                            {
-                                if (playerData[p].PrimaryWeapon == weaponName)
-                                    matchingCount++;
-                            }
-                            else
-                            {
-                                if (playerData[p].SecondaryWeapon == weaponName)
-                                    matchingCount++;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (restrictValue == 0)
-                        return false;
-                    else if (restrictValue < 0)
-                        return true;
+            if (restrictValue < 0)
+                return true;
 
-                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && p.Team == team))
-                    {
-                        if (bPrimary)
-                        {
-                            if (playerData[p].PrimaryWeapon == weaponName)
-                                matchingCount++;
-                        }
-                        else
-                        {
-                            if (playerData[p].SecondaryWeapon == weaponName)
-                                matchingCount++;
-                        }
-                    }
-                }
-                return matchingCount >= restrictValue;
-            }
-            return false;
+            var playersList = Config.WeaponsRestrict.Global ? GetAllDeathmatchPlayers() : GetAllDeathmatchPlayers().Where(p => p.Team == team).ToList();
+            int matchingCount = playersList.Count(p => playerData.ContainsPlayer(p) &&
+                                                      ((bPrimary && playerData[p].PrimaryWeapon == weaponName) ||
+                                                       (!bPrimary && playerData[p].SecondaryWeapon == weaponName)));
+
+            return matchingCount >= restrictValue;
         }
 
         public CBasePlayerWeapon? GetWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
         {
-            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || !player.PlayerPawn.IsValid || player.PlayerPawn.Value.WeaponServices == null)
+            var pawn = player.PlayerPawn.Value;
+            if (pawn == null || pawn.WeaponServices == null)
                 return null;
 
-            return player.PlayerPawn.Value.WeaponServices.MyWeapons
+            return pawn.WeaponServices.MyWeapons
                 .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot)
-                .FirstOrDefault();
+                .FirstOrDefault(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
         }
 
         public bool IsHaveWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
         {
-            if (player == null || !player.IsValid || player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+            var pawn = player.PlayerPawn.Value;
+            if (pawn == null || pawn.WeaponServices == null || !player.PawnIsAlive)
                 return false;
 
-            return player.PlayerPawn.Value.WeaponServices.MyWeapons
+            return pawn.WeaponServices.MyWeapons
                 .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot)
-                .Count() > 0;
+                .Any(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
         }
 
         public void RemovePlayerWeapon(CCSPlayerController player, string weaponName)
         {
-            if (player.PlayerPawn == null || player.PlayerPawn.Value == null || player.PlayerPawn.Value.WeaponServices == null || !player.PawnIsAlive)
+            var pawn = player.PlayerPawn?.Value;
+            if (pawn == null || pawn.WeaponServices == null || !player.PawnIsAlive)
                 return;
 
-            switch (weaponName)
+            var replacements = new Dictionary<string, string>
             {
-                case "weapon_m4a1_silencer":
-                    weaponName = "weapon_m4a1";
-                    break;
+                { "weapon_m4a1_silencer", "weapon_m4a1" },
+                { "weapon_usp_silencer", "weapon_hkp2000" },
+                { "weapon_mp5sd", "weapon_mp7" }
+            };
 
-                case "weapon_usp_silencer":
-                    weaponName = "weapon_hkp2000";
-                    break;
-
-                case "weapon_mp5sd":
-                    weaponName = "weapon_mp7";
-                    break;
+            if (replacements.TryGetValue(weaponName, out var replacement))
+            {
+                weaponName = replacement;
             }
 
-            var weapon = player.PlayerPawn.Value.WeaponServices.MyWeapons
+            var weapon = pawn.WeaponServices.MyWeapons
                 .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .Where(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.DesignerName.Contains(weaponName)).FirstOrDefault();
+                .FirstOrDefault(weaponBase => weaponBase != null && weaponBase.DesignerName.Contains(weaponName));
 
             if (weapon != null)
                 weapon.Remove();
@@ -149,7 +102,7 @@ namespace Deathmatch
             return Config.WeaponsRestrict.Global ? restrictInfo.Global : (team == CsTeam.CounterTerrorist ? restrictInfo.CT : restrictInfo.T);
         }
 
-        public (int, int) GetRestrictData(string weaponName, bool isVIP, CsTeam team)
+        public (int, int) GetRestrictData(string weaponName, CsTeam team)
         {
             if (!RestrictedWeapons.ContainsKey(weaponName))
                 return (0, 0);

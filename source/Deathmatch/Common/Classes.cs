@@ -19,7 +19,9 @@ namespace Deathmatch
             public required bool OnlyHS { get; set; }
             public required bool HudMessages { get; set; }
             public Vector LastSpawn { get; set; } = new Vector();
+            //public (Vector, QAngle) BlockedSpawn { get; set; } = new();
             public int OpenedMenu { get; set; } = 0;
+            public float BlockRandomWeaponsIntegeration { get; set; } = 0;
         }
 
         public class RestrictData

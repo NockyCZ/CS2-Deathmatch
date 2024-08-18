@@ -7,21 +7,13 @@ namespace Deathmatch
     {
         public void RemoveEntities()
         {
-            var bombSites = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_bomb_target");
-            foreach (var site in bombSites)
+            var entities = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_bomb_target")
+                .Concat(Utilities.FindAllEntitiesByDesignerName<CBreakable>("func_buyzone"));
+            foreach (var entity in entities)
             {
-                if (site.IsValid)
-                {
-                    site.Remove();
-                }
-            }
-            var buyZones = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("func_buyzone");
-            foreach (var zone in buyZones)
-            {
-                if (zone.IsValid)
-                {
-                    zone.Remove();
-                }
+                if (entity == null)
+                    continue;
+                entity.Remove();
             }
         }
         public void RemoveBreakableEntities()
@@ -30,10 +22,9 @@ namespace Deathmatch
                 .Concat(Utilities.FindAllEntitiesByDesignerName<CBreakable>("func_breakable"));
             foreach (var entity in entities)
             {
-                if (entity.IsValid)
-                {
-                    entity.AcceptInput("Break");
-                }
+                if (entity == null)
+                    continue;
+                entity.Remove();
             }
         }
         public void RemoveBeams()
@@ -41,10 +32,9 @@ namespace Deathmatch
             var beams = Utilities.FindAllEntitiesByDesignerName<CEntityInstance>("beam");
             foreach (var beam in beams)
             {
-                if (beam.IsValid)
-                {
-                    beam.Remove();
-                }
+                if (beam == null)
+                    continue;
+                beam.Remove();
             }
         }
         public static CCSGameRules GameRules()

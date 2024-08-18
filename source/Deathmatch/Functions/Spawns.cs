@@ -5,7 +5,6 @@ using System.Drawing;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using CounterStrikeSharp.API.Modules.Utils;
-using CounterStrikeSharp.API.Modules.Timers;
 using System.Globalization;
 
 namespace Deathmatch
@@ -35,32 +34,46 @@ namespace Deathmatch
                 if (!IsBot)
                     playerData[player].LastSpawn = randomSpawn.Key;
 
-                player.Respawn();
-                player.PlayerPawn.Value.Teleport(randomSpawn.Key, randomSpawn.Value, new Vector(0, 0, 0));
-                spawnsDictionary.Remove(randomSpawn.Key);
-
-                AddTimer(10.0f, () =>
+                if (blockedSpawns.ContainsKey(player.Slot))
                 {
-                    if (!spawnsDictionary.ContainsKey(randomSpawn.Key))
-                        spawnsDictionary.Add(randomSpawn.Key, randomSpawn.Value);
-                }, TimerFlags.STOP_ON_MAPCHANGE);
+                    var blockedSpawn = blockedSpawns[player.Slot];
+                    if (!spawnsDictionary.ContainsKey(blockedSpawn.Item1))
+                        spawnsDictionary.Add(blockedSpawn.Item1, blockedSpawn.Item2);
+
+                    blockedSpawns[player.Slot] = (randomSpawn.Key, randomSpawn.Value);
+                }
+                else
+                    blockedSpawns.Add(player.Slot, (randomSpawn.Key, randomSpawn.Value));
+
+                player.Respawn();
+                player.PlayerPawn.Value.Teleport(randomSpawn.Key, randomSpawn.Value, new Vector());
+                if (spawnsDictionary.ContainsKey(randomSpawn.Key))
+                    spawnsDictionary.Remove(randomSpawn.Key);
                 return;
             }
 
             var Spawn = GetAvailableSpawn(player, spawnsList);
             if (!IsBot)
-                playerData[player].LastSpawn = Spawn.Key;
+                playerData[player].LastSpawn = Spawn.Item1;
+
+            if (blockedSpawns.ContainsKey(player.Slot))
+            {
+                var blockedSpawn = blockedSpawns[player.Slot];
+                if (!spawnsDictionary.ContainsKey(blockedSpawn.Item1))
+                    spawnsDictionary.Add(blockedSpawn.Item1, blockedSpawn.Item2);
+
+                blockedSpawns[player.Slot] = (Spawn.Item1, Spawn.Item2);
+            }
+            else
+                blockedSpawns.Add(player.Slot, (Spawn.Item1, Spawn.Item2));
 
             player.Respawn();
-            player.PlayerPawn.Value.Teleport(Spawn.Key, Spawn.Value, new Vector(0, 0, 0));
-            AddTimer(5.0f, () =>
-            {
-                if (!spawnsDictionary.ContainsKey(Spawn.Key))
-                    spawnsDictionary.Add(Spawn.Key, Spawn.Value);
-            }, TimerFlags.STOP_ON_MAPCHANGE);
+            player.PlayerPawn.Value.Teleport(Spawn.Item1, Spawn.Item2, new Vector());
+            if (spawnsDictionary.ContainsKey(Spawn.Item1))
+                spawnsDictionary.Remove(Spawn.Item1);
         }
 
-        private KeyValuePair<Vector, QAngle> GetAvailableSpawn(CCSPlayerController player, List<KeyValuePair<Vector, QAngle>> spawnsList)
+        private (Vector, QAngle) GetAvailableSpawn(CCSPlayerController player, List<KeyValuePair<Vector, QAngle>> spawnsList)
         {
             var allPlayers = Utilities.GetPlayers();
             var playerPositions = allPlayers
@@ -69,10 +82,8 @@ namespace Deathmatch
                 .ToList();
 
             var availableSpawns = new List<KeyValuePair<Vector, QAngle>>();
-            int spawnCount = 0;
             foreach (KeyValuePair<Vector, QAngle> spawn in spawnsList)
             {
-                spawnCount++;
                 double closestDistance = 4000;
                 foreach (var playerPos in playerPositions)
                 {
@@ -98,11 +109,11 @@ namespace Deathmatch
             {
                 //SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, available spawns found: {availableSpawns.Count})", ConsoleColor.DarkYellow);
                 var randomAvailableSpawn = availableSpawns.ElementAt(Random.Next(availableSpawns.Count));
-                return randomAvailableSpawn;
+                return (randomAvailableSpawn.Key, randomAvailableSpawn.Value);
             }
             SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found! Therefore, a random spawn was selected. (T {spawnPositionsT.Count()} : CT {spawnPositionsCT.Count()})", ConsoleColor.DarkYellow);
             var randomSpawn = spawnsList.ElementAt(Random.Next(spawnsList.Count));
-            return randomSpawn;
+            return (randomSpawn.Key, randomSpawn.Value);
         }
 
         public void AddNewSpawnPoint(string filepath, Vector posValue, QAngle angleValue, string team)
