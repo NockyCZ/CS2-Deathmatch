@@ -142,7 +142,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
                 else
                 {
-                    foreach (var p in GetAllDeathmatchPlayers())
+                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
                     {
                         if (!playerData[p].HudMessages)
                             continue;

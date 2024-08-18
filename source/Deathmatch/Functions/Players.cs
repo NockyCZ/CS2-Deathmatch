@@ -482,21 +482,11 @@ namespace Deathmatch
             }
         }
 
-        public List<CCSPlayerController> GetAllDeathmatchPlayers()
-        {
-            return playerData
-                .Select(p => Utilities.GetPlayerFromSlot(p.Key))
-                .Where(player => player != null)
-                .Select(player => player!)
-                .ToList();
-        }
-
         public bool IsHaveBlockedRandomWeaponsIntegration(CCSPlayerController player)
         {
             if (playerData.ContainsPlayer(player))
             {
                 var time = Server.CurrentTime - playerData[player].BlockRandomWeaponsIntegeration;
-                Server.PrintToChatAll($"time: {time}");
                 return time < 0.2;
             }
             return true;

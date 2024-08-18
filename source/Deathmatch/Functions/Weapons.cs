@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 
@@ -7,7 +8,8 @@ namespace Deathmatch
     {
         public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
-            if (ActiveMode == null || GetAllDeathmatchPlayers().Count < 2)
+            var players = Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)).ToList();
+            if (ActiveMode == null || players == null || players.Count < 2)
                 return false;
 
             var weaponsList = bPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons;
@@ -24,10 +26,8 @@ namespace Deathmatch
             if (restrictValue < 0)
                 return true;
 
-            var playersList = Config.WeaponsRestrict.Global ? GetAllDeathmatchPlayers() : GetAllDeathmatchPlayers().Where(p => p.Team == team).ToList();
-            int matchingCount = playersList.Count(p => playerData.ContainsPlayer(p) &&
-                                                      ((bPrimary && playerData[p].PrimaryWeapon == weaponName) ||
-                                                       (!bPrimary && playerData[p].SecondaryWeapon == weaponName)));
+            var playersList = Config.WeaponsRestrict.Global ? players : players.Where(p => p.Team == team).ToList();
+            int matchingCount = playersList.Count(p => (bPrimary && playerData[p].PrimaryWeapon == weaponName) || (!bPrimary && playerData[p].SecondaryWeapon == weaponName));
 
             return matchingCount >= restrictValue;
         }
