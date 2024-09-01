@@ -1,7 +1,14 @@
-# CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).<br>
-Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
+<h1 align="center"> CS2 Deathmatch + MultiCFG plugin</h1>
+
+<p align="center">
+Enhance your server with this plugin. The plugin includes extensive configuration for mode settings (MultiCFG), player preferences or VIP perks and much more.
+Use gamemodes like <b>Custom</b> , <b>Casual</b> or <b>Deathmatch</b> for the plugin to work properly.<br>
 If you have a Windows server, you cannot use DM cvars (like game_mode and game_type)
+<br><br>
+<a href="https://buymeacoffee.com/sourcefactory">
+<img src="https://img.buymeacoffee.com/button-api/?text=Support Me&emoji=🚀&slug=sourcefactory&button_colour=e6005c&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" />
+</a>
+</p>
 
 ## [Documentation/Wiki](https://docs.sourcefactory.eu/cs2-plugins/deathmatch)
 ### Discord Support Server
