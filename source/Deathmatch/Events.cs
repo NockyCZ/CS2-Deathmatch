@@ -35,8 +35,13 @@ namespace Deathmatch
         public HookResult OnPlayerConnectDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
         {
             var player = @event.Userid;
-            if (player != null && player.IsValid && playerData.ContainsPlayer(player))
-                playerData.RemovePlayer(player);
+            if (player != null && player.IsValid)
+            {
+                if (playerData.ContainsPlayer(player))
+                    playerData.RemovePlayer(player);
+                if (blockedSpawns.ContainsKey(player.Slot))
+                    blockedSpawns.Remove(player.Slot);
+            }
 
             return HookResult.Continue;
         }
@@ -405,7 +410,7 @@ namespace Deathmatch
                 return HookResult.Continue;
 
             var player = controller.As<CCSPlayerController>();
-            
+
             if (player == null || !player.IsValid)
                 return HookResult.Continue;
 

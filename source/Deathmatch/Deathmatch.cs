@@ -16,12 +16,11 @@ using static CounterStrikeSharp.API.Core.Listeners;
 
 namespace Deathmatch;
 
-[MinimumApiVersion(216)]
 public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.7a";
+    public override string ModuleVersion => "1.1.8";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -67,13 +66,14 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         AddCommandListener("autobuy", OnRandomWeapons);
 
         bool mapLoaded = false;
-        RegisterListener<OnMapEnd>(() => { mapLoaded = false; });
+        RegisterListener<OnMapEnd>(() => { mapLoaded = false; blockedSpawns.Clear(); });
         RegisterListener<OnMapStart>(mapName =>
         {
             if (!mapLoaded)
             {
                 mapLoaded = true;
                 DefaultMapSpawnDisabled = false;
+                blockedSpawns.Clear();
                 AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
