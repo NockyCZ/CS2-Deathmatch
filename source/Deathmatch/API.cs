@@ -13,6 +13,11 @@ public partial class Deathmatch : IDeathmatchAPI
         DeathmatchEventHandlers?.Invoke(this, @event);
     }
 
+    public void RegisterNewPreference(PreferencesData preferencesData)
+    {
+        Preferences.Add(preferencesData);
+    }
+
     public void StartCustomMode(int modeId)
     {
         if (!CustomModes.ContainsKey(modeId.ToString()))
@@ -73,7 +78,7 @@ public partial class Deathmatch : IDeathmatchAPI
 
     public int GetActiveModeId()
     {
-        return ActiveCustomMode;
+        return int.Parse(ActiveCustomMode);
     }
 
     public int GetActiveModeRemainingTime()

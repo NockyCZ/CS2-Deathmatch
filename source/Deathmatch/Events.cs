@@ -5,6 +5,9 @@ using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using CounterStrikeSharp.API.Modules.Timers;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Admin;
+using CounterStrikeSharp.API.Modules.Entities;
+using Newtonsoft.Json;
+using CounterStrikeSharp.API.Modules.Utils;
 
 namespace Deathmatch
 {
@@ -16,21 +19,24 @@ namespace Deathmatch
             var player = @event.Userid;
             if (player != null && player.IsValid && !player.IsBot && !player.IsHLTV && player.SteamID.ToString().Length == 17 && !playerData.ContainsPlayer(player))
             {
-                bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-                DeathmatchPlayerData setupPlayerData = new DeathmatchPlayerData
+                var setupPlayerData = new DeathmatchPlayerData
                 {
-                    KillSound = Config.PlayersPreferences.KillSound.Enabled ? ((Config.PlayersPreferences.KillSound.OnlyVIP && IsVIP ? Config.PlayersPreferences.KillSound.DefaultValue : false) || (!Config.PlayersPreferences.KillSound.OnlyVIP ? Config.PlayersPreferences.KillSound.DefaultValue : false)) : false,
-                    HSKillSound = Config.PlayersPreferences.HSKillSound.Enabled ? ((Config.PlayersPreferences.HSKillSound.OnlyVIP && IsVIP ? Config.PlayersPreferences.HSKillSound.DefaultValue : false) || (!Config.PlayersPreferences.HSKillSound.OnlyVIP ? Config.PlayersPreferences.HSKillSound.DefaultValue : false)) : false,
-                    KnifeKillSound = Config.PlayersPreferences.KnifeKillSound.Enabled ? ((Config.PlayersPreferences.KnifeKillSound.OnlyVIP && IsVIP ? Config.PlayersPreferences.KnifeKillSound.DefaultValue : false) || (!Config.PlayersPreferences.KnifeKillSound.OnlyVIP ? Config.PlayersPreferences.KnifeKillSound.DefaultValue : false)) : false,
-                    HitSound = Config.PlayersPreferences.HitSound.Enabled ? ((Config.PlayersPreferences.HitSound.OnlyVIP && IsVIP ? Config.PlayersPreferences.HitSound.DefaultValue : false) || (!Config.PlayersPreferences.HitSound.OnlyVIP ? Config.PlayersPreferences.HitSound.DefaultValue : false)) : false,
-                    OnlyHS = Config.PlayersPreferences.OnlyHS.Enabled ? ((Config.PlayersPreferences.OnlyHS.OnlyVIP && IsVIP ? Config.PlayersPreferences.OnlyHS.DefaultValue : false) || (!Config.PlayersPreferences.OnlyHS.OnlyVIP ? Config.PlayersPreferences.OnlyHS.DefaultValue : false)) : false,
-                    HudMessages = Config.PlayersPreferences.HudMessages.Enabled ? ((Config.PlayersPreferences.HudMessages.OnlyVIP && IsVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false) || (!Config.PlayersPreferences.HudMessages.OnlyVIP ? Config.PlayersPreferences.HudMessages.DefaultValue : false)) : false,
                     BlockRandomWeaponsIntegeration = Server.CurrentTime,
                 };
                 playerData[player] = setupPlayerData;
+                if (Config.SaveWeapons)
+                {
+                    _ = UpdateOrLoadPlayerData(player, player.SteamID.ToString(), null, true);
+                }
+                else
+                {
+                    SetupDefaultWeapons(player);
+                    SetupDefaultPreferences(player);
+                }
             }
             return HookResult.Continue;
         }
+
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnPlayerConnectDisconnect(EventPlayerDisconnect @event, GameEventInfo info)
         {
@@ -38,7 +44,16 @@ namespace Deathmatch
             if (player != null && player.IsValid)
             {
                 if (playerData.ContainsPlayer(player))
+                {
+                    string[] data = {
+                        JsonConvert.SerializeObject(playerData[player].PrimaryWeapon),
+                        JsonConvert.SerializeObject(playerData[player].SecondaryWeapon),
+                        JsonConvert.SerializeObject(playerData[player].Preferences),
+                    };
+
+                    _ = UpdateOrLoadPlayerData(player, player.SteamID.ToString(), data, false);
                     playerData.RemovePlayer(player);
+                }
                 if (blockedSpawns.ContainsKey(player.Slot))
                     blockedSpawns.Remove(player.Slot);
             }
@@ -67,23 +82,23 @@ namespace Deathmatch
             if (player == null || !player.IsValid || attacker == player)
                 return HookResult.Continue;
 
-            if (ActiveMode != null && playerData.ContainsPlayer(attacker))
+            if (playerData.ContainsPlayer(attacker))
             {
                 if (ActiveMode.OnlyHS)
                 {
-                    if (@event.Hitgroup == 1 && playerData[attacker].HitSound && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
+                    if (@event.Hitgroup == 1 && playerData[attacker].Preferences["HitSound"] && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                         attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                 }
                 else
                 {
                     if (@event.Hitgroup != 1 && player.PlayerPawn.IsValid)
                     {
-                        if (playerData[attacker].OnlyHS)
+                        if (playerData[attacker].Preferences["OnlyHS"])
                         {
                             player.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
                             player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
                         }
-                        else if (playerData[attacker].HitSound && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
+                        else if (playerData[attacker].Preferences["HitSound"] && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                             attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
@@ -117,57 +132,74 @@ namespace Deathmatch
             if (player == null || !player.IsValid)
                 return HookResult.Continue;
 
-            var timer = Config.PlayersSettings.RespawnTime;
-            var IsBot = true;
+            var timer = 1.0f;
+            bool IsVIP = AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag);
             if (playerData.ContainsPlayer(player))
             {
-                IsBot = false;
                 playerData[player].KillStreak = 0;
                 if (Config.General.RemoveDecals)
                 {
                     var RemoveDecals = NativeAPI.CreateEvent("round_start", false);
                     NativeAPI.FireEventToClient(RemoveDecals, (int)player.Index);
                 }
-                timer = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag) ? Config.PlayersSettings.RespawnTimeVIP : Config.PlayersSettings.RespawnTime;
+                timer = IsVIP ? Config.PlayersSettings.VIP.RespawnTime : Config.PlayersSettings.NonVIP.RespawnTime;
                 @event.FireEventToClient(player);
             }
             AddTimer(timer, () =>
             {
                 if (player != null && player.IsValid && !player.PawnIsAlive)
-                    PerformRespawn(player, player.Team, IsBot);
+                    PerformRespawn(player, player.Team);
             }, TimerFlags.STOP_ON_MAPCHANGE);
 
             if (attacker != player && playerData.ContainsPlayer(attacker) && attacker!.PlayerPawn.Value != null)
             {
                 playerData[attacker].KillStreak++;
-                bool IsVIP = AdminManager.PlayerHasPermissions(attacker, Config.PlayersSettings.VIPFlag);
                 bool IsHeadshot = @event.Headshot;
                 bool IsKnifeKill = @event.Weapon.Contains("knife");
 
-                if (IsHeadshot && playerData[attacker].HSKillSound)
+                if (IsHeadshot && playerData[attacker].Preferences["HeadshotKillSound"])
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HSKillSound.Path);
-                else if (IsKnifeKill && playerData[attacker].KnifeKillSound)
+                else if (IsKnifeKill && playerData[attacker].Preferences["KnifeKillSound"])
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KnifeKillSound.Path);
-                else if (playerData[attacker].KillSound)
+                else if (playerData[attacker].Preferences["KillSound"])
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KillSound.Path);
 
                 var Health = IsHeadshot
-                ? (IsVIP ? Config.PlayersSettings.HeadshotHealthVIP : Config.PlayersSettings.HeadshotHealth)
-                : (IsVIP ? Config.PlayersSettings.KillHealthVIP : Config.PlayersSettings.KillHealth);
+                ? (IsVIP ? Config.PlayersSettings.VIP.HeadshotHealth : Config.PlayersSettings.NonVIP.HeadshotHealth)
+                : (IsVIP ? Config.PlayersSettings.VIP.KillHealth : Config.PlayersSettings.VIP.KillHealth);
 
                 var refillAmmo = IsHeadshot
-                ? (IsVIP ? Config.PlayersSettings.RefillAmmoHSVIP : Config.PlayersSettings.RefillAmmoHS)
-                : (IsVIP ? Config.PlayersSettings.RefillAmmoVIP : Config.PlayersSettings.RefillAmmo);
+                ? (IsVIP ? Config.PlayersSettings.VIP.RefillAmmoHS : Config.PlayersSettings.NonVIP.RefillAmmoHS)
+                : (IsVIP ? Config.PlayersSettings.VIP.RefillAmmo : Config.PlayersSettings.NonVIP.RefillAmmo);
 
                 var giveHP = 100 >= attacker.PlayerPawn.Value.Health + Health ? Health : 100 - attacker.PlayerPawn.Value.Health;
 
                 if (refillAmmo)
                 {
-                    var activeWeapon = attacker.PlayerPawn.Value.WeaponServices?.ActiveWeapon.Value;
-                    if (activeWeapon != null)
+                    var allWeapons = IsVIP ? Config.PlayersSettings.VIP.ReffilAllWeapons : Config.PlayersSettings.NonVIP.ReffilAllWeapons;
+                    if (allWeapons)
                     {
-                        activeWeapon.Clip1 = 250;
-                        activeWeapon.ReserveAmmo[0] = 250;
+                        var weapons = attacker.PlayerPawn.Value.WeaponServices?.MyWeapons.Where(w => w.Value != null && (ActiveMode.SecondaryWeapons.Contains(w.Value.DesignerName) || ActiveMode.PrimaryWeapons.Contains(w.Value.DesignerName))).ToList();
+                        if (weapons != null)
+                        {
+                            foreach (var weapon in weapons)
+                            {
+                                if (weapon.Value == null)
+                                    continue;
+
+                                weapon.Value.Clip1 = 250;
+                                weapon.Value.ReserveAmmo[0] = 250;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        var activeWeapon = attacker.PlayerPawn.Value.WeaponServices?.ActiveWeapon.Value;
+                        if (activeWeapon != null)
+                        {
+                            activeWeapon.Clip1 = 250;
+                            activeWeapon.ReserveAmmo[0] = 250;
+                        }
                     }
                 }
                 if (giveHP > 0)
@@ -176,7 +208,7 @@ namespace Deathmatch
                     Utilities.SetStateChanged(attacker.PlayerPawn.Value, "CBaseEntity", "m_iHealth");
                 }
 
-                if (ActiveMode != null && ActiveMode.Armor != 0)
+                if (ActiveMode.Armor != 0)
                 {
                     string armor = ActiveMode.Armor == 1 ? "item_kevlar" : "item_assaultsuit";
                     attacker.GiveNamedItem(armor);
@@ -195,17 +227,12 @@ namespace Deathmatch
             return HookResult.Continue;
         }
 
-        [GameEventHandler]
-        public HookResult OnRoundEnd(EventRoundEnd @event, GameEventInfo info)
-        {
-            IsActiveEditor = false;
-            return HookResult.Continue;
-        }
+
 
         [GameEventHandler(HookMode.Pre)]
         public HookResult OnItemPurcharsed(EventItemPurchase @event, GameEventInfo info)
         {
-            if (IsLinuxServer || ActiveMode == null)
+            if (IsLinuxServer)
                 return HookResult.Continue;
 
             var player = @event.Userid;
@@ -217,7 +244,7 @@ namespace Deathmatch
                 if (player.IsBot)
                 {
                     RemovePlayerWeapon(player, weaponName);
-                    var weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, false, player.Team, false);
+                    var weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, false);
                     if (!string.IsNullOrEmpty(weapon))
                         player.GiveNamedItem(weapon);
                     return HookResult.Continue;
@@ -241,7 +268,7 @@ namespace Deathmatch
 
                     if (string.IsNullOrEmpty(weapon))
                     {
-                        weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, false, player.Team, false);
+                        weapon = GetRandomWeaponFromList(IsPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, false);
                         if (!string.IsNullOrEmpty(weapon))
                         {
                             player.GiveNamedItem(weapon);
@@ -289,12 +316,12 @@ namespace Deathmatch
                 {
                     if (IsPrimary)
                     {
-                        playerData[player].PrimaryWeapon = weaponName;
+                        playerData[player].PrimaryWeapon[ActiveCustomMode] = weaponName;
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", replacedweaponName]}");
                     }
                     else
                     {
-                        playerData[player].SecondaryWeapon = weaponName;
+                        playerData[player].SecondaryWeapon[ActiveCustomMode] = weaponName;
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", replacedweaponName]}");
                     }
                 }
@@ -305,7 +332,7 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Post)]
         public HookResult OnItemPickup(EventItemPickup @event, GameEventInfo info)
         {
-            if (IsLinuxServer || ActiveMode == null)
+            if (IsLinuxServer)
                 return HookResult.Continue;
 
             var player = @event.Userid;
@@ -347,6 +374,53 @@ namespace Deathmatch
             return HookResult.Continue;
         }
 
+        private HookResult OnPlayerSay(CCSPlayerController? player, CommandInfo info)
+        {
+            if (player == null || !player.IsValid || ActiveEditor != player)
+                return HookResult.Continue;
+
+            if (!player.PawnIsAlive)
+            {
+                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to use Spawns Editor!");
+                return HookResult.Continue;
+            }
+
+            string msg = info.GetArg(1).ToLower();
+            if (msg.StartsWith('!') || msg.StartsWith('/'))
+            {
+                msg = msg.Replace("!", "").Replace("/", "");
+                if (ulong.TryParse(msg, out var number))
+                {
+                    switch (number)
+                    {
+                        case 1:
+                            AddNewSpawnPoint(player.PlayerPawn.Value!.AbsOrigin!, player.PlayerPawn.Value.AbsRotation!, CsTeam.CounterTerrorist);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsCT.Count}{ChatColors.Default})");
+                            break;
+
+                        case 2:
+                            AddNewSpawnPoint(player.PlayerPawn.Value!.AbsOrigin!, player.PlayerPawn.Value.AbsRotation!, CsTeam.Terrorist);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsT.Count}{ChatColors.Default})");
+                            break;
+
+                        case 3:
+                            RemoveNearestSpawnPoint(player.PlayerPawn.Value!.AbsOrigin);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} The nearest spawn point has been removed!");
+                            break;
+
+                        case 4:
+                            SaveSpawnsFile();
+                            LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json", false);
+                            player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawns have been successfully saved!");
+                            RemoveSpawnModels();
+                            ActiveEditor = null;
+                            break;
+                    }
+                }
+            }
+            return HookResult.Continue;
+        }
+
         private HookResult OnPlayerChatwheel(CCSPlayerController? player, CommandInfo info)
         {
             if (Config.General.BlockPlayerChatWheel)
@@ -368,9 +442,6 @@ namespace Deathmatch
 
         private HookResult OnTakeDamage(DynamicHook hook)
         {
-            if (ActiveMode == null)
-                return HookResult.Continue;
-
             var damageInfo = hook.GetParam<CTakeDamageInfo>(1);
             var playerPawn = hook.GetParam<CCSPlayerPawn>(0);
             if (playerPawn.Controller.Value == null)
@@ -397,9 +468,6 @@ namespace Deathmatch
 
         private HookResult OnWeaponCanAcquire(DynamicHook hook)
         {
-            if (ActiveMode == null)
-                return HookResult.Continue;
-
             var vdata = GetCSWeaponDataFromKeyFunc?.Invoke(-1, hook.GetParam<CEconItemView>(1).ItemDefinitionIndex.ToString());
             var controller = hook.GetParam<CCSPlayer_ItemServices>(0).Pawn.Value.Controller.Value;
 
@@ -418,7 +486,7 @@ namespace Deathmatch
             {
                 if (!ActiveMode.PrimaryWeapons.Contains(vdata.Name) && !ActiveMode.SecondaryWeapons.Contains(vdata.Name))
                 {
-                    if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet") || (ActiveMode != null && ActiveMode.Utilities.Contains(vdata.Name)))
+                    if (vdata.Name.Contains("knife") || vdata.Name.Contains("bayonet") || ActiveMode.Utilities.Contains(vdata.Name))
                         return HookResult.Continue;
 
                     hook.SetReturn(AcquireResult.AlreadyOwned);
@@ -475,13 +543,13 @@ namespace Deathmatch
 
                 if (IsPrimary)
                 {
-                    if (vdata.Name == playerData[player].PrimaryWeapon)
+                    if (vdata.Name == playerData[player].PrimaryWeapon[ActiveCustomMode])
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
-                    playerData[player].PrimaryWeapon = vdata.Name;
+                    playerData[player].PrimaryWeapon[ActiveCustomMode] = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
 
                     var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
@@ -493,13 +561,13 @@ namespace Deathmatch
                 }
                 else
                 {
-                    if (vdata.Name == playerData[player].SecondaryWeapon)
+                    if (vdata.Name == playerData[player].SecondaryWeapon[ActiveCustomMode])
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
-                    playerData[player].SecondaryWeapon = vdata.Name;
+                    playerData[player].SecondaryWeapon[ActiveCustomMode] = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
 
                     var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL);

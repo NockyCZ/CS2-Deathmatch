@@ -7,6 +7,8 @@ namespace Deathmatch;
 
 public class DeathmatchConfig : BasePluginConfig
 {
+    [JsonPropertyName("Save Players Weapons")] public bool SaveWeapons { get; set; } = false;
+    [JsonPropertyName("Database Connection")] public Database Database { get; set; } = new Database();
     [JsonPropertyName("Gameplay Settings")] public Gameplay Gameplay { get; set; } = new Gameplay();
     [JsonPropertyName("General Settings")] public General General { get; set; } = new General();
     [JsonPropertyName("Sounds Settings")] public SoundSettings SoundSettings { get; set; } = new SoundSettings();
@@ -122,6 +124,15 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("Weapons Restrict")] public WeaponsRestrict WeaponsRestrict { get; set; } = new WeaponsRestrict();
 }
 
+public class Database
+{
+    [JsonPropertyName("Host")] public string Host { get; set; } = "";
+    [JsonPropertyName("Port")] public uint Port { get; set; } = 3306;
+    [JsonPropertyName("User")] public string User { get; set; } = "";
+    [JsonPropertyName("Database")] public string DatabaseName { get; set; } = "";
+    [JsonPropertyName("Password")] public string Password { get; set; } = "";
+}
+
 public class SoundSettings
 {
     [JsonPropertyName("Weapon Cant Equip Sound")] public string CantEquipSound { get; set; } = "sounds/ui/weapon_cant_buy.vsnd_c";
@@ -235,19 +246,31 @@ public class HSKillSound
 
 public class PlayersSettings
 {
-    [JsonPropertyName("VIP_flag")] public string VIPFlag { get; set; } = "@css/vip";
-    [JsonPropertyName("respawn_time")] public float RespawnTime { get; set; } = 1.5f;
-    [JsonPropertyName("VIP_respawn_time")] public float RespawnTimeVIP { get; set; } = 1.1f;
-    [JsonPropertyName("spawn_protection_time")] public float ProtectionTime { get; set; } = 1.1f;
-    [JsonPropertyName("VIP_spawn_protection_time")] public float ProtectionTimeVIP { get; set; } = 1.2f;
-    [JsonPropertyName("reffil_ammo_kill")] public bool RefillAmmo { get; set; } = false;
-    [JsonPropertyName("VIP_reffil_ammo_kill")] public bool RefillAmmoVIP { get; set; } = true;
-    [JsonPropertyName("reffil_ammo_headshot")] public bool RefillAmmoHS { get; set; } = true;
-    [JsonPropertyName("VIP_reffil_ammo_headshot")] public bool RefillAmmoHSVIP { get; set; } = true;
-    [JsonPropertyName("refill_health_kill")] public int KillHealth { get; set; } = 20;
-    [JsonPropertyName("VIP_refill_health_kill")] public int KillHealthVIP { get; set; } = 25;
-    [JsonPropertyName("refill_health_headshot")] public int HeadshotHealth { get; set; } = 40;
-    [JsonPropertyName("VIP_refill_health_headshot")] public int HeadshotHealthVIP { get; set; } = 50;
+    [JsonPropertyName("VIP Flag")] public string VIPFlag { get; set; } = "@css/vip";
+    [JsonPropertyName("Non VIP Players")] public NonVIP NonVIP { get; set; } = new();
+    [JsonPropertyName("VIP Players")] public VIP VIP { get; set; } = new();
+}
+
+public class NonVIP
+{
+    [JsonPropertyName("Respawn Time")] public float RespawnTime { get; set; } = 1.5f;
+    [JsonPropertyName("Spawn Protection Time")] public float ProtectionTime { get; set; } = 1.1f;
+    [JsonPropertyName("Reffil Ammo Kill")] public bool RefillAmmo { get; set; } = false;
+    [JsonPropertyName("Reffil Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
+    [JsonPropertyName("Reffil Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
+    [JsonPropertyName("Reffil Health Kill")] public int KillHealth { get; set; } = 20;
+    [JsonPropertyName("Reffil Health Headshot")] public int HeadshotHealth { get; set; } = 40;
+}
+
+public class VIP
+{
+    [JsonPropertyName("Respawn Time")] public float RespawnTime { get; set; } = 1.1f;
+    [JsonPropertyName("Spawn Protection Time")] public float ProtectionTime { get; set; } = 1.2f;
+    [JsonPropertyName("Reffil Ammo Kill")] public bool RefillAmmo { get; set; } = false;
+    [JsonPropertyName("Reffil Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
+    [JsonPropertyName("Reffil Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
+    [JsonPropertyName("Reffil Health Kill")] public int KillHealth { get; set; } = 25;
+    [JsonPropertyName("Reffil Health Headshot")] public int HeadshotHealth { get; set; } = 50;
 }
 
 public class WeaponsRestrict

@@ -16,11 +16,12 @@ using static CounterStrikeSharp.API.Core.Listeners;
 
 namespace Deathmatch;
 
+[MinimumApiVersion(216)]
 public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.8";
+    public override string ModuleVersion => "1.1.9";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -42,6 +43,8 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
         LoadCustomModes();
         LoadWeaponsRestrict();
+        if (Config.SaveWeapons)
+            _ = CreateDatabaseConnection();
 
         string[] Shortcuts = Config.CustomCommands.CustomShortcuts.Split(',');
         string[] WSelect = Config.CustomCommands.WeaponSelectCmds.Split(',');
@@ -65,15 +68,18 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         AddCommandListener("player_ping", OnPlayerPing);
         AddCommandListener("autobuy", OnRandomWeapons);
 
+        AddCommandListener("say", OnPlayerSay);
+        AddCommandListener("say_team", OnPlayerSay);
+
         bool mapLoaded = false;
-        RegisterListener<OnMapEnd>(() => { mapLoaded = false; blockedSpawns.Clear(); });
+        RegisterListener<OnMapEnd>(() => { mapLoaded = false; });
         RegisterListener<OnMapStart>(mapName =>
         {
+            blockedSpawns.Clear();
             if (!mapLoaded)
             {
                 mapLoaded = true;
                 DefaultMapSpawnDisabled = false;
-                blockedSpawns.Clear();
                 AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
@@ -88,7 +94,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 {
                     AddTimer(1.0f, () =>
                     {
-                        if (!GameRules().WarmupPeriod && ActiveMode != null)
+                        if (!GameRules().WarmupPeriod)
                         {
                             ModeTimer++;
                             RemainingTime = ActiveMode.Interval - ModeTimer;
@@ -128,27 +134,32 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
             }
         });
+        RegisterListener<OnServerPrecacheResources>((manifest) =>
+        {
+            manifest.AddResource("characters/models/shared/animsets/animset_uiplayer.vmdl");
+
+        });
         RegisterListener<OnTick>(() =>
         {
             if (VisibleHud)
             {
-                if (IsActiveEditor)
+                foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)))
                 {
-                    foreach (var p in Utilities.GetPlayers().Where(p => !p.IsBot && !p.IsHLTV && AdminManager.PlayerHasPermissions(p, "@css/root")))
+                    if (!playerData[p].Preferences.ContainsKey("HudMessages") || !playerData[p].Preferences["HudMessages"])
+                        continue;
+
+                    if (ActiveEditor == p)
                     {
-                        string CTSpawns = $"<font class='fontSize-m' color='cyan'>CT Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsCT.Count}</font>";
-                        string TSpawns = $"<font class='fontSize-m' color='orange'>T Spawns:</font> <font class='fontSize-m' color='green'>{spawnPositionsT.Count}</font>";
-                        p.PrintToCenterHtml($"<font class='fontSize-l' color='red'>Spawns Editor</font><br>{CTSpawns}<br>{TSpawns}<br>");
+                        var ctSpawns = DefaultMapSpawnDisabled ? spawnPositionsCT.Count : 0;
+                        var tSpawns = DefaultMapSpawnDisabled ? spawnPositionsT.Count : 0;
+                        p.PrintToCenterHtml($"<font class='fontSize-l' color='red'>Spawns Editor</font><br><font class='fontSize-m' color='green'>!1</font> Add CT Spawn (Total: <font color='lime'>{ctSpawns}</font>)<br><font class='fontSize-m' color='green'>!2</font> Add T Spawn (Total: <font color='lime'>{tSpawns}</font>)<br><font class='fontSize-m' color='green'>!3</font> Remove the Nearest Spawn<br><br><font class='fontSize-m' color='green'>!4</font> <font class='fontSize-m' color='cyan'>Save Spawns</font><br> ");
                     }
-                }
-                else
-                {
-                    foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p) && playerData[p].HudMessages))
+                    else
                     {
-                        if (!playerData[p].HudMessages)
+                        if (MenuManager.GetActiveMenu(p) != null)
                             continue;
 
-                        if (ActiveMode != null && !string.IsNullOrEmpty(ActiveMode.CenterMessageText) && MenuManager.GetActiveMenu(p) == null)
+                        if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
                         {
                             if (Config.Gameplay.HudType == 1)
                                 p.PrintToCenterHtml(ModeCenterMessage);
@@ -196,7 +207,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         if (modeId.Equals(ActiveCustomMode.ToString()))
             bNewmode = false;
 
-        ActiveCustomMode = int.Parse(modeId);
+        ActiveCustomMode = modeId;
         NextMode = GetModeType();
 
         if (CustomModes.ContainsKey(NextMode.ToString()) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
@@ -209,7 +220,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
         Server.NextFrame(() =>
         {
-            DeathmatchAPI.Get()?.TriggerEvent(new OnCustomModeStarted(ActiveCustomMode));
+            DeathmatchAPI.Get()?.TriggerEvent(new OnCustomModeStarted(int.Parse(ActiveCustomMode)));
         });
     }
 
@@ -307,7 +318,7 @@ sv_cheats 0
                 dynamic deserializedJson = JsonConvert.DeserializeObject(jsonData)!;
                 var modes = deserializedJson["Custom Modes"].ToObject<Dictionary<string, ModeData>>();
                 CustomModes = new Dictionary<string, ModeData>(modes);
-                SendConsoleMessage($"[Deathmatch] Loaded {CustomModes.Count()} Custom Modes", ConsoleColor.Green);
+                SendConsoleMessage($"[Deathmatch] Loaded {CustomModes.Count} Custom Modes", ConsoleColor.Green);
 
             }
             catch (Exception ex)
@@ -329,7 +340,7 @@ sv_cheats 0
                 dynamic deserializedJson = JsonConvert.DeserializeObject(jsonData)!;
                 var weapons = deserializedJson["Weapons Restrict"]["Weapons"].ToObject<Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>>>();
                 RestrictedWeapons = new(weapons);
-                SendConsoleMessage($"[Deathmatch] Total Restricted Weapons: {RestrictedWeapons.Count()}", ConsoleColor.Green);
+                SendConsoleMessage($"[Deathmatch] Total Restricted Weapons: {RestrictedWeapons.Count}", ConsoleColor.Green);
                 /*foreach (var item in RestrictedWeapons)
                 {
                     SendConsoleMessage(item.Key, ConsoleColor.Magenta);
@@ -385,19 +396,20 @@ sv_cheats 0
     {
         if (Config.Gameplay.IsCustomModes)
         {
+            var modeId = int.Parse(ActiveCustomMode);
             if (Config.Gameplay.RandomSelectionOfModes)
             {
                 int iRandomMode;
                 do
                 {
                     iRandomMode = Random.Next(0, CustomModes.Count);
-                } while (iRandomMode == ActiveCustomMode);
+                } while (iRandomMode == modeId);
                 return iRandomMode;
             }
             else
             {
-                if (ActiveCustomMode + 1 != CustomModes.Count && ActiveCustomMode + 1 < CustomModes.Count)
-                    return ActiveCustomMode + 1;
+                if (modeId + 1 != CustomModes.Count && modeId + 1 < CustomModes.Count)
+                    return modeId + 1;
                 return 0;
             }
         }

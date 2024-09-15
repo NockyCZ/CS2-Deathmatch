@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 using DeathmatchAPI.Helpers;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
@@ -10,10 +11,11 @@ namespace Deathmatch
         public static Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
         public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         public static Dictionary<Vector, QAngle> spawnPositionsT = new();
-        public static Dictionary<int, (Vector, QAngle)> blockedSpawns = new();
+        public static Dictionary<int, Vector> blockedSpawns = new();
         public static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
-        public static List<(string, bool, int)> PrefsMenuSounds = new();
-        public static List<(string, bool, int)> PrefsMenuFunctions = new();
+        public static List<PreferencesData> Preferences = new();
+        public static List<CDynamicProp> savedSpawnsModel = new();
+        public static List<CPointWorldText> savedSpawnsVectorText = new();
 
         readonly Dictionary<string, string> weaponSelectMapping = new Dictionary<string, string>
         {

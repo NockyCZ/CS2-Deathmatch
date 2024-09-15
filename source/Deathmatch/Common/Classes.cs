@@ -1,26 +1,26 @@
+using DeathmatchAPI.Helpers;
 using Vector = CounterStrikeSharp.API.Modules.Utils.Vector;
 
 namespace Deathmatch
 {
     public partial class Deathmatch
     {
+        public class SpawnData
+        {
+            public required string team { get; set; }
+            public required string pos { get; set; }
+            public required string angle { get; set; }
+        }
+
         public class DeathmatchPlayerData
         {
-            public string PrimaryWeapon { get; set; } = "";
-            public string SecondaryWeapon { get; set; } = "";
+            public Dictionary<string, string> PrimaryWeapon { get; set; } = new();
+            public Dictionary<string, string> SecondaryWeapon { get; set; } = new();
+            public Dictionary<string, bool> Preferences { get; set; } = new();
             public string LastPrimaryWeapon { get; set; } = "";
             public string LastSecondaryWeapon { get; set; } = "";
             public bool SpawnProtection { get; set; } = false;
             public int KillStreak { get; set; } = 0;
-            public required bool KillSound { get; set; }
-            public required bool HSKillSound { get; set; }
-            public required bool KnifeKillSound { get; set; }
-            public required bool HitSound { get; set; }
-            public required bool OnlyHS { get; set; }
-            public required bool HudMessages { get; set; }
-            public Vector LastSpawn { get; set; } = new Vector();
-            //public (Vector, QAngle) BlockedSpawn { get; set; } = new();
-            public int OpenedMenu { get; set; } = 0;
             public float BlockRandomWeaponsIntegeration { get; set; } = 0;
         }
 

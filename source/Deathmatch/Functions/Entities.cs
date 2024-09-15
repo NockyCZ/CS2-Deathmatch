@@ -37,6 +37,22 @@ namespace Deathmatch
                 beam.Remove();
             }
         }
+        public void RemoveSpawnModels()
+        {
+            foreach (var model in savedSpawnsModel)
+            {
+                if (model == null || !model.IsValid)
+                    continue;
+                model.Remove();
+            }
+
+            foreach (var model in savedSpawnsVectorText)
+            {
+                if (model == null || !model.IsValid)
+                    continue;
+                model.Remove();
+            }
+        }
         public static CCSGameRules GameRules()
         {
             return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
