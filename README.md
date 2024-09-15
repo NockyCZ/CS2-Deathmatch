@@ -1,7 +1,12 @@
-# CS2 Deathmatch plugin
-CS2 Deathmatch plugin for [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp).<br>
-Use gamemodes like `Custom` , `Casual` or `Deathmatch` for the plugin to work properly.<br>
-If you have a Windows server, you cannot use DM cvars (like game_mode and game_type)
+<p align="center">
+<b>Deathmatch</b> plugin is a game mode where players respawn immediately after being killed, allowing them to practice shooting and movement without the typical match constraints.
+Use gamemodes like <b>Custom</b> , <b>Casual</b> or <b>Deathmatch</b> for the plugin to work properly.<br>
+Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterStrikeSharp</a> framework<br>
+<br>
+<a href="https://buymeacoffee.com/sourcefactory">
+<img src="https://img.buymeacoffee.com/button-api/?text=Support Me&emoji=🚀&slug=sourcefactory&button_colour=e6005c&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" />
+</a>
+</p>
 
 ## [Documentation/Wiki](https://docs.sourcefactory.eu/cs2-plugins/deathmatch)
 ### Discord Support Server
@@ -12,7 +17,7 @@ If you have a Windows server, you cannot use DM cvars (like game_mode and game_t
 - [x] [Creating Custom Modes](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/creating-custom-modes)
   - [x] [With Examples](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/creating-custom-modes#examples)
 - [x] [Weapons Restrict](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/weapons-restrict)
-- [x] [Spawns Editor](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/spawns-editor)
+- [x] Spawns Editor
 - [x] [Configuration](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/configuration)
   - [x] [General Settings](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/configuration#general-settings-1)
   - [x] [Gameplay Settings](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/configuration#gameplay-settings-1)
