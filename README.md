@@ -1,5 +1,5 @@
 <p align="center">
-<b>Deathmatch</b> plugin is a game mode where players respawn immediately after being killed, allowing them to practice shooting and movement without the typical match constraints.
+<b>Deathmatch + MutliCFG</b> plugin is a game mode where players respawn immediately after being killed, allowing them to practice shooting and movement without the typical match constraints. MutliCFG allows you to set up special modes that change the gameplay to different types such as Only Pistols, Only AWP, Rifles, etc.
 Use gamemodes like <b>Custom</b> , <b>Casual</b> or <b>Deathmatch</b> for the plugin to work properly.<br>
 Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterStrikeSharp</a> framework<br>
 <br>
