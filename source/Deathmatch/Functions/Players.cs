@@ -220,7 +220,7 @@ namespace Deathmatch
                         playerData[player].SpawnProtection = true;
                         AddTimer(timer, () =>
                         {
-                            if (playerData.ContainsPlayer(player))
+                            if (player != null && player.IsValid && playerData.ContainsPlayer(player))
                             {
                                 playerData[player].SpawnProtection = false;
                                 if (string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
@@ -464,9 +464,9 @@ namespace Deathmatch
                 }
             }
 
-            public bool ContainsPlayer(CCSPlayerController? player)
+            public bool ContainsPlayer(CCSPlayerController player)
             {
-                if (player == null || !player.IsValid || !player.PlayerPawn.IsValid || player.SteamID.ToString().Length != 17)
+                if (player.SteamID.ToString().Length != 17)
                     return false;
 
                 if (player.IsBot || player.IsHLTV)

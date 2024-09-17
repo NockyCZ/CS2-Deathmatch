@@ -171,9 +171,9 @@ namespace Deathmatch
                     using var cmd = new MySqlCommand(
                     @"CREATE TABLE IF NOT EXISTS dm_players (
                         steamid VARCHAR(32) PRIMARY KEY UNIQUE NOT NULL,
-                        primary_weapons JSON DEFAULT NULL,
-                        secondary_weapons JSON DEFAULT NULL,
-                        preferences JSON DEFAULT NULL
+                        primary_weapons TEXT DEFAULT NULL,
+                        secondary_weapons TEXT DEFAULT NULL,
+                        preferences TEXT DEFAULT NULL
                         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;", connection);
                     await cmd.ExecuteNonQueryAsync();
                 }

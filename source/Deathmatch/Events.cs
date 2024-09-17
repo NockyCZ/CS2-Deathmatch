@@ -82,23 +82,23 @@ namespace Deathmatch
             if (player == null || !player.IsValid || attacker == player)
                 return HookResult.Continue;
 
-            if (playerData.ContainsPlayer(attacker))
+            if (attacker != null && attacker.IsValid && playerData.ContainsPlayer(attacker))
             {
                 if (ActiveMode.OnlyHS)
                 {
-                    if (@event.Hitgroup == 1 && playerData[attacker].Preferences["HitSound"] && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
+                    if (@event.Hitgroup == 1 && playerData[attacker].Preferences.TryGetValue("HitSound", out var value) & value && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                         attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                 }
                 else
                 {
                     if (@event.Hitgroup != 1 && player.PlayerPawn.IsValid)
                     {
-                        if (playerData[attacker].Preferences["OnlyHS"])
+                        if (playerData[attacker].Preferences.TryGetValue("OnlyHS", out var hsValue) & hsValue)
                         {
                             player.PlayerPawn.Value!.Health = player.PlayerPawn.Value.Health >= 100 ? 100 : player.PlayerPawn.Value.Health + @event.DmgHealth;
                             player.PlayerPawn.Value.ArmorValue = player.PlayerPawn.Value.ArmorValue >= 100 ? 100 : player.PlayerPawn.Value.ArmorValue + @event.DmgArmor;
                         }
-                        else if (playerData[attacker].Preferences["HitSound"] && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
+                        else if (playerData[attacker].Preferences.TryGetValue("HitSound", out var hitValue) & hitValue && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                             attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
@@ -151,17 +151,20 @@ namespace Deathmatch
                     PerformRespawn(player, player.Team);
             }, TimerFlags.STOP_ON_MAPCHANGE);
 
-            if (attacker != player && playerData.ContainsPlayer(attacker) && attacker!.PlayerPawn.Value != null)
+            if (attacker != null && attacker.IsValid && attacker != player && playerData.ContainsPlayer(attacker) && attacker!.PlayerPawn.Value != null)
             {
                 playerData[attacker].KillStreak++;
                 bool IsHeadshot = @event.Headshot;
                 bool IsKnifeKill = @event.Weapon.Contains("knife");
 
-                if (IsHeadshot && playerData[attacker].Preferences["HeadshotKillSound"])
+                bool TryGetPreference(string key, out bool value) =>
+                    playerData[attacker].Preferences.TryGetValue(key, out value) && value;
+
+                if (IsHeadshot && TryGetPreference("HeadshotKillSound", out var headshotValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HSKillSound.Path);
-                else if (IsKnifeKill && playerData[attacker].Preferences["KnifeKillSound"])
+                else if (IsKnifeKill && TryGetPreference("KnifeKillSound", out var knifeValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KnifeKillSound.Path);
-                else if (playerData[attacker].Preferences["KillSound"])
+                else if (Config.PlayersPreferences.KillSound.Enabled && TryGetPreference("KillSound", out var killValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KillSound.Path);
 
                 var Health = IsHeadshot

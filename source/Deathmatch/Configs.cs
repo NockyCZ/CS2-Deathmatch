@@ -157,7 +157,7 @@ public class Gameplay
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
     [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
-    [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "#000000";
+    [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "#FFFFFF";
 }
 public class General
 {

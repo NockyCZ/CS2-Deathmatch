@@ -16,12 +16,11 @@ using static CounterStrikeSharp.API.Core.Listeners;
 
 namespace Deathmatch;
 
-[MinimumApiVersion(216)]
 public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.1.9";
+    public override string ModuleVersion => "1.2.0";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {

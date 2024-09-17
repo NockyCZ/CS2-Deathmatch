@@ -211,7 +211,13 @@ namespace Deathmatch
                 if (model == null || textVector == null)
                     continue;
 
-                model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
+                //model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
+                //model.SetModel("characters/models/ctm_fbi/ctm_fbi_variantf.vmdl");
+                model.SetModel("characters/models/ctm_sas/ctm_sas.vmdl");
+                //
+                model.UseAnimGraph = false;
+                model.AcceptInput("SetAnimation", value: "tools_preview");
+                //
                 model.DispatchSpawn();
                 model.Render = Color.FromArgb(255, 0, 102, 255);
                 model.Glow.GlowColorOverride = Color.Blue;
@@ -250,7 +256,12 @@ namespace Deathmatch
                 if (model == null || textVector == null)
                     continue;
 
-                model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
+                //model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
+                model.SetModel("characters/models/tm_leet/tm_leet_variantb.vmdl");
+                //
+                model.UseAnimGraph = false;
+                model.AcceptInput("SetAnimation", value: "tools_preview");
+                //
                 model.DispatchSpawn();
                 model.Render = Color.FromArgb(255, 255, 0, 0);
                 model.Glow.GlowColorOverride = Color.Red;

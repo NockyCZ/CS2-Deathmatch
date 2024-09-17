@@ -20,7 +20,7 @@ namespace Deathmatch
                 case 1:
                     AddCommand(cmdName, $"Weapon Shortcut: {weapon_name}", (player, info) =>
                     {
-                        if (!playerData.ContainsPlayer(player))
+                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
                             return;
 
                         if (ActiveMode.RandomWeapons)
@@ -34,7 +34,7 @@ namespace Deathmatch
                 case 2:
                     AddCommand(cmdName, "Select a weapon by command", (player, info) =>
                     {
-                        if (!playerData.ContainsPlayer(player))
+                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
                             return;
                         if (ActiveMode.RandomWeapons)
                         {
@@ -49,7 +49,7 @@ namespace Deathmatch
                 case 3:
                     AddCommand(cmdName, "Opens a Deathmatch menu", (player, info) =>
                     {
-                        if (!playerData.ContainsPlayer(player))
+                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
                             return;
 
                         if (Preferences.Count == 0)
