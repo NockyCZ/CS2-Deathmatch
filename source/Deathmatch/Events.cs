@@ -546,7 +546,7 @@ namespace Deathmatch
 
                 if (IsPrimary)
                 {
-                    if (vdata.Name == playerData[player].PrimaryWeapon[ActiveCustomMode])
+                    if (playerData[player].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primaryWeapon) && vdata.Name == primaryWeapon)
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
@@ -564,7 +564,7 @@ namespace Deathmatch
                 }
                 else
                 {
-                    if (vdata.Name == playerData[player].SecondaryWeapon[ActiveCustomMode])
+                    if (playerData[player].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondaryWeapon) && vdata.Name == secondaryWeapon)
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);

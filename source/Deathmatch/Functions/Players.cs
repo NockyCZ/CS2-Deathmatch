@@ -95,7 +95,7 @@ namespace Deathmatch
             if (ActiveMode.PrimaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (weaponName == playerData[player].PrimaryWeapon[ActiveCustomMode])
+                if (playerData[player].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -143,7 +143,7 @@ namespace Deathmatch
             else if (ActiveMode.SecondaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (weaponName == playerData[player].SecondaryWeapon[ActiveCustomMode])
+                if (playerData[player].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -243,28 +243,32 @@ namespace Deathmatch
 
                 if (ActiveMode.PrimaryWeapons.Count != 0)
                 {
-                    var PrimaryWeapon = playerData[player].PrimaryWeapon[ActiveCustomMode];
                     if (ActiveMode.RandomWeapons)
                     {
-                        PrimaryWeapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, IsVIP, player.Team, true);
-                        playerData[player].LastPrimaryWeapon = PrimaryWeapon;
+                        var weapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, IsVIP, player.Team, true);
+                        playerData[player].LastPrimaryWeapon = weapon;
+                        if (!string.IsNullOrEmpty(weapon))
+                            player.GiveNamedItem(weapon);
                     }
-
-                    if (!string.IsNullOrEmpty(PrimaryWeapon))
-                        player.GiveNamedItem(PrimaryWeapon);
+                    else if (playerData[player].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && !string.IsNullOrEmpty(weapon))
+                    {
+                        player.GiveNamedItem(weapon);
+                    }
                 }
 
                 if (ActiveMode.SecondaryWeapons.Count != 0)
                 {
-                    var SecondaryWeapon = playerData[player].SecondaryWeapon[ActiveCustomMode];
                     if (ActiveMode.RandomWeapons)
                     {
-                        SecondaryWeapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, IsVIP, player.Team, false);
-                        playerData[player].LastSecondaryWeapon = SecondaryWeapon;
+                        var weapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, IsVIP, player.Team, true);
+                        playerData[player].LastPrimaryWeapon = weapon;
+                        if (!string.IsNullOrEmpty(weapon))
+                            player.GiveNamedItem(weapon);
                     }
-
-                    if (!string.IsNullOrEmpty(SecondaryWeapon))
-                        player.GiveNamedItem(SecondaryWeapon);
+                    else if (playerData[player].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && !string.IsNullOrEmpty(weapon))
+                    {
+                        player.GiveNamedItem(weapon);
+                    }
                 }
 
                 if (giveKnife)

@@ -28,7 +28,7 @@ namespace Deathmatch
                 return true;
 
             var playersList = Config.WeaponsRestrict.Global ? players : players.Where(p => p.Team == team).ToList();
-            int matchingCount = playersList.Count(p => (bPrimary && playerData[p].PrimaryWeapon[ActiveCustomMode] == weaponName) || (!bPrimary && playerData[p].SecondaryWeapon[ActiveCustomMode] == weaponName));
+            int matchingCount = playersList.Count(p => (bPrimary && playerData[p].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName) || (!bPrimary && playerData[p].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName));
 
             return matchingCount >= restrictValue;
         }
