@@ -7,7 +7,6 @@ using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
 using CounterStrikeSharp.API.Modules.Menu;
-using Newtonsoft.Json;
 using CounterStrikeSharp.API.Core.Capabilities;
 using DeathmatchAPI.Helpers;
 using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
@@ -20,7 +19,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.1";
+    public override string ModuleVersion => "1.2.2";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -31,17 +30,9 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
     {
         var API = new Deathmatch();
         Capabilities.RegisterPluginCapability(DeathmatchAPI, () => API);
-        IsLinuxServer = RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
-        if (IsLinuxServer)
-        {
-            GetCSWeaponDataFromKeyFunc = new(GameData.GetSignature("GetCSWeaponDataFromKey"));
-            CCSPlayer_CanAcquireFunc = new(GameData.GetSignature("CCSPlayer_CanAcquire"));
-            CCSPlayer_CanAcquireFunc.Hook(OnWeaponCanAcquire, HookMode.Pre);
-            VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
-        }
+        VirtualFunctions.CCSPlayer_ItemServices_CanAcquireFunc.Hook(OnWeaponCanAcquire, HookMode.Pre);
+        VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Hook(OnTakeDamage, HookMode.Pre);
 
-        LoadCustomModes();
-        LoadWeaponsRestrict();
         if (Config.SaveWeapons)
             _ = CreateDatabaseConnection();
 
@@ -79,6 +70,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             {
                 mapLoaded = true;
                 DefaultMapSpawnDisabled = false;
+                playerData.Clear();
                 AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
@@ -102,12 +94,12 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             {
                                 SetupCustomMode(NextMode.ToString());
                             }
-                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && CustomModes.ContainsKey(NextMode.ToString()))
+                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.ContainsKey(NextMode.ToString()))
                             {
                                 var time = TimeSpan.FromSeconds(RemainingTime);
                                 var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";//RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
 
-                                var NextModeData = CustomModes[NextMode.ToString()];
+                                var NextModeData = Config.CustomModes[NextMode.ToString()];
                                 ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{REMAININGTIME}", formattedTime);
                                 ModeCenterMessage = ModeCenterMessage.Replace("{NEXTMODE}", NextModeData.Name);
                             }
@@ -133,20 +125,12 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
             }
         });
-        RegisterListener<OnServerPrecacheResources>((manifest) =>
-        {
-            manifest.AddResource("characters/models/shared/animsets/animset_uiplayer.vmdl");
-
-        });
         RegisterListener<OnTick>(() =>
         {
             if (VisibleHud)
             {
                 foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)))
                 {
-                    if (!playerData[p].Preferences.ContainsKey("HudMessages") || !playerData[p].Preferences["HudMessages"])
-                        continue;
-
                     if (ActiveEditor == p)
                     {
                         var ctSpawns = DefaultMapSpawnDisabled ? spawnPositionsCT.Count : 0;
@@ -155,7 +139,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     }
                     else
                     {
-                        if (MenuManager.GetActiveMenu(p) != null)
+                        if (!playerData[p].Preferences.TryGetValue("HudMessages", out var hudMessage) || !hudMessage || MenuManager.GetActiveMenu(p) != null)
                             continue;
 
                         if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
@@ -176,11 +160,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             }
                             else
                             {
-                                var NextModeData = CustomModes[NextMode.ToString()];
+                                var NextModeData = Config.CustomModes[NextMode.ToString()];
                                 if (Config.Gameplay.HudType == 1)
-                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
-                                else
                                     p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
+                                else
+                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                             }
                         }
                     }
@@ -191,17 +175,13 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
     public override void Unload(bool hotReload)
     {
-
-        if (IsLinuxServer)
-        {
-            CCSPlayer_CanAcquireFunc?.Unhook(OnWeaponCanAcquire, HookMode.Pre);
-            VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
-        }
+        VirtualFunctions.CCSPlayer_ItemServices_CanAcquireFunc.Unhook(OnWeaponCanAcquire, HookMode.Pre);
+        VirtualFunctions.CBaseEntity_TakeDamageOldFunc.Unhook(OnTakeDamage, HookMode.Pre);
     }
 
     public void SetupCustomMode(string modeId)
     {
-        ActiveMode = CustomModes[modeId];
+        ActiveMode = Config.CustomModes[modeId];
         bool bNewmode = true;
         if (modeId.Equals(ActiveCustomMode.ToString()))
             bNewmode = false;
@@ -209,9 +189,9 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         ActiveCustomMode = modeId;
         NextMode = GetModeType();
 
-        if (CustomModes.ContainsKey(NextMode.ToString()) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+        if (Config.CustomModes.ContainsKey(NextMode.ToString()) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
         {
-            var NextModeData = CustomModes[NextMode.ToString()];
+            var NextModeData = Config.CustomModes[NextMode.ToString()];
             ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{NEXTMODE}", NextModeData.Name);
             ModeCenterMessage = ModeCenterMessage.Replace("{REMAININGTIME}", RemainingTime.ToString());
         }
@@ -306,75 +286,18 @@ sv_cheats 0
         }
         Server.ExecuteCommand("exec deathmatch/deathmatch.cfg");
     }
-    public void LoadCustomModes()
-    {
-        string filePath = Server.GameDirectory + "/csgo/addons/counterstrikesharp/configs/plugins/Deathmatch/Deathmatch.json";
-        if (File.Exists(filePath))
-        {
-            try
-            {
-                var jsonData = File.ReadAllText(filePath);
-                dynamic deserializedJson = JsonConvert.DeserializeObject(jsonData)!;
-                var modes = deserializedJson["Custom Modes"].ToObject<Dictionary<string, ModeData>>();
-                CustomModes = new Dictionary<string, ModeData>(modes);
-                SendConsoleMessage($"[Deathmatch] Loaded {CustomModes.Count} Custom Modes", ConsoleColor.Green);
 
-            }
-            catch (Exception ex)
-            {
-                SendConsoleMessage($"[Deathmatch] An error occurred while loading Custom Modes: {ex.Message}", ConsoleColor.Red);
-                throw new Exception($"An error occurred while loading Custom Modes: {ex.Message}");
-            }
-        }
-    }
-
-    public void LoadWeaponsRestrict()
-    {
-        string filePath = Server.GameDirectory + "/csgo/addons/counterstrikesharp/configs/plugins/Deathmatch/Deathmatch.json";
-        if (File.Exists(filePath))
-        {
-            try
-            {
-                var jsonData = File.ReadAllText(filePath);
-                dynamic deserializedJson = JsonConvert.DeserializeObject(jsonData)!;
-                var weapons = deserializedJson["Weapons Restrict"]["Weapons"].ToObject<Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>>>();
-                RestrictedWeapons = new(weapons);
-                SendConsoleMessage($"[Deathmatch] Total Restricted Weapons: {RestrictedWeapons.Count}", ConsoleColor.Green);
-                /*foreach (var item in RestrictedWeapons)
-                {
-                    SendConsoleMessage(item.Key, ConsoleColor.Magenta);
-                    foreach (var mode in item.Value)
-                    {
-                        SendConsoleMessage(mode.Key, ConsoleColor.Magenta);
-                        foreach (var type in mode.Value)
-                        {
-                            SendConsoleMessage($"type - {type.Key}", ConsoleColor.Magenta);
-                            var data = type.Value;
-                            SendConsoleMessage($"data T - {data.T}", ConsoleColor.Magenta);
-                            SendConsoleMessage($"data CT - {data.CT}", ConsoleColor.Magenta);
-                            SendConsoleMessage($"data GLOBAL - {data.Global}", ConsoleColor.Magenta);
-                        }
-                    }
-                }*/
-            }
-            catch (Exception ex)
-            {
-                SendConsoleMessage($"[Deathmatch] An error occurred while loading Weapons Restrictions: {ex.Message}", ConsoleColor.Red);
-                throw new Exception($"An error occurred while loading Weapons Restrictions: {ex.Message}");
-            }
-        }
-    }
     public void SetupDeathMatchConfigValues()
     {
         var gameType = ConVar.Find("game_type")!.GetPrimitiveValue<int>();
         IsCasualGamemode = gameType != 1;
-        if (!IsLinuxServer && !IsCasualGamemode)
+        /*if (!IsLinuxServer && !IsCasualGamemode)
         {
             SendConsoleMessage("======= Deathmatch WARNING =======", ConsoleColor.Red);
             SendConsoleMessage("Your server is running on Windows, the Deathmatch plugin does not work properly if you have deathmatch game mode (game_type 1 and game_mode 2)", ConsoleColor.DarkYellow);
             SendConsoleMessage("Please use game mode Casual!", ConsoleColor.DarkYellow);
             SendConsoleMessage("======= Deathmatch WARNING =======", ConsoleColor.Red);
-        }
+        }*/
 
         var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
         var iFFA = Config.Gameplay.IsFFA ? 1 : 0;
@@ -401,13 +324,13 @@ sv_cheats 0
                 int iRandomMode;
                 do
                 {
-                    iRandomMode = Random.Next(0, CustomModes.Count);
+                    iRandomMode = Random.Next(0, Config.CustomModes.Count);
                 } while (iRandomMode == modeId);
                 return iRandomMode;
             }
             else
             {
-                if (modeId + 1 != CustomModes.Count && modeId + 1 < CustomModes.Count)
+                if (modeId + 1 != Config.CustomModes.Count && modeId + 1 < Config.CustomModes.Count)
                     return modeId + 1;
                 return 0;
             }

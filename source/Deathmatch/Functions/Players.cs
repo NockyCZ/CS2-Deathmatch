@@ -238,15 +238,11 @@ namespace Deathmatch
                     }
                 }
 
-                playerData[player].LastPrimaryWeapon = "";
-                playerData[player].LastSecondaryWeapon = "";
-
                 if (ActiveMode.PrimaryWeapons.Count != 0)
                 {
                     if (ActiveMode.RandomWeapons)
                     {
                         var weapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, IsVIP, player.Team, true);
-                        playerData[player].LastPrimaryWeapon = weapon;
                         if (!string.IsNullOrEmpty(weapon))
                             player.GiveNamedItem(weapon);
                     }
@@ -261,7 +257,6 @@ namespace Deathmatch
                     if (ActiveMode.RandomWeapons)
                     {
                         var weapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, IsVIP, player.Team, true);
-                        playerData[player].LastPrimaryWeapon = weapon;
                         if (!string.IsNullOrEmpty(weapon))
                             player.GiveNamedItem(weapon);
                     }
@@ -351,7 +346,7 @@ namespace Deathmatch
         public void SetupDefaultWeapons(CCSPlayerController player)
         {
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-            foreach (var mode in CustomModes)
+            foreach (var mode in Config.CustomModes)
             {
                 if (playerData[player].PrimaryWeapon.ContainsKey(mode.Key))
                     continue;
@@ -360,14 +355,14 @@ namespace Deathmatch
                 {
                     if (mode.Value.PrimaryWeapons.Count > 0)
                     {
-                        var primary = mode.Value.PrimaryWeapons.Where(w => !RestrictedWeapons.ContainsKey(w)).FirstOrDefault();
+                        var primary = mode.Value.PrimaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
                         playerData[player].PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                     }
                     else
                         playerData[player].PrimaryWeapon[mode.Key] = "";
                     if (mode.Value.SecondaryWeapons.Count > 0)
                     {
-                        var secondary = mode.Value.SecondaryWeapons.Where(w => !RestrictedWeapons.ContainsKey(w)).FirstOrDefault();
+                        var secondary = mode.Value.SecondaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
                         playerData[player].SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                     }
                     else

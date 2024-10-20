@@ -7,17 +7,17 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public static Dictionary<string, ModeData> CustomModes = new();
-        public static Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
+        //public static Dictionary<string, ModeData> CustomModes = new();
+        //public static Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
         public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         public static Dictionary<Vector, QAngle> spawnPositionsT = new();
         public static Dictionary<int, Vector> blockedSpawns = new();
-        public static PlayerCache<DeathmatchPlayerData> playerData = new PlayerCache<DeathmatchPlayerData>();
+        public static PlayerCache<DeathmatchPlayerData> playerData = new();
         public static List<PreferencesData> Preferences = new();
         public static List<CDynamicProp> savedSpawnsModel = new();
         public static List<CPointWorldText> savedSpawnsVectorText = new();
 
-        readonly Dictionary<string, string> weaponSelectMapping = new Dictionary<string, string>
+        readonly Dictionary<string, string> weaponSelectMapping = new()
         {
             { "m4a4", "weapon_m4a1" },
             { "weapon_m4a1", "weapon_m4a1" },

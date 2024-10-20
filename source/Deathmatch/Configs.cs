@@ -16,7 +16,7 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("Players Gameplay Settings")] public PlayersSettings PlayersSettings { get; set; } = new PlayersSettings();
     [JsonPropertyName("Client Preferences")] public PlayersPreferences PlayersPreferences { get; set; } = new PlayersPreferences();
     [JsonPropertyName("Custom Modes")]
-    public Dictionary<string, ModeData> Modes { get; set; } = new()
+    public Dictionary<string, ModeData> CustomModes { get; set; } = new()
     {
         ["0"] = new ModeData
         {
@@ -31,11 +31,16 @@ public class DeathmatchConfig : BasePluginConfig
                         "weapon_aug", "weapon_sg556", "weapon_xm1014",
                         "weapon_ak47", "weapon_famas", "weapon_galilar",
                         "weapon_m4a1", "weapon_m4a1_silencer", "weapon_mp5sd",
-                        "weapon_mp7", "weapon_p90", "weapon_awp"
+                        "weapon_mp7", "weapon_p90", "weapon_awp",
+                        "weapon_ssg08", "weapon_scar20", "weapon_g3sg1",
+                        "weapon_m249", "weapon_negev", "weapon_nova",
+                        "weapon_sawedoff", "weapon_mag7", "weapon_ump45",
+                        "weapon_bizon", "weapon_mac10", "weapon_mp9"
                     },
-            SecondaryWeapons = new List<string> {
+                                SecondaryWeapons = new List<string> {
                         "weapon_usp_silencer", "weapon_p250", "weapon_glock",
-                        "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle"
+                        "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle",
+                        "weapon_tec9", "weapon_revolver", "weapon_dualberettas"
                     },
             Utilities = new List<string> {
                         "weapon_flashbang"
@@ -121,7 +126,7 @@ public class DeathmatchConfig : BasePluginConfig
             ExecuteCommands = new List<string>()
         }
     };
-    [JsonPropertyName("Weapons Restrict")] public WeaponsRestrict WeaponsRestrict { get; set; } = new WeaponsRestrict();
+    [JsonPropertyName("Weapons Restrict")] public WeaponsRestrict RestrictedWeapons { get; set; } = new WeaponsRestrict();
 }
 
 public class Database
@@ -278,7 +283,7 @@ public class WeaponsRestrict
     [JsonPropertyName("Global Restrict")] public bool Global { get; set; } = true;
 
     [JsonPropertyName("Weapons")]
-    public Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> DefaultRestrictions { get; set; } = new()
+    public Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> Restrictions { get; set; } = new()
     {
         ["weapon_ak47"] = new Dictionary<string, Dictionary<RestrictType, RestrictData>>()
         {

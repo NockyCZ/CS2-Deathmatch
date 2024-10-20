@@ -20,7 +20,7 @@ public partial class Deathmatch : IDeathmatchAPI
 
     public void StartCustomMode(int modeId)
     {
-        if (!CustomModes.ContainsKey(modeId.ToString()))
+        if (!Config.CustomModes.ContainsKey(modeId.ToString()))
             throw new Exception($"A Custom mode with ID '{modeId}' cannot be started, because this mode does not exist!");
 
         SetupCustomMode(modeId.ToString());
@@ -28,7 +28,7 @@ public partial class Deathmatch : IDeathmatchAPI
 
     public void ChangeNextMode(int modeId)
     {
-        if (!CustomModes.ContainsKey(modeId.ToString()))
+        if (!Config.CustomModes.ContainsKey(modeId.ToString()))
             throw new Exception($"A Custom mode with ID '{modeId}' cannot be set as next mode, because this mode does not exist!");
 
         NextMode = modeId;
@@ -36,10 +36,10 @@ public partial class Deathmatch : IDeathmatchAPI
 
     public void AddCustomMode(int modeId, ModeData mode)
     {
-        if (CustomModes.ContainsKey(modeId.ToString()))
+        if (Config.CustomModes.ContainsKey(modeId.ToString()))
             throw new Exception($"A Custom mode with ID '{modeId}' cannot be added, because this mode already exists!");
 
-        CustomModes.Add(modeId.ToString(), mode);
+        Config.CustomModes.Add(modeId.ToString(), mode);
     }
 
     public void ChangeCheckDistance(int distance)
@@ -88,6 +88,6 @@ public partial class Deathmatch : IDeathmatchAPI
 
     public Dictionary<string, ModeData> GetCustomModes()
     {
-        return CustomModes;
+        return Config.CustomModes;
     }
 }

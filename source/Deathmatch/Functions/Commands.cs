@@ -119,7 +119,7 @@ namespace Deathmatch
             string modeid = info.GetArg(1);
             if (int.TryParse(modeid, out _))
             {
-                if (!CustomModes.ContainsKey(modeid))
+                if (!Config.CustomModes.ContainsKey(modeid))
                 {
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} A mod with a number doesn't exist!");
                     return;

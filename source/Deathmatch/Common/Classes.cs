@@ -17,8 +17,6 @@ namespace Deathmatch
             public Dictionary<string, string> PrimaryWeapon { get; set; } = new();
             public Dictionary<string, string> SecondaryWeapon { get; set; } = new();
             public Dictionary<string, bool> Preferences { get; set; } = new();
-            public string LastPrimaryWeapon { get; set; } = "";
-            public string LastSecondaryWeapon { get; set; } = "";
             public bool SpawnProtection { get; set; } = false;
             public int KillStreak { get; set; } = 0;
             public float BlockRandomWeaponsIntegeration { get; set; } = 0;

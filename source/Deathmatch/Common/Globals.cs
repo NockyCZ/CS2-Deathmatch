@@ -22,9 +22,6 @@ namespace Deathmatch
         public static int CheckedEnemiesDistance = 500;
         public static bool IsCasualGamemode;
         public static bool DefaultMapSpawnDisabled = false;
-        public static bool IsLinuxServer;
         public static ModeData ActiveMode = new();
-        public MemoryFunctionWithReturn<CCSPlayer_ItemServices, CEconItemView, AcquireMethod, NativeObject, AcquireResult>? CCSPlayer_CanAcquireFunc;
-        public MemoryFunctionWithReturn<int, string, CCSWeaponBaseVData>? GetCSWeaponDataFromKeyFunc;
     }
 }

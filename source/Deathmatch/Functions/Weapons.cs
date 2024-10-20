@@ -17,7 +17,7 @@ namespace Deathmatch
             if (weaponsList.Count == 1)
                 return false;
 
-            if (!RestrictedWeapons.ContainsKey(weaponName))
+            if (!Config.RestrictedWeapons.Restrictions.ContainsKey(weaponName))
                 return false;
 
             int restrictValue = GetWeaponRestrict(weaponName, isVIP, team);
@@ -27,7 +27,7 @@ namespace Deathmatch
             if (restrictValue < 0)
                 return true;
 
-            var playersList = Config.WeaponsRestrict.Global ? players : players.Where(p => p.Team == team).ToList();
+            var playersList = Config.RestrictedWeapons.Global ? players : players.Where(p => p.Team == team).ToList();
             int matchingCount = playersList.Count(p => (bPrimary && playerData[p].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName) || (!bPrimary && playerData[p].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName));
 
             return matchingCount >= restrictValue;
@@ -99,24 +99,24 @@ namespace Deathmatch
 
         public int GetWeaponRestrict(string weaponName, bool isVIP, CsTeam team)
         {
-            if (!RestrictedWeapons.ContainsKey(weaponName) || !RestrictedWeapons[weaponName].ContainsKey(ActiveCustomMode))
+            if (!Config.RestrictedWeapons.Restrictions.ContainsKey(weaponName) || !Config.RestrictedWeapons.Restrictions[weaponName].ContainsKey(ActiveCustomMode))
                 return 0;
 
-            var restrictInfo = RestrictedWeapons[weaponName][ActiveCustomMode][isVIP ? RestrictType.VIP : RestrictType.NonVIP];
-            return Config.WeaponsRestrict.Global ? restrictInfo.Global : (team == CsTeam.CounterTerrorist ? restrictInfo.CT : restrictInfo.T);
+            var restrictInfo = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][isVIP ? RestrictType.VIP : RestrictType.NonVIP];
+            return Config.RestrictedWeapons.Global ? restrictInfo.Global : (team == CsTeam.CounterTerrorist ? restrictInfo.CT : restrictInfo.T);
         }
 
         public (int, int) GetRestrictData(string weaponName, CsTeam team)
         {
-            if (!RestrictedWeapons.ContainsKey(weaponName))
+            if (!Config.RestrictedWeapons.Restrictions.ContainsKey(weaponName))
                 return (0, 0);
-            if (!RestrictedWeapons[weaponName].ContainsKey(ActiveCustomMode))
+            if (!Config.RestrictedWeapons.Restrictions[weaponName].ContainsKey(ActiveCustomMode))
                 return (0, 0);
 
-            var restrictDataVIP = RestrictedWeapons[weaponName][ActiveCustomMode][RestrictType.VIP];
-            var restrictDataNonVIP = RestrictedWeapons[weaponName][ActiveCustomMode][RestrictType.NonVIP];
+            var restrictDataVIP = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][RestrictType.VIP];
+            var restrictDataNonVIP = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][RestrictType.NonVIP];
 
-            if (Config.WeaponsRestrict.Global)
+            if (Config.RestrictedWeapons.Global)
                 return (restrictDataNonVIP.Global, restrictDataVIP.Global);
 
             return team == CsTeam.CounterTerrorist
