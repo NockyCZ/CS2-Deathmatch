@@ -33,7 +33,7 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     - [x] Headshot Kill Sound
     - [x] Knife Kill Sound
     - [x] Hit Sound
-    - [x] Only Headsnhot
+    - [x] Only Headshot
     - [x] Hud Messages
 - [x] VIP Support
 - [x] [Admin & Players Commands](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/commands)
