@@ -37,10 +37,10 @@ public class DeathmatchConfig : BasePluginConfig
                         "weapon_sawedoff", "weapon_mag7", "weapon_ump45",
                         "weapon_bizon", "weapon_mac10", "weapon_mp9"
                     },
-                                SecondaryWeapons = new List<string> {
+            SecondaryWeapons = new List<string> {
                         "weapon_usp_silencer", "weapon_p250", "weapon_glock",
                         "weapon_fiveseven", "weapon_hkp2000", "weapon_deagle",
-                        "weapon_tec9", "weapon_revolver", "weapon_dualberettas"
+                        "weapon_tec9", "weapon_revolver", "weapon_elite"
                     },
             Utilities = new List<string> {
                         "weapon_flashbang"
