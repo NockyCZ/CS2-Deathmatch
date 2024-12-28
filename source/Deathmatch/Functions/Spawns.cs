@@ -45,8 +45,7 @@ namespace Deathmatch
 
         public (Vector, QAngle) GetAvailableSpawn(CCSPlayerController player, List<KeyValuePair<Vector, QAngle>> spawnsList)
         {
-            var allPlayers = Utilities.GetPlayers();
-            var playerPositions = allPlayers
+            var playerPositions = Utilities.GetPlayers()
                 .Where(p => !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
                 .Select(p => p.PlayerPawn.Value!.AbsOrigin)
                 .ToList();

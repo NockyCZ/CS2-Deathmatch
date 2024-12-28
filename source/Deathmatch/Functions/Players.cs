@@ -293,9 +293,8 @@ namespace Deathmatch
                         1 => ActiveMode.PrimaryWeapons[0],
                         _ => Config.Gameplay.DefaultModeWeapons switch
                         {
-                            2 => GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, false, player.Team, true),
-                            1 => ActiveMode.PrimaryWeapons[0],
-                            _ => ""
+                            2 or 3 => GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, false, player.Team, true),
+                            _ or 1 => ActiveMode.PrimaryWeapons[0]
                         }
                     };
                     if (!string.IsNullOrEmpty(PrimaryWeapon))
@@ -311,9 +310,8 @@ namespace Deathmatch
                         1 => ActiveMode.SecondaryWeapons[0],
                         _ => Config.Gameplay.DefaultModeWeapons switch
                         {
-                            2 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, true),
-                            1 => ActiveMode.SecondaryWeapons[0],
-                            _ => ""
+                            2 or 3 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, true),
+                            _ or 1 => ActiveMode.SecondaryWeapons[0]
                         }
                     };
 
@@ -491,10 +489,10 @@ namespace Deathmatch
 
         public bool IsHaveBlockedRandomWeaponsIntegration(CCSPlayerController player)
         {
-            if (playerData.ContainsPlayer(player))
+            if (playerData.TryGetValue(player.Slot, out var data))
             {
-                var time = Server.CurrentTime - playerData[player].BlockRandomWeaponsIntegeration;
-                return time < 0.2;
+                var time = Server.CurrentTime - data.BlockRandomWeaponsIntegeration;
+                return time < 0.5;
             }
             return true;
         }

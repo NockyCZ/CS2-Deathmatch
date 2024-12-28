@@ -433,7 +433,7 @@ namespace Deathmatch
                 return HookResult.Stop;
             }
 
-            if (playerData.ContainsPlayer(player))
+            if (playerData.TryGetValue(player.Slot, out var data))
             {
                 string localizerWeaponName = Localizer[vdata.Name];
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
@@ -452,13 +452,13 @@ namespace Deathmatch
 
                 if (IsPrimary)
                 {
-                    if (playerData[player].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primaryWeapon) && vdata.Name == primaryWeapon)
+                    if (data.PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primaryWeapon) && vdata.Name == primaryWeapon)
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
-                    playerData[player].PrimaryWeapon[ActiveCustomMode] = vdata.Name;
+                    data.PrimaryWeapon[ActiveCustomMode] = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
 
                     var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
@@ -470,13 +470,13 @@ namespace Deathmatch
                 }
                 else
                 {
-                    if (playerData[player].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondaryWeapon) && vdata.Name == secondaryWeapon)
+                    if (data.SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondaryWeapon) && vdata.Name == secondaryWeapon)
                     {
                         player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                         hook.SetReturn(AcquireResult.AlreadyOwned);
                         return HookResult.Stop;
                     }
-                    playerData[player].SecondaryWeapon[ActiveCustomMode] = vdata.Name;
+                    data.SecondaryWeapon[ActiveCustomMode] = vdata.Name;
                     player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
 
                     var weapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL);
