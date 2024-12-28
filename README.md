@@ -35,6 +35,7 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     - [x] Hit Sound
     - [x] Only Headshot
     - [x] Hud Messages
+    - [x] Damage Info
 - [x] VIP Support
 - [x] [Admin & Players Commands](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/commands)
 
