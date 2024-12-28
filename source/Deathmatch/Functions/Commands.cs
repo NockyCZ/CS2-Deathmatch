@@ -28,7 +28,7 @@ namespace Deathmatch
                             info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
                             return;
                         }
-                        SetupPlayerWeapons(player!, weapon_name, info);
+                        SetupPlayerWeapons(player, weapon_name, info);
                     });
                     break;
                 case 2:
@@ -44,7 +44,7 @@ namespace Deathmatch
                         }
 
                         string weaponName = info.GetArg(1).ToLower();
-                        SetupPlayerWeapons(player!, weaponName, info);
+                        SetupPlayerWeapons(player, weaponName, info);
                     });
                     break;
                 case 3:
@@ -58,15 +58,15 @@ namespace Deathmatch
 
                         if (Preferences.Where(x => x.Category == CategoryType.SOUNDS).Any() && Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() == 0)
                         {
-                            OpenSubMenu(player!, CategoryType.SOUNDS, true);
+                            OpenSubMenu(player, CategoryType.SOUNDS, true);
                             return;
                         }
                         if (Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Any() && Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() == 0)
                         {
-                            OpenSubMenu(player!, CategoryType.FUNCTIONS, true);
+                            OpenSubMenu(player, CategoryType.FUNCTIONS, true);
                             return;
                         }
-                        OpenMainMenu(player!);
+                        OpenMainMenu(player);
 
                     });
                     break;

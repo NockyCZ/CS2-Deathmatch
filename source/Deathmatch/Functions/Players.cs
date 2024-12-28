@@ -256,7 +256,7 @@ namespace Deathmatch
                 {
                     if (ActiveMode.RandomWeapons)
                     {
-                        var weapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, IsVIP, player.Team, true);
+                        var weapon = GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, IsVIP, player.Team, false);
                         if (!string.IsNullOrEmpty(weapon))
                             player.GiveNamedItem(weapon);
                     }
@@ -310,7 +310,7 @@ namespace Deathmatch
                         1 => ActiveMode.SecondaryWeapons[0],
                         _ => Config.Gameplay.DefaultModeWeapons switch
                         {
-                            2 or 3 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, true),
+                            2 or 3 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, false),
                             _ or 1 => ActiveMode.SecondaryWeapons[0]
                         }
                     };
@@ -377,7 +377,7 @@ namespace Deathmatch
                             playerData[player].PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
-                            var secondary = GetRandomWeaponFromList(mode.Value.SecondaryWeapons, mode.Value, IsVIP, player.Team, true);
+                            var secondary = GetRandomWeaponFromList(mode.Value.SecondaryWeapons, mode.Value, IsVIP, player.Team, false);
                             playerData[player].SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
