@@ -12,7 +12,7 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        private void AddCustomCommands(string command, string weapon_name, int type)
+        private void AddCustomCommands(string command, string weapon_name, int type, bool onlyVIP = false)
         {
             string cmdName = $"css_{command}";
             switch (type)
@@ -20,7 +20,7 @@ namespace Deathmatch
                 case 1:
                     AddCommand(cmdName, $"Weapon Shortcut: {weapon_name}", (player, info) =>
                     {
-                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
                             return;
 
                         if (ActiveMode.RandomWeapons)
@@ -34,8 +34,9 @@ namespace Deathmatch
                 case 2:
                     AddCommand(cmdName, "Select a weapon by command", (player, info) =>
                     {
-                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
                             return;
+
                         if (ActiveMode.RandomWeapons)
                         {
                             info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
@@ -49,24 +50,37 @@ namespace Deathmatch
                 case 3:
                     AddCommand(cmdName, "Opens a Deathmatch menu", (player, info) =>
                     {
-                        if (player != null && player.IsValid && !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
                             return;
 
-                        if (Preferences.Count == 0)
+                        if (!Preferences.Any())
                             return;
 
-                        if (Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() > 0 && Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() == 0)
+                        if (Preferences.Where(x => x.Category == CategoryType.SOUNDS).Any() && Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() == 0)
                         {
                             OpenSubMenu(player!, CategoryType.SOUNDS, true);
                             return;
                         }
-                        if (Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() > 0 && Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() == 0)
+                        if (Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Any() && Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() == 0)
                         {
                             OpenSubMenu(player!, CategoryType.FUNCTIONS, true);
                             return;
                         }
                         OpenMainMenu(player!);
 
+                    });
+                    break;
+
+                case 4:
+                    AddCommand(cmdName, "Switch Player Preferences", (player, info) =>
+                    {
+                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
+                            return;
+
+                        if (onlyVIP && !AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
+                            return;
+
+                        SwitchPrefsValue(player, weapon_name);
                     });
                     break;
             }

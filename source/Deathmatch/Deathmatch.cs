@@ -10,7 +10,6 @@ using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Core.Capabilities;
 using DeathmatchAPI.Helpers;
 using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
-using System.Runtime.InteropServices;
 using static CounterStrikeSharp.API.Core.Listeners;
 
 namespace Deathmatch;
@@ -19,7 +18,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.2";
+    public override string ModuleVersion => "1.2.3";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -36,6 +35,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         if (Config.SaveWeapons)
             _ = CreateDatabaseConnection();
 
+        SetupDeathmatchMenus();
         string[] Shortcuts = Config.CustomCommands.CustomShortcuts.Split(',');
         string[] WSelect = Config.CustomCommands.WeaponSelectCmds.Split(',');
         string[] DeathmatchMenus = Config.CustomCommands.DeatmatchMenuCmds.Split(',');
@@ -51,6 +51,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             AddCustomCommands(cmd, "", 2);
         foreach (var cmd in DeathmatchMenus)
             AddCustomCommands(cmd, "", 3);
+        foreach (var preference in Preferences.Where(x => x.CommandShortcuts.Any()))
+        {
+            foreach (var cmd in preference.CommandShortcuts)
+                AddCustomCommands(cmd, preference.Name, 4, preference.vipOnly);
+        }
         foreach (string radioName in RadioMessagesList)
             AddCommandListener(radioName, OnPlayerRadioMessage);
 
@@ -69,12 +74,12 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             if (!mapLoaded)
             {
                 mapLoaded = true;
+                bool RoundTerminated = false;
                 DefaultMapSpawnDisabled = false;
                 playerData.Clear();
                 AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
-                    SetupDeathmatchMenus();
                     SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
                     SetupDeathMatchConfigValues();
                     RemoveEntities();
@@ -92,35 +97,28 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
                             if (RemainingTime == 0)
                             {
+                                if (Config.General.ForceMapEnd)
+                                {
+                                    var timelimit = Config.Gameplay.GameLength * 60;
+                                    var gameStart = GameRules().GameStartTime;
+                                    var currentTime = Server.CurrentTime;
+                                    var timeleft = timelimit - (currentTime - gameStart);
+                                    if (timeleft <= 0 && !RoundTerminated)
+                                    {
+                                        GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
+                                    }
+                                }
                                 SetupCustomMode(NextMode.ToString());
                             }
-                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.ContainsKey(NextMode.ToString()))
+                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.TryGetValue(NextMode.ToString(),out var modeData))
                             {
                                 var time = TimeSpan.FromSeconds(RemainingTime);
                                 var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";//RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
 
-                                var NextModeData = Config.CustomModes[NextMode.ToString()];
                                 ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{REMAININGTIME}", formattedTime);
-                                ModeCenterMessage = ModeCenterMessage.Replace("{NEXTMODE}", NextModeData.Name);
+                                ModeCenterMessage = ModeCenterMessage.Replace("{NEXTMODE}", modeData.Name);
                             }
                         }
-                    }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
-                }
-                if (Config.General.ForceMapEnd)
-                {
-                    bool RoundTerminated = false;
-                    var timelimit = Config.Gameplay.GameLength * 60;
-                    AddTimer(10.0f, () =>
-                    {
-                        var gameStart = GameRules().GameStartTime;
-                        var currentTime = Server.CurrentTime;
-                        var timeleft = timelimit - (currentTime - gameStart);
-                        if (timeleft <= 0 && !RoundTerminated)
-                        {
-                            RoundTerminated = true;
-                            GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
-                        }
-
                     }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
                 }
             }
@@ -129,7 +127,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         {
             if (VisibleHud)
             {
-                foreach (var p in Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)))
+                foreach (var p in Utilities.GetPlayers())
                 {
                     if (ActiveEditor == p)
                     {
@@ -139,7 +137,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     }
                     else
                     {
-                        if (!playerData[p].Preferences.TryGetValue("HudMessages", out var hudMessage) || !hudMessage || MenuManager.GetActiveMenu(p) != null)
+                        if (!GetPrefsValue(p.Slot, "HudMessages") || MenuManager.GetActiveMenu(p) != null)
                             continue;
 
                         if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
@@ -171,6 +169,25 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }
             }
         });
+
+        if (Config.General.RemoveDecals)
+        {
+            HookUserMessage(411, um =>
+            {
+                um.Recipients.Clear();
+                return HookResult.Continue;
+            }, HookMode.Pre);
+        }
+
+        if (hotReload)
+        {
+            Server.ExecuteCommand($"map {Server.MapName}");
+        }
+        else
+        {
+            if (Config.General.RestartMapOnPluginLoad)
+                Server.ExecuteCommand($"map {Server.MapName}");
+        }
     }
 
     public override void Unload(bool hotReload)
@@ -189,10 +206,9 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         ActiveCustomMode = modeId;
         NextMode = GetModeType();
 
-        if (Config.CustomModes.ContainsKey(NextMode.ToString()) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+        if (Config.CustomModes.TryGetValue(NextMode.ToString(),out var modeData) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
         {
-            var NextModeData = Config.CustomModes[NextMode.ToString()];
-            ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{NEXTMODE}", NextModeData.Name);
+            ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{NEXTMODE}", modeData.Name);
             ModeCenterMessage = ModeCenterMessage.Replace("{REMAININGTIME}", RemainingTime.ToString());
         }
         SetupDeathmatchConfiguration(ActiveMode, bNewmode);
@@ -212,7 +228,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
         Server.ExecuteCommand($"mp_free_armor {mode.Armor};mp_damage_headshot_only {mode.OnlyHS};mp_ct_default_primary \"\";mp_t_default_primary \"\";mp_ct_default_secondary \"\";mp_t_default_secondary \"\"");
 
-        if (mode.ExecuteCommands.Count > 0)
+        if (mode.ExecuteCommands.Any())
         {
             foreach (var cmd in mode.ExecuteCommands)
                 Server.ExecuteCommand(cmd);

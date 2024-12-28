@@ -27,4 +27,5 @@ public class PreferencesData
     public required CategoryType Category { get; set; }
     public required bool defaultValue { get; set; }
     public required bool vipOnly { get; set; }
+    public List<string> CommandShortcuts { get; set; } = new();
 }

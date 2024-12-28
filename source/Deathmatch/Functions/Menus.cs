@@ -31,7 +31,7 @@ namespace Deathmatch
 
             foreach (var option in Preferences.Where(x => x.Category == menuType))
             {
-                Value = GetPrefsValue(player, option.Name) ? "ON" : "OFF";
+                Value = GetPrefsValue(player.Slot, option.Name) ? "ON" : "OFF";
                 if (option.vipOnly)
                 {
                     if (IsVIP)
@@ -66,7 +66,6 @@ namespace Deathmatch
         private void SetupDeathmatchMenus()
         {
             Preferences.Clear();
-
             if (Config.PlayersPreferences.KillSound.Enabled)
             {
                 var data = new PreferencesData()
@@ -74,7 +73,8 @@ namespace Deathmatch
                     Name = "KillSound",
                     Category = CategoryType.SOUNDS,
                     defaultValue = Config.PlayersPreferences.KillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.KillSound.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.KillSound.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.KillSound.Shotcuts
                 };
                 Preferences.Add(data);
             }
@@ -86,7 +86,8 @@ namespace Deathmatch
                     Name = "HeadshotKillSound",
                     Category = CategoryType.SOUNDS,
                     defaultValue = Config.PlayersPreferences.HSKillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HSKillSound.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.HSKillSound.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.HSKillSound.Shotcuts
                 };
                 Preferences.Add(data);
             }
@@ -98,7 +99,8 @@ namespace Deathmatch
                     Name = "KnifeKillSound",
                     Category = CategoryType.SOUNDS,
                     defaultValue = Config.PlayersPreferences.KnifeKillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.KnifeKillSound.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.KnifeKillSound.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.KnifeKillSound.Shotcuts
                 };
                 Preferences.Add(data);
             }
@@ -109,7 +111,8 @@ namespace Deathmatch
                     Name = "HitSound",
                     Category = CategoryType.SOUNDS,
                     defaultValue = Config.PlayersPreferences.HitSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HitSound.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.HitSound.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.HitSound.Shotcuts
                 };
                 Preferences.Add(data);
             }
@@ -121,7 +124,8 @@ namespace Deathmatch
                     Name = "OnlyHS",
                     Category = CategoryType.FUNCTIONS,
                     defaultValue = Config.PlayersPreferences.OnlyHS.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.OnlyHS.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.OnlyHS.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.OnlyHS.Shotcuts
                 };
                 Preferences.Add(data);
             }
@@ -132,7 +136,20 @@ namespace Deathmatch
                     Name = "HudMessages",
                     Category = CategoryType.FUNCTIONS,
                     defaultValue = Config.PlayersPreferences.HudMessages.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HudMessages.OnlyVIP
+                    vipOnly = Config.PlayersPreferences.HudMessages.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.HudMessages.Shotcuts
+                };
+                Preferences.Add(data);
+            }
+            if (Config.PlayersPreferences.DamageInfo.Enabled)
+            {
+                var data = new PreferencesData()
+                {
+                    Name = "DamageInfo",
+                    Category = CategoryType.FUNCTIONS,
+                    defaultValue = Config.PlayersPreferences.DamageInfo.DefaultValue,
+                    vipOnly = Config.PlayersPreferences.DamageInfo.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.DamageInfo.Shotcuts
                 };
                 Preferences.Add(data);
             }

@@ -1,3 +1,4 @@
+using System.Diagnostics.Eventing.Reader;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
@@ -27,8 +28,10 @@ namespace Deathmatch
             if (restrictValue < 0)
                 return true;
 
-            var playersList = Config.RestrictedWeapons.Global ? players : players.Where(p => p.Team == team).ToList();
-            int matchingCount = playersList.Count(p => (bPrimary && playerData[p].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName) || (!bPrimary && playerData[p].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName));
+            var playersList = Config.RestrictedWeapons.Global ? players : players.Where(p => p.Team == team);
+            int matchingCount = playersList.Count(p => bPrimary
+                ? playerData[p].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName
+                : playerData[p].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName);
 
             return matchingCount >= restrictValue;
         }
@@ -55,41 +58,12 @@ namespace Deathmatch
                 .Any(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
         }
 
-        public void RemovePlayerWeapon(CCSPlayerController player, string weaponName)
-        {
-            var pawn = player.PlayerPawn?.Value;
-            if (pawn == null || pawn.WeaponServices == null || !player.PawnIsAlive)
-                return;
-
-            var replacements = new Dictionary<string, string>
-            {
-                { "weapon_m4a1_silencer", "weapon_m4a1" },
-                { "weapon_usp_silencer", "weapon_hkp2000" },
-                { "weapon_mp5sd", "weapon_mp7" }
-            };
-
-            if (replacements.TryGetValue(weaponName, out var replacement))
-            {
-                weaponName = replacement;
-            }
-
-            var weapon = pawn.WeaponServices.MyWeapons
-                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .FirstOrDefault(weaponBase => weaponBase != null && weaponBase.DesignerName.Contains(weaponName));
-
-            if (weapon != null)
-                weapon.Remove();
-        }
-
         private string GetRandomWeaponFromList(List<string> weaponsList, ModeData modeData, bool isVIP, CsTeam team, bool bPrimary)
         {
-            if (weaponsList.Count > 0)
+            if (weaponsList.Any())
             {
-                if (!modeData.RandomWeapons && Config.Gameplay.RemoveRestrictedWeapons)
+                if (!modeData.RandomWeapons && (Config.Gameplay.DefaultModeWeapons != 1 || Config.Gameplay.DefaultModeWeapons != 2))
                     weaponsList.RemoveAll(weapon => CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary));
-
-                //if (weaponsList.Count == 1)
-                //    return weaponsList[0];
 
                 int index = Random.Next(weaponsList.Count);
                 return weaponsList[index];
@@ -99,29 +73,39 @@ namespace Deathmatch
 
         public int GetWeaponRestrict(string weaponName, bool isVIP, CsTeam team)
         {
-            if (!Config.RestrictedWeapons.Restrictions.ContainsKey(weaponName) || !Config.RestrictedWeapons.Restrictions[weaponName].ContainsKey(ActiveCustomMode))
+            if (!Config.RestrictedWeapons.Restrictions.TryGetValue(weaponName, out var weaponRestrictions) || !weaponRestrictions.TryGetValue(ActiveCustomMode, out var restrictTypes))
                 return 0;
 
-            var restrictInfo = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][isVIP ? RestrictType.VIP : RestrictType.NonVIP];
+            var restrictInfo = restrictTypes[isVIP ? RestrictType.VIP : RestrictType.NonVIP];
             return Config.RestrictedWeapons.Global ? restrictInfo.Global : (team == CsTeam.CounterTerrorist ? restrictInfo.CT : restrictInfo.T);
         }
 
-        public (int, int) GetRestrictData(string weaponName, CsTeam team)
+        public (int NonVIP, int VIP) GetRestrictData(string weaponName, CsTeam team)
         {
-            if (!Config.RestrictedWeapons.Restrictions.ContainsKey(weaponName))
-                return (0, 0);
-            if (!Config.RestrictedWeapons.Restrictions[weaponName].ContainsKey(ActiveCustomMode))
+            if (!Config.RestrictedWeapons.Restrictions.TryGetValue(weaponName, out var weaponRestrictions) || !weaponRestrictions.TryGetValue(ActiveCustomMode, out var restrictTypes))
                 return (0, 0);
 
-            var restrictDataVIP = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][RestrictType.VIP];
-            var restrictDataNonVIP = Config.RestrictedWeapons.Restrictions[weaponName][ActiveCustomMode][RestrictType.NonVIP];
+            var restrictDataNonVIP = restrictTypes[RestrictType.NonVIP];
+            var restrictDataVIP = restrictTypes[RestrictType.VIP];
 
-            if (Config.RestrictedWeapons.Global)
-                return (restrictDataNonVIP.Global, restrictDataVIP.Global);
+            return Config.RestrictedWeapons.Global
+                ? (restrictDataNonVIP.Global, restrictDataVIP.Global)
+                : team == CsTeam.CounterTerrorist
+                    ? (restrictDataNonVIP.CT, restrictDataVIP.CT)
+                    : (restrictDataNonVIP.T, restrictDataVIP.T);
+        }
 
-            return team == CsTeam.CounterTerrorist
-                ? (restrictDataNonVIP.CT, restrictDataVIP.CT)
-                : (restrictDataNonVIP.T, restrictDataVIP.T);
+        public string GetWeaponRestrictLozalizer(int bullets)
+        {
+            switch (bullets)
+            {
+                case -1:
+                    return Localizer["Chat.Disabled"];
+                case 0:
+                    return Localizer["Chat.Unlimited"];
+                default:
+                    return bullets.ToString();
+            }
         }
     }
 }

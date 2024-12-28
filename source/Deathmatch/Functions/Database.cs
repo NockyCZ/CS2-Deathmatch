@@ -87,7 +87,7 @@ namespace Deathmatch
 
                                     Server.NextFrame(() =>
                                     {
-                                        if (playerData.ContainsPlayer(player))
+                                        if (playerData.TryGetValue(player.Slot, out var data))
                                         {
                                             if (primaryWeapons == null || secondaryWeapons == null)
                                             {
@@ -95,8 +95,8 @@ namespace Deathmatch
                                             }
                                             else
                                             {
-                                                playerData[player].PrimaryWeapon = primaryWeapons;
-                                                playerData[player].SecondaryWeapon = secondaryWeapons;
+                                                data.PrimaryWeapon = primaryWeapons;
+                                                data.SecondaryWeapon = secondaryWeapons;
                                                 SetupDefaultWeapons(player);
                                             }
 
@@ -106,7 +106,7 @@ namespace Deathmatch
                                             }
                                             else
                                             {
-                                                playerData[player].Preferences = preferences;
+                                                data.Preferences = preferences;
                                                 SetupDefaultPreferences(player);
                                             }
                                         }

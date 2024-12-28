@@ -157,7 +157,6 @@ public class Gameplay
     [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
     [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
-    [JsonPropertyName("Include Restricted Weapons As Defaults")] public bool RemoveRestrictedWeapons { get; set; } = true;
     [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
     [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
@@ -172,8 +171,9 @@ public class General
     [JsonPropertyName("Block Player Ping")] public bool BlockPlayerPing { get; set; } = true;
     [JsonPropertyName("Block Player ChatWheel")] public bool BlockPlayerChatWheel { get; set; } = true;
     [JsonPropertyName("Remove Breakable Entities")] public bool RemoveBreakableEntities { get; set; } = true;
-    [JsonPropertyName("Remove Decals After Death")] public bool RemoveDecals { get; set; } = true;
+    [JsonPropertyName("Remove Decals")] public bool RemoveDecals { get; set; } = true;
     [JsonPropertyName("Force Map End")] public bool ForceMapEnd { get; set; } = false;
+    [JsonPropertyName("Restart Map On Plugin Load")] public bool RestartMapOnPluginLoad { get; set; } = false;
 }
 public class CustomCommands
 {
@@ -189,6 +189,7 @@ public class PlayersPreferences
     [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new HitSound();
     [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new OnlyHS();
     [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new HudMessages();
+    [JsonPropertyName("Damage Info")] public DamageInfo DamageInfo { get; set; } = new DamageInfo();
 }
 // sounds/ui/beepclear.vsnd_c
 
@@ -197,6 +198,7 @@ public class OnlyHS
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "hs", "onlyhs" };
 }
 
 public class HudMessages
@@ -204,6 +206,7 @@ public class HudMessages
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = true;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "hud" };
 }
 public class HitSound
 {
@@ -218,6 +221,7 @@ public class HitSound
     [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/csgo_ui_contract_type2.vsnd_c";
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
 }
 public class KnifeKillSound
 {
@@ -225,6 +229,7 @@ public class KnifeKillSound
     [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/armsrace_final_kill_knife.vsnd_c";
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
 }
 public class KillSound
 {
@@ -240,6 +245,7 @@ public class KillSound
     [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/armsrace_kill_01.vsnd_c";
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
 }
 public class HSKillSound
 {
@@ -247,6 +253,15 @@ public class HSKillSound
     [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/buttons/bell1.vsnd_c";
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
+}
+
+public class DamageInfo
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "damage", "dmg" };
 }
 
 public class PlayersSettings

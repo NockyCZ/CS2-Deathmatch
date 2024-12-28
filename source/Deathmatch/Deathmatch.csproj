@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.282" />
+    <PackageReference Include="CounterStrikeSharp.API" Version="1.0.290" />
     <PackageReference Include="MysqlConnector" Version="2.3.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <ProjectReference Include="..\DeathmatchAPI\DeathmatchAPI.csproj" />
