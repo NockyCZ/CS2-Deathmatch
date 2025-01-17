@@ -39,6 +39,9 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
 - [x] VIP Support
 - [x] [Admin & Players Commands](https://docs.sourcefactory.eu/cs2-plugins/deathmatch/commands)
 
+### Addons/Modules
+- [Limited Zones](https://docs.sourcefactory.eu/deathmatch/modules/limited-zones)
+
 ### Installation
 1. Download the latest verison - https://github.com/NockyCZ/CS2-Deathmatch/releases
 2. Unzip into your servers `csgo/addons/counterstrikesharp/` dir
