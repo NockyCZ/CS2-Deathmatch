@@ -90,12 +90,15 @@ namespace Deathmatch
                 return;
             }
 
+            if (!playerData.TryGetValue(player.Slot, out var data))
+                return;
 
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
+            var pawn = player.PlayerPawn.Value;
             if (ActiveMode.PrimaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (playerData[player].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
+                if (data.PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -112,10 +115,10 @@ namespace Deathmatch
                     return;
                 }
 
-                playerData[player].PrimaryWeapon[ActiveCustomMode] = weaponName;
+                data.PrimaryWeapon[ActiveCustomMode] = weaponName;
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
 
-                var primaryWeapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
+                var primaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE) : null;
                 if (player.PawnIsAlive)
                 {
                     if (primaryWeapon == null)
@@ -124,7 +127,7 @@ namespace Deathmatch
                     }
                     else if (Config.Gameplay.SwitchWeapons)
                     {
-                        var secondaryWeapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL);
+                        var secondaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL) : null;
                         player.RemoveWeapons();
                         player.GiveNamedItem("weapon_knife");
                         player.GiveNamedItem(weaponName);
@@ -143,7 +146,7 @@ namespace Deathmatch
             else if (ActiveMode.SecondaryWeapons.Contains(weaponName))
             {
                 string localizerWeaponName = Localizer[weaponName];
-                if (playerData[player].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
+                if (data.SecondaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
@@ -160,10 +163,10 @@ namespace Deathmatch
                     return;
                 }
 
-                playerData[player].SecondaryWeapon[ActiveCustomMode] = weaponName;
+                data.SecondaryWeapon[ActiveCustomMode] = weaponName;
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
 
-                var secondaryWeapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL);
+                var secondaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL) : null;
                 if (player.PawnIsAlive)
                 {
                     if (secondaryWeapon == null)
@@ -172,7 +175,7 @@ namespace Deathmatch
                     }
                     else if (Config.Gameplay.SwitchWeapons)
                     {
-                        var primaryWeapon = GetWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE);
+                        var primaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE) : null;
                         player.RemoveWeapons();
                         player.GiveNamedItem("weapon_knife");
                         player.GiveNamedItem(weaponName);
@@ -200,7 +203,8 @@ namespace Deathmatch
 
         public void GivePlayerWeapons(CCSPlayerController player, bool bNewMode, bool giveUtilities = true, bool giveKnife = false)
         {
-            if (playerData.TryGetValue(player.Slot, out var data) && player.PlayerPawn.Value != null)
+            var pawn = player.PlayerPawn.Value;
+            if (playerData.TryGetValue(player.Slot, out var data) && pawn != null)
             {
                 if (player.InGameMoneyServices != null && giveUtilities)
                     player.InGameMoneyServices.Account = Config.Gameplay.AllowBuyMenu ? 16000 : 0;
@@ -211,11 +215,11 @@ namespace Deathmatch
                     var timer = IsVIP ? Config.PlayersSettings.VIP.ProtectionTime : Config.PlayersSettings.NonVIP.ProtectionTime;
                     if (timer > 0.1)
                     {
-                        if (string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
+                        if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
                         {
                             Color transparentColor = ColorTranslator.FromHtml(Config.Gameplay.SpawnProtectionColor);
-                            player.PlayerPawn.Value.Render = transparentColor;
-                            Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseModelEntity", "m_clrRender");
+                            pawn.Render = transparentColor;
+                            Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
                         }
                         data.SpawnProtection = true;
                         AddTimer(timer, () =>
@@ -223,10 +227,10 @@ namespace Deathmatch
                             if (player != null && player.IsValid && playerData.TryGetValue(player.Slot, out data))
                             {
                                 data.SpawnProtection = false;
-                                if (string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
+                                if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
                                 {
-                                    player.PlayerPawn.Value.Render = Color.White;
-                                    Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseModelEntity", "m_clrRender");
+                                    pawn.Render = Color.White;
+                                    Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
                                 }
                             }
                         });
@@ -278,75 +282,88 @@ namespace Deathmatch
                         player.GiveNamedItem("weapon_knife");
                 }
 
+                if (Config.Gameplay.FastWeaponEquip)
+                {
+                    Server.NextFrame(() =>
+                    {
+                        var activeWeapon = GetActiveWeapon(pawn);
+                        if (activeWeapon != null && activeWeapon.IsValid)
+                        {
+                            activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
+                            Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
+                        }
+                    });
+                }
                 return;
             }
 
             if (player.InGameMoneyServices != null)
                 player.InGameMoneyServices.Account = 0;
 
-            if (ActiveMode.PrimaryWeapons.Any())
+            if (pawn != null)
             {
-                if (!IsHaveWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_RIFLE))
+                if (ActiveMode.PrimaryWeapons.Any())
                 {
-                    var PrimaryWeapon = ActiveMode.PrimaryWeapons.Count switch
+                    if (!IsHaveWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE))
                     {
-                        1 => ActiveMode.PrimaryWeapons[0],
-                        _ => Config.Gameplay.DefaultModeWeapons switch
+                        var PrimaryWeapon = ActiveMode.PrimaryWeapons.Count switch
                         {
-                            2 or 3 => GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, false, player.Team, true),
-                            _ or 1 => ActiveMode.PrimaryWeapons[0]
-                        }
-                    };
-                    if (!string.IsNullOrEmpty(PrimaryWeapon))
-                        player.GiveNamedItem(PrimaryWeapon);
+                            1 => ActiveMode.PrimaryWeapons[0],
+                            _ => Config.Gameplay.DefaultModeWeapons switch
+                            {
+                                2 or 3 => GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, false, player.Team, true),
+                                _ or 1 => ActiveMode.PrimaryWeapons[0]
+                            }
+                        };
+                        if (!string.IsNullOrEmpty(PrimaryWeapon))
+                            player.GiveNamedItem(PrimaryWeapon);
+                    }
                 }
-            }
-            if (ActiveMode.SecondaryWeapons.Any())
-            {
-                if (!IsHaveWeaponFromSlot(player, gear_slot_t.GEAR_SLOT_PISTOL))
+                if (ActiveMode.SecondaryWeapons.Any())
                 {
-                    var SecondaryWeapon = ActiveMode.SecondaryWeapons.Count switch
+                    if (!IsHaveWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL))
                     {
-                        1 => ActiveMode.SecondaryWeapons[0],
-                        _ => Config.Gameplay.DefaultModeWeapons switch
+                        var SecondaryWeapon = ActiveMode.SecondaryWeapons.Count switch
                         {
-                            2 or 3 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, false),
-                            _ or 1 => ActiveMode.SecondaryWeapons[0]
-                        }
-                    };
+                            1 => ActiveMode.SecondaryWeapons[0],
+                            _ => Config.Gameplay.DefaultModeWeapons switch
+                            {
+                                2 or 3 => GetRandomWeaponFromList(ActiveMode.SecondaryWeapons, ActiveMode, false, player.Team, false),
+                                _ or 1 => ActiveMode.SecondaryWeapons[0]
+                            }
+                        };
 
-                    if (!string.IsNullOrEmpty(SecondaryWeapon))
-                        player.GiveNamedItem(SecondaryWeapon);
+                        if (!string.IsNullOrEmpty(SecondaryWeapon))
+                            player.GiveNamedItem(SecondaryWeapon);
+                    }
                 }
             }
         }
 
-        public void SetupDefaultPreferences(CCSPlayerController player)
+        public void SetupDefaultPreferences(CCSPlayerController player, DeathmatchPlayerData data, bool IsVIP)
         {
-            bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-            foreach (var data in Preferences)
+            foreach (var pref in Preferences)
             {
-                if (playerData[player].Preferences.ContainsKey(data.Name))
+                if (data.Preferences.ContainsKey(pref.Name))
                     continue;
 
-                if (data.vipOnly)
+                if (pref.vipOnly)
                 {
                     if (IsVIP)
-                        playerData[player].Preferences[data.Name] = data.defaultValue;
+                        data.Preferences[pref.Name] = pref.defaultValue;
                     else
-                        playerData[player].Preferences[data.Name] = false;
+                        data.Preferences[pref.Name] = false;
                 }
                 else
-                    playerData[player].Preferences[data.Name] = data.defaultValue;
+                    data.Preferences[pref.Name] = pref.defaultValue;
             }
         }
 
-        public void SetupDefaultWeapons(CCSPlayerController player)
+        public void SetupDefaultWeapons(CCSPlayerController player, DeathmatchPlayerData data, bool IsVIP)
         {
-            bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
             foreach (var mode in Config.CustomModes)
             {
-                if (playerData[player].PrimaryWeapon.ContainsKey(mode.Key))
+                if (data.PrimaryWeapon.ContainsKey(mode.Key))
                     continue;
 
                 switch (Config.Gameplay.DefaultModeWeapons)
@@ -355,49 +372,49 @@ namespace Deathmatch
                         if (mode.Value.PrimaryWeapons.Any())
                         {
                             var primary = mode.Value.PrimaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
-                            playerData[player].PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
+                            data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
-                            playerData[player].PrimaryWeapon[mode.Key] = "";
+                            data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
                             var secondary = mode.Value.SecondaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
-                            playerData[player].SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
+                            data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
-                            playerData[player].SecondaryWeapon[mode.Key] = "";
+                            data.SecondaryWeapon[mode.Key] = "";
                         break;
                     case 2 or 3:
                         if (mode.Value.PrimaryWeapons.Any())
                         {
                             var primary = GetRandomWeaponFromList(mode.Value.PrimaryWeapons, mode.Value, IsVIP, player.Team, true);
-                            playerData[player].PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
+                            data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
-                            playerData[player].PrimaryWeapon[mode.Key] = "";
+                            data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
                             var secondary = GetRandomWeaponFromList(mode.Value.SecondaryWeapons, mode.Value, IsVIP, player.Team, false);
-                            playerData[player].SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
+                            data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
-                            playerData[player].SecondaryWeapon[mode.Key] = "";
+                            data.SecondaryWeapon[mode.Key] = "";
                         break;
                     default:
                         if (mode.Value.PrimaryWeapons.Any())
                         {
                             var primary = mode.Value.PrimaryWeapons.FirstOrDefault();
-                            playerData[player].PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
+                            data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
-                            playerData[player].PrimaryWeapon[mode.Key] = "";
+                            data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
                             var secondary = mode.Value.SecondaryWeapons.FirstOrDefault();
-                            playerData[player].SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
+                            data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
-                            playerData[player].SecondaryWeapon[mode.Key] = "";
+                            data.SecondaryWeapon[mode.Key] = "";
                         break;
                 }
             }
@@ -413,78 +430,13 @@ namespace Deathmatch
 
         private void SwitchPrefsValue(CCSPlayerController player, string preference)
         {
-            playerData[player].Preferences[preference] = !playerData[player].Preferences[preference];
-            var changedValue = playerData[player].Preferences[preference] ? Localizer["Menu.Enabled"] : Localizer["Menu.Disabled"];
+            if (!playerData.TryGetValue(player.Slot, out var data))
+                return;
+
+            data.Preferences[preference] = !data.Preferences[preference];
+            var changedValue = data.Preferences[preference] ? Localizer["Menu.Enabled"] : Localizer["Menu.Disabled"];
             var Preference = Localizer[$"Prefs.{preference}"];
             player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueChanged", Preference, changedValue]}");
-        }
-
-        //https://github.com/K4ryuu/K4-System/blob/dev/src/Plugin/PluginCache.cs
-        public class PlayerCache<T> : Dictionary<int, T>
-        {
-            public T this[CCSPlayerController? controller]
-            {
-                get
-                {
-                    if (controller is null || !controller.IsValid || controller.SteamID.ToString().Length != 17)
-                    {
-                        throw new ArgumentException("Invalid player controller");
-                    }
-
-                    if (controller.IsBot || controller.IsHLTV)
-                    {
-                        throw new ArgumentException("Player controller is BOT or HLTV");
-                    }
-
-                    if (!ContainsKey(controller.Slot))
-                    {
-                        throw new KeyNotFoundException($"Player with ID {controller.Slot} not found in cache");
-                    }
-
-                    if (TryGetValue(controller.Slot, out T? value))
-                    {
-                        return value;
-                    }
-
-                    return default(T)!;
-                }
-                set
-                {
-                    if (controller is null || !controller.IsValid || !controller.PlayerPawn.IsValid || controller.SteamID.ToString().Length != 17)
-                    {
-                        throw new ArgumentException("Invalid player controller");
-                    }
-
-                    if (controller.IsBot || controller.IsHLTV)
-                    {
-                        throw new ArgumentException("Player controller is BOT or HLTV");
-                    }
-
-                    this[controller.Slot] = value;
-                }
-            }
-
-            public bool ContainsPlayer(CCSPlayerController player)
-            {
-                if (player.SteamID.ToString().Length != 17)
-                    return false;
-
-                if (player.IsBot || player.IsHLTV)
-                    return false;
-
-                return ContainsKey(player.Slot);
-            }
-
-            public bool RemovePlayer(CCSPlayerController? player)
-            {
-                if (player == null || !player.IsValid || !player.PlayerPawn.IsValid || player.SteamID.ToString().Length != 17)
-                    return false;
-
-                if (player.IsBot || player.IsHLTV)
-                    return false;
-
-                return Remove(player.Slot);
-            }
         }
 
         public bool IsHaveBlockedRandomWeaponsIntegration(CCSPlayerController player)

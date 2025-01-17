@@ -5,13 +5,6 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public class SpawnData
-        {
-            public required string team { get; set; }
-            public required string pos { get; set; }
-            public required string angle { get; set; }
-        }
-
         public class DeathmatchPlayerData
         {
             public Dictionary<string, string> PrimaryWeapon { get; set; } = new();

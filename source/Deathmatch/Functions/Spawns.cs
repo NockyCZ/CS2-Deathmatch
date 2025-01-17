@@ -6,6 +6,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using CounterStrikeSharp.API.Modules.Utils;
 using System.Globalization;
+using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
+using DeathmatchAPI.Helpers;
 
 namespace Deathmatch
 {
@@ -22,7 +24,7 @@ namespace Deathmatch
 
             if (!spawnsDictionary.Any())
             {
-                player.Respawn();
+                //player.Respawn();
                 SendConsoleMessage("[Deathmatch] Spawns list is empty, you got something wrong!", ConsoleColor.Red);
                 return;
             }
@@ -39,7 +41,7 @@ namespace Deathmatch
             }
 
             blockedSpawns[player.Slot] = selectedSpawn.position;
-            player.Respawn();
+            //player.Respawn();
             player.Pawn.Value?.Teleport(selectedSpawn.position, selectedSpawn.angle, new Vector());
         }
 
@@ -397,6 +399,30 @@ namespace Deathmatch
                         RemoveMapDefaulSpawns();
                 }
             }
+
+            Server.NextFrame(() =>
+            {
+                var spawns = new List<SpawnData>();
+                foreach (var spawn in spawnPositionsCT)
+                {
+                    spawns.Add(new()
+                    {
+                        Team = CsTeam.CounterTerrorist,
+                        Position = spawn.Key,
+                        Angle = spawn.Value
+                    });
+                }
+                foreach (var spawn in spawnPositionsT)
+                {
+                    spawns.Add(new()
+                    {
+                        Team = CsTeam.Terrorist,
+                        Position = spawn.Key,
+                        Angle = spawn.Value
+                    });
+                }
+                DeathmatchAPI.Get()?.TriggerEvent(new OnSpawnPointsLoaded(spawns));
+            });
         }
         private static Vector ParseVector(string pos)
         {

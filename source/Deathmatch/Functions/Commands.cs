@@ -20,7 +20,7 @@ namespace Deathmatch
                 case 1:
                     AddCommand(cmdName, $"Weapon Shortcut: {weapon_name}", (player, info) =>
                     {
-                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid)
                             return;
 
                         if (ActiveMode.RandomWeapons)
@@ -34,7 +34,7 @@ namespace Deathmatch
                 case 2:
                     AddCommand(cmdName, "Select a weapon by command", (player, info) =>
                     {
-                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid)
                             return;
 
                         if (ActiveMode.RandomWeapons)
@@ -50,7 +50,7 @@ namespace Deathmatch
                 case 3:
                     AddCommand(cmdName, "Opens a Deathmatch menu", (player, info) =>
                     {
-                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid || !playerData.ContainsKey(player.Slot))
                             return;
 
                         if (!Preferences.Any())
@@ -74,7 +74,7 @@ namespace Deathmatch
                 case 4:
                     AddCommand(cmdName, "Switch Player Preferences", (player, info) =>
                     {
-                        if (player == null || !player.IsValid || !playerData.ContainsPlayer(player))
+                        if (player == null || !player.IsValid || !playerData.ContainsKey(player.Slot))
                             return;
 
                         if (onlyVIP && !AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))

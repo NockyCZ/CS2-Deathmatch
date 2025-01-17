@@ -10,7 +10,7 @@ namespace Deathmatch
     {
         public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
-            var players = Utilities.GetPlayers().Where(p => playerData.ContainsPlayer(p)).ToList();
+            var players = Utilities.GetPlayers().Where(p => playerData.ContainsKey(p.Slot)).ToList();
             if (players == null || players.Count < 2)
                 return false;
 
@@ -30,16 +30,15 @@ namespace Deathmatch
 
             var playersList = Config.RestrictedWeapons.Global ? players : players.Where(p => p.Team == team);
             int matchingCount = playersList.Count(p => bPrimary
-                ? playerData[p].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName
-                : playerData[p].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName);
+                ? playerData[p.Slot].PrimaryWeapon.TryGetValue(ActiveCustomMode, out var primary) && primary == weaponName
+                : playerData[p.Slot].SecondaryWeapon.TryGetValue(ActiveCustomMode, out var secondary) && secondary == weaponName);
 
             return matchingCount >= restrictValue;
         }
 
-        public CBasePlayerWeapon? GetWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
+        public CBasePlayerWeapon? GetWeaponFromSlot(CCSPlayerPawn pawn, gear_slot_t slot)
         {
-            var pawn = player.PlayerPawn.Value;
-            if (pawn == null || pawn.WeaponServices == null)
+            if (pawn.WeaponServices == null)
                 return null;
 
             return pawn.WeaponServices.MyWeapons
@@ -47,10 +46,9 @@ namespace Deathmatch
                 .FirstOrDefault(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
         }
 
-        public bool IsHaveWeaponFromSlot(CCSPlayerController player, gear_slot_t slot)
+        public bool IsHaveWeaponFromSlot(CCSPlayerPawn pawn, gear_slot_t slot)
         {
-            var pawn = player.PlayerPawn.Value;
-            if (pawn == null || pawn.WeaponServices == null || !player.PawnIsAlive)
+            if (pawn.WeaponServices == null)
                 return false;
 
             return pawn.WeaponServices.MyWeapons
@@ -93,6 +91,11 @@ namespace Deathmatch
                 : team == CsTeam.CounterTerrorist
                     ? (restrictDataNonVIP.CT, restrictDataVIP.CT)
                     : (restrictDataNonVIP.T, restrictDataVIP.T);
+        }
+
+        public CBasePlayerWeapon? GetActiveWeapon(CCSPlayerPawn pawn)
+        {
+            return pawn.WeaponServices?.ActiveWeapon.Value;
         }
 
         public string GetWeaponRestrictLozalizer(int bullets)

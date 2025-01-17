@@ -161,7 +161,8 @@ public class Gameplay
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
     [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
-    [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "#FFFFFF";
+    [JsonPropertyName("Fast Weapon Equip")] public bool FastWeaponEquip { get; set; } = true;
+    [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "";
 }
 public class General
 {
@@ -172,6 +173,7 @@ public class General
     [JsonPropertyName("Block Player ChatWheel")] public bool BlockPlayerChatWheel { get; set; } = true;
     [JsonPropertyName("Remove Breakable Entities")] public bool RemoveBreakableEntities { get; set; } = true;
     [JsonPropertyName("Remove Decals")] public bool RemoveDecals { get; set; } = true;
+    [JsonPropertyName("Remove Kill Points Message")] public bool RemovePointsMessage { get; set; } = true;
     [JsonPropertyName("Force Map End")] public bool ForceMapEnd { get; set; } = false;
     [JsonPropertyName("Restart Map On Plugin Load")] public bool RestartMapOnPluginLoad { get; set; } = false;
 }

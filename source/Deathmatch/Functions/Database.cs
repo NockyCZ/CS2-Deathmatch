@@ -1,5 +1,6 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Modules.Admin;
 using MySqlConnector;
 using Newtonsoft.Json;
 
@@ -89,25 +90,26 @@ namespace Deathmatch
                                     {
                                         if (playerData.TryGetValue(player.Slot, out var data))
                                         {
+                                            bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                                             if (primaryWeapons == null || secondaryWeapons == null)
                                             {
-                                                SetupDefaultWeapons(player);
+                                                SetupDefaultWeapons(player, data, IsVIP);
                                             }
                                             else
                                             {
                                                 data.PrimaryWeapon = primaryWeapons;
                                                 data.SecondaryWeapon = secondaryWeapons;
-                                                SetupDefaultWeapons(player);
+                                                SetupDefaultWeapons(player, data, IsVIP);
                                             }
 
                                             if (preferences == null)
                                             {
-                                                SetupDefaultPreferences(player);
+                                                SetupDefaultPreferences(player, data, IsVIP);
                                             }
                                             else
                                             {
                                                 data.Preferences = preferences;
-                                                SetupDefaultPreferences(player);
+                                                SetupDefaultPreferences(player, data, IsVIP);
                                             }
                                         }
                                     });

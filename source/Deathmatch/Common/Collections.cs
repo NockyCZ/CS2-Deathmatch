@@ -12,7 +12,7 @@ namespace Deathmatch
         public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         public static Dictionary<Vector, QAngle> spawnPositionsT = new();
         public static Dictionary<int, Vector> blockedSpawns = new();
-        public static PlayerCache<DeathmatchPlayerData> playerData = new();
+        public static Dictionary<int, DeathmatchPlayerData> playerData = new();
         public static List<PreferencesData> Preferences = new();
         public static List<CDynamicProp> savedSpawnsModel = new();
         public static List<CPointWorldText> savedSpawnsVectorText = new();
@@ -51,6 +51,17 @@ namespace Deathmatch
             "negative", "enemydown", "sorry", "cheer", "compliment",
             "thanks", "go_a", "go_b", "needrop", "deathcry"
         };
-    };
 
+        readonly string[] PointsMessagesArray =
+        {
+            "Player_Point_Award_Killed_Enemy",
+            "Player_Point_Award_Killed_Enemy_Plural",
+            "Player_Point_Award_Assist_Enemy",
+            "Player_Point_Award_Assist_Enemy_Plural",
+            "Player_Point_Award_Killed_Enemy_Noweapon",
+            "Player_Point_Award_Killed_Enemy_Noweapon_Plural",
+            "Player_Point_Award_Picked_Up_Dogtag",
+            "Player_Point_Award_Picked_Up_Dogtag_Plural"
+        };
+    };
 }

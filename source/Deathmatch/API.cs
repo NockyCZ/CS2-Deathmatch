@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Modules.Utils;
 using DeathmatchAPI;
 using DeathmatchAPI.Events;
@@ -26,7 +27,7 @@ public partial class Deathmatch : IDeathmatchAPI
         SetupCustomMode(modeId.ToString());
     }
 
-    public void ChangeNextMode(int modeId)
+    public void SetNextMode(int modeId)
     {
         if (!Config.CustomModes.ContainsKey(modeId.ToString()))
             throw new Exception($"A Custom mode with ID '{modeId}' cannot be set as next mode, because this mode does not exist!");
@@ -42,36 +43,12 @@ public partial class Deathmatch : IDeathmatchAPI
         Config.CustomModes.Add(modeId.ToString(), mode);
     }
 
-    public void ChangeCheckDistance(int distance)
+    public void SetCheckEnemiesSpawnDistance(int distance)
     {
         CheckedEnemiesDistance = distance;
     }
 
-    public void SetupCustomSpawns(string team, Dictionary<Vector, QAngle> spawns)
-    {
-        if (team.Equals("ct"))
-        {
-            spawnPositionsCT.Clear();
-            foreach (var spawn in spawns)
-            {
-                spawnPositionsCT.Add(spawn.Key, spawn.Value);
-            }
-        }
-        else if (team.Equals("t"))
-        {
-            spawnPositionsT.Clear();
-            foreach (var spawn in spawns)
-            {
-                spawnPositionsT.Add(spawn.Key, spawn.Value);
-            }
-        }
-        else
-        {
-            throw new Exception($"Invalid team name '{team}'! Allowed options: ct , t");
-        }
-    }
-
-    public void SwapHudMessageVisibility(bool visible)
+    public void SetHudMessageVisibility(bool visible)
     {
         VisibleHud = visible;
     }
@@ -89,5 +66,32 @@ public partial class Deathmatch : IDeathmatchAPI
     public Dictionary<string, ModeData> GetCustomModes()
     {
         return Config.CustomModes;
+    }
+
+    public int GetDefaultCheckDistance()
+    {
+        return Config.Gameplay.DistanceRespawn;
+    }
+
+    public void SetupCustomSpawns(List<SpawnData> spawns, bool clearSpawnsDictionary)
+    {
+        if (clearSpawnsDictionary)
+        {
+            spawnPositionsCT.Clear();
+            spawnPositionsT.Clear();
+        }
+
+        foreach (var data in spawns)
+        {
+            switch (data.Team)
+            {
+                case CsTeam.CounterTerrorist:
+                    spawnPositionsCT[data.Position] = data.Angle;
+                    break;
+                case CsTeam.Terrorist:
+                    spawnPositionsT[data.Position] = data.Angle;
+                    break;
+            }
+        }
     }
 }

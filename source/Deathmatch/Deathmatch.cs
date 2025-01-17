@@ -18,7 +18,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.3";
+    public override string ModuleVersion => "1.2.4";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -110,7 +110,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                                 }
                                 SetupCustomMode(NextMode.ToString());
                             }
-                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.TryGetValue(NextMode.ToString(),out var modeData))
+                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.TryGetValue(NextMode.ToString(), out var modeData))
                             {
                                 var time = TimeSpan.FromSeconds(RemainingTime);
                                 var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";//RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
@@ -137,7 +137,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     }
                     else
                     {
-                        if (!GetPrefsValue(p.Slot, "HudMessages") || MenuManager.GetActiveMenu(p) != null)
+                        if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(p.Slot, "HudMessages")) || MenuManager.GetActiveMenu(p) != null)
                             continue;
 
                         if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
@@ -179,6 +179,29 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             }, HookMode.Pre);
         }
 
+        if (Config.General.RemovePointsMessage)
+        {
+            HookUserMessage(124, um =>
+            {
+                if (IsCasualGamemode)
+                    return HookResult.Continue;
+
+                for (int i = 0; i < um.GetRepeatedFieldCount("param"); i++)
+                {
+                    var message = um.ReadString("param", i);
+                    foreach (var msg in PointsMessagesArray)
+                    {
+                        if (message.Contains(msg))
+                        {
+                            return HookResult.Stop;
+                        }
+                    }
+
+                }
+                return HookResult.Continue;
+            }, HookMode.Pre);
+        }
+
         if (hotReload)
         {
             Server.ExecuteCommand($"map {Server.MapName}");
@@ -206,7 +229,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         ActiveCustomMode = modeId;
         NextMode = GetModeType();
 
-        if (Config.CustomModes.TryGetValue(NextMode.ToString(),out var modeData) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+        if (Config.CustomModes.TryGetValue(NextMode.ToString(), out var modeData) && !string.IsNullOrEmpty(ActiveMode.CenterMessageText))
         {
             ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{NEXTMODE}", modeData.Name);
             ModeCenterMessage = ModeCenterMessage.Replace("{REMAININGTIME}", RemainingTime.ToString());
@@ -215,7 +238,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
         Server.NextFrame(() =>
         {
-            DeathmatchAPI.Get()?.TriggerEvent(new OnCustomModeStarted(int.Parse(ActiveCustomMode)));
+            DeathmatchAPI.Get()?.TriggerEvent(new OnCustomModeStarted(int.Parse(ActiveCustomMode), ActiveMode));
         });
     }
 

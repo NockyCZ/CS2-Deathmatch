@@ -1,0 +1,18 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.sln
+
+# OS-specific files
+*.DS_Store
+*.Thumbs.db
+
+# Package files
+*.nupkg
+*.snupkg
