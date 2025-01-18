@@ -202,6 +202,21 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             }, HookMode.Pre);
         }
 
+        if (Config.General.RemoveRespawnSound)
+        {
+            HookUserMessage(208, um =>
+            {
+                if (IsCasualGamemode)
+                    return HookResult.Continue;
+
+                var soundevent = um.ReadUInt("soundevent_hash");
+                if (soundevent == 1734994609)
+                    um.Recipients.Clear();
+
+                return HookResult.Continue;
+            }, HookMode.Pre);
+        }
+
         if (hotReload)
         {
             Server.ExecuteCommand($"map {Server.MapName}");

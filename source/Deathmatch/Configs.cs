@@ -174,6 +174,7 @@ public class General
     [JsonPropertyName("Remove Breakable Entities")] public bool RemoveBreakableEntities { get; set; } = true;
     [JsonPropertyName("Remove Decals")] public bool RemoveDecals { get; set; } = true;
     [JsonPropertyName("Remove Kill Points Message")] public bool RemovePointsMessage { get; set; } = true;
+    [JsonPropertyName("Remove Respawn Sound")] public bool RemoveRespawnSound { get; set; } = true;
     [JsonPropertyName("Force Map End")] public bool ForceMapEnd { get; set; } = false;
     [JsonPropertyName("Restart Map On Plugin Load")] public bool RestartMapOnPluginLoad { get; set; } = false;
 }

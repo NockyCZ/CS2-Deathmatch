@@ -99,12 +99,20 @@ namespace Deathmatch
                         playerData[p].DamageInfo.Remove(player.Slot);
                     });
 
-                    if (GetPrefsValue(player.Slot, "DamageInfo") && attacker != null && attacker.IsValid)
+                    if (GetPrefsValue(player.Slot, "DamageInfo") && attacker != null && attacker.IsValid && attacker != player)
                     {
                         if (data.DamageInfo.TryGetValue(attacker.Slot, out var damageInfo))
-                            player.PrintToChat(Localizer["Chat.Prefix"] + " " + Localizer["Chat.GivenDamageVictim", attacker.PlayerName, damageInfo.Damage, damageInfo.Hits]);
+                        {
+                            var givenDamageMessage = Localizer["Chat.GivenDamageVictim", attacker.PlayerName, damageInfo.Damage, damageInfo.Hits];
+                            if (!string.IsNullOrEmpty(givenDamageMessage))
+                                player.PrintToChat(Localizer["Chat.Prefix"] + " " + givenDamageMessage);
+                        }
                         else
-                            player.PrintToChat(Localizer["Chat.Prefix"] + " " + Localizer["Chat.NoDamageGiven", attacker.PlayerName]);
+                        {
+                            var givenDamageMessage = Localizer["Chat.NoDamageGiven", attacker.PlayerName];
+                            if (!string.IsNullOrEmpty(givenDamageMessage))
+                                player.PrintToChat(Localizer["Chat.Prefix"] + " " + givenDamageMessage);
+                        }
 
                         data.DamageInfo.Clear();
                     }
@@ -114,7 +122,7 @@ namespace Deathmatch
             }
             AddTimer(timer, () =>
             {
-                if (player != null && player.IsValid && !player.PawnIsAlive)
+                if (player != null && player.IsValid && !player.PawnIsAlive && (player.Team == CsTeam.Terrorist || player.Team == CsTeam.CounterTerrorist))
                     player.Respawn();
             }, TimerFlags.STOP_ON_MAPCHANGE);
 
@@ -123,7 +131,9 @@ namespace Deathmatch
                 attackerData.KillStreak++;
                 if (GetPrefsValue(attacker.Slot, "DamageInfo") && attackerData.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
                 {
-                    attacker.PrintToChat(Localizer["Chat.Prefix"] + " " + Localizer["Chat.GivenDamageAttacker", player.PlayerName, damageInfo.Damage, damageInfo.Hits]);
+                    var givenDamageMessage = Localizer["Chat.GivenDamageAttacker", player.PlayerName, damageInfo.Damage, damageInfo.Hits];
+                    if (!string.IsNullOrEmpty(givenDamageMessage))
+                        attacker.PrintToChat(Localizer["Chat.Prefix"] + " " + givenDamageMessage);
                     attackerData.DamageInfo.Remove(player.Slot);
                 }
 
