@@ -136,6 +136,7 @@ public class Database
     [JsonPropertyName("User")] public string User { get; set; } = "";
     [JsonPropertyName("Database")] public string DatabaseName { get; set; } = "";
     [JsonPropertyName("Password")] public string Password { get; set; } = "";
+    [JsonPropertyName("SslMode")] public string SslMode { get; set; } = "Preferred";
 }
 
 public class SoundSettings
