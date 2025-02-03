@@ -45,17 +45,11 @@ namespace Deathmatch
                     continue;
                 model.Remove();
             }
-
-            foreach (var model in savedSpawnsVectorText)
-            {
-                if (model == null || !model.IsValid)
-                    continue;
-                model.Remove();
-            }
         }
-        public static CCSGameRules GameRules()
+        public void SetGameRules()
         {
-            return Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First().GameRules!;
+            var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules").First();
+            GameRules = gameRules.GameRules;
         }
     }
 }

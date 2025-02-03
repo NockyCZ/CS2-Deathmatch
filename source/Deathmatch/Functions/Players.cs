@@ -219,7 +219,7 @@ namespace Deathmatch
                         {
                             Color transparentColor = ColorTranslator.FromHtml(Config.Gameplay.SpawnProtectionColor);
                             pawn.Render = transparentColor;
-                            Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
+                            Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
                         }
                         data.SpawnProtection = true;
                         AddTimer(timer, () =>
@@ -230,7 +230,7 @@ namespace Deathmatch
                                 if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
                                 {
                                     pawn.Render = Color.White;
-                                    Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
+                                    Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
                                 }
                             }
                         });
@@ -282,18 +282,41 @@ namespace Deathmatch
                         player.GiveNamedItem("weapon_knife");
                 }
 
-                if (Config.Gameplay.FastWeaponEquip)
+
+                Server.NextFrame(() =>
                 {
-                    Server.NextFrame(() =>
+                    if (Config.PlayersPreferences.EquipSlot.Enabled)
                     {
-                        var activeWeapon = GetActiveWeapon(pawn);
+                        var equipSlot = GetPrefsValue(data, "EquipSlot", "-1");
+                        if (equipSlot == "2")
+                        {
+                            var weapon = player.PlayerPawn.Value?.SetActiveWeapon(player, gear_slot_t.GEAR_SLOT_PISTOL);
+                            if (Config.Gameplay.FastWeaponEquip && weapon != null && weapon.IsValid)
+                            {
+                                weapon.NextPrimaryAttackTick = Server.TickCount + 1;
+                                Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
+                            }
+                        }
+                        else if (Config.Gameplay.FastWeaponEquip)
+                        {
+                            var activeWeapon = player.PlayerPawn.Value?.GetActiveWeapon();
+                            if (activeWeapon != null && activeWeapon.IsValid)
+                            {
+                                activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
+                                Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
+                            }
+                        }
+                    }
+                    else if (Config.Gameplay.FastWeaponEquip)
+                    {
+                        var activeWeapon = player.PlayerPawn.Value?.GetActiveWeapon();
                         if (activeWeapon != null && activeWeapon.IsValid)
                         {
                             activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
                             Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
                         }
-                    });
-                }
+                    }
+                });
                 return;
             }
 
@@ -340,7 +363,7 @@ namespace Deathmatch
             }
         }
 
-        public void SetupDefaultPreferences(CCSPlayerController player, DeathmatchPlayerData data, bool IsVIP)
+        public void SetupDefaultPreferences(DeathmatchPlayerData data, bool IsVIP)
         {
             foreach (var pref in Preferences)
             {
@@ -352,14 +375,19 @@ namespace Deathmatch
                     if (IsVIP)
                         data.Preferences[pref.Name] = pref.defaultValue;
                     else
-                        data.Preferences[pref.Name] = false;
+                    {
+                        if (pref.defaultValue is bool)
+                            data.Preferences[pref.Name] = false;
+                        else if (pref.defaultValue is int)
+                            data.Preferences[pref.Name] = -1;
+                    }
                 }
                 else
                     data.Preferences[pref.Name] = pref.defaultValue;
             }
         }
 
-        public void SetupDefaultWeapons(CCSPlayerController player, DeathmatchPlayerData data, bool IsVIP)
+        public void SetupDefaultWeapons(DeathmatchPlayerData data, CsTeam team, bool IsVIP)
         {
             foreach (var mode in Config.CustomModes)
             {
@@ -387,14 +415,14 @@ namespace Deathmatch
                     case 2 or 3:
                         if (mode.Value.PrimaryWeapons.Any())
                         {
-                            var primary = GetRandomWeaponFromList(mode.Value.PrimaryWeapons, mode.Value, IsVIP, player.Team, true);
+                            var primary = GetRandomWeaponFromList(mode.Value.PrimaryWeapons, mode.Value, IsVIP, team, true);
                             data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
                             data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
-                            var secondary = GetRandomWeaponFromList(mode.Value.SecondaryWeapons, mode.Value, IsVIP, player.Team, false);
+                            var secondary = GetRandomWeaponFromList(mode.Value.SecondaryWeapons, mode.Value, IsVIP, team, false);
                             data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
@@ -420,23 +448,38 @@ namespace Deathmatch
             }
         }
 
-        public static bool GetPrefsValue(int slot, string preference)
+        public static T GetPrefsValue<T>(DeathmatchPlayerData data, string preference, T defaultValue)
         {
-            if (playerData.TryGetValue(slot, out var data) && data.Preferences.TryGetValue(preference, out var value))
-                return value;
+            if (data.Preferences.TryGetValue(preference, out var value) && value is T result)
+                return result;
 
-            return false;
+            return defaultValue;
         }
 
-        private void SwitchPrefsValue(CCSPlayerController player, string preference)
+        private void SwitchBooleanPrefsValue(CCSPlayerController player, string preference)
         {
             if (!playerData.TryGetValue(player.Slot, out var data))
                 return;
 
-            data.Preferences[preference] = !data.Preferences[preference];
-            var changedValue = data.Preferences[preference] ? Localizer["Menu.Enabled"] : Localizer["Menu.Disabled"];
+            if (data.Preferences.TryGetValue(preference, out var value) && value is bool currentValue)
+            {
+                data.Preferences[preference] = !currentValue;
+            }
+
+            var changedValue = (bool)data.Preferences[preference] ? Localizer["Menu.Enabled"] : Localizer["Menu.Disabled"];
             var Preference = Localizer[$"Prefs.{preference}"];
             player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueChanged", Preference, changedValue]}");
+        }
+
+        private void SwitchStringPrefsValue(CCSPlayerController player, string preference, string value, string valueName)
+        {
+            if (!playerData.TryGetValue(player.Slot, out var data))
+                return;
+
+            data.Preferences[preference] = value;
+
+            var Preference = Localizer[$"Prefs.{preference}"];
+            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueSet", Preference, valueName]}");
         }
 
         public bool IsHaveBlockedRandomWeaponsIntegration(CCSPlayerController player)

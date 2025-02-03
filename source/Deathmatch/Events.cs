@@ -32,8 +32,8 @@ namespace Deathmatch
                 else
                 {
                     bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
-                    SetupDefaultWeapons(player, data, IsVIP);
-                    SetupDefaultPreferences(player, data, IsVIP);
+                    SetupDefaultWeapons(data, player.Team, IsVIP);
+                    SetupDefaultPreferences(data, IsVIP);
                 }
             }
             return HookResult.Continue;
@@ -99,7 +99,7 @@ namespace Deathmatch
                         playerData[p].DamageInfo.Remove(player.Slot);
                     });
 
-                    if (GetPrefsValue(player.Slot, "DamageInfo") && attacker != null && attacker.IsValid && attacker != player)
+                    if (GetPrefsValue(data, "DamageInfo", Config.PlayersPreferences.DamageInfo.DefaultValue) && attacker != null && attacker.IsValid && attacker != player)
                     {
                         if (data.DamageInfo.TryGetValue(attacker.Slot, out var damageInfo))
                         {
@@ -129,7 +129,7 @@ namespace Deathmatch
             if (attacker != null && attacker.IsValid && attacker != player && playerData.TryGetValue(attacker.Slot, out var attackerData) && attacker.PlayerPawn.Value != null)
             {
                 attackerData.KillStreak++;
-                if (GetPrefsValue(attacker.Slot, "DamageInfo") && attackerData.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
+                if (GetPrefsValue(attackerData, "DamageInfo", Config.PlayersPreferences.DamageInfo.DefaultValue) && attackerData.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
                 {
                     var givenDamageMessage = Localizer["Chat.GivenDamageAttacker", player.PlayerName, damageInfo.Damage, damageInfo.Hits];
                     if (!string.IsNullOrEmpty(givenDamageMessage))
@@ -140,11 +140,11 @@ namespace Deathmatch
                 bool IsHeadshot = @event.Headshot;
                 bool IsKnifeKill = @event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet");
 
-                if (IsHeadshot && GetPrefsValue(attacker.Slot, "HeadshotKillSound"))
+                if (IsHeadshot && GetPrefsValue(attackerData, "HeadshotKillSound", Config.PlayersPreferences.HSKillSound.DefaultValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HSKillSound.Path);
-                else if (IsKnifeKill && GetPrefsValue(attacker.Slot, "KnifeKillSound"))
+                else if (IsKnifeKill && GetPrefsValue(attackerData, "KnifeKillSound", Config.PlayersPreferences.KnifeKillSound.DefaultValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KnifeKillSound.Path);
-                else if (GetPrefsValue(attacker.Slot, "KillSound"))
+                else if (GetPrefsValue(attackerData, "KillSound", Config.PlayersPreferences.KillSound.DefaultValue))
                     attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KillSound.Path);
 
                 var Health = IsHeadshot
@@ -212,29 +212,29 @@ namespace Deathmatch
             if (player == null || !player.IsValid || attacker == player)
                 return HookResult.Continue;
 
-            if (attacker != null && attacker.IsValid && attacker != player)
+            if (attacker != null && attacker.IsValid && attacker != player && playerData.TryGetValue(attacker.Slot, out var attackerData))
             {
                 if (ActiveMode.OnlyHS)
                 {
-                    if (@event.Hitgroup == 1 && playerData.TryGetValue(attacker.Slot, out var data))
+                    if (@event.Hitgroup == 1)
                     {
-                        if (Config.PlayersPreferences.DamageInfo.Enabled && GetPrefsValue(attacker.Slot, "DamageInfo"))
+                        if (Config.PlayersPreferences.DamageInfo.Enabled && GetPrefsValue(attackerData, "DamageInfo", Config.PlayersPreferences.DamageInfo.DefaultValue))
                         {
-                            if (data.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
+                            if (attackerData.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
                             {
                                 damageInfo.Damage += @event.DmgHealth;
                                 damageInfo.Hits++;
                             }
                             else
                             {
-                                data.DamageInfo[player.Slot] = new DamageData
+                                attackerData.DamageInfo[player.Slot] = new DamageData
                                 {
                                     Damage = @event.DmgHealth,
                                     Hits = 1
                                 };
                             }
                         }
-                        if (GetPrefsValue(attacker.Slot, "HitSound") && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
+                        if (GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue) && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
                             attacker!.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
                 }
@@ -242,26 +242,26 @@ namespace Deathmatch
                 {
                     if (@event.Hitgroup != 1)
                     {
-                        if ((!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")) && GetPrefsValue(attacker.Slot, "HitSound"))
+                        if ((!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")) && GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
                         {
-                            if (!GetPrefsValue(attacker.Slot, "OnlyHS"))
+                            if (!GetPrefsValue(attackerData, "OnlyHS", Config.PlayersPreferences.OnlyHS.DefaultValue))
                                 attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                         }
                     }
-                    else if (GetPrefsValue(attacker.Slot, "HitSound"))
+                    else if (GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
                     {
                         attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
                     }
-                    if (Config.PlayersPreferences.DamageInfo.Enabled && GetPrefsValue(attacker.Slot, "DamageInfo") && playerData.TryGetValue(attacker.Slot, out var data))
+                    if (Config.PlayersPreferences.DamageInfo.Enabled && GetPrefsValue(attackerData, "DamageInfo", Config.PlayersPreferences.DamageInfo.DefaultValue))
                     {
-                        if (data.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
+                        if (attackerData.DamageInfo.TryGetValue(player.Slot, out var damageInfo))
                         {
                             damageInfo.Damage += @event.DmgHealth;
                             damageInfo.Hits++;
                         }
                         else
                         {
-                            data.DamageInfo[player.Slot] = new DamageData
+                            attackerData.DamageInfo[player.Slot] = new DamageData
                             {
                                 Damage = @event.DmgHealth,
                                 Hits = 1
@@ -352,7 +352,7 @@ namespace Deathmatch
                 return HookResult.Continue;
             }
 
-            if (damageInfo.GetHitGroup() != HitGroup_t.HITGROUP_HEAD && GetPrefsValue(attacker.Slot, "OnlyHS"))
+            if (damageInfo.GetHitGroup() != HitGroup_t.HITGROUP_HEAD && playerData.TryGetValue(attacker.Slot, out var attackerData) && GetPrefsValue(attackerData, "OnlyHS", Config.PlayersPreferences.OnlyHS.DefaultValue))
             {
                 damageInfo.Damage = 0;
                 return HookResult.Continue;
@@ -382,7 +382,7 @@ namespace Deathmatch
                 return HookResult.Continue;
             }
 
-            if (!IsCasualGamemode && IsHaveBlockedRandomWeaponsIntegration(player))
+            if (!IsCasualGamemode && !player.IsBot && IsHaveBlockedRandomWeaponsIntegration(player))
             {
                 hook.SetReturn(AcquireResult.AlreadyPurchased);
                 return HookResult.Stop;

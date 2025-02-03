@@ -21,11 +21,11 @@ namespace Deathmatch
             }
         }
 
-        public static Dictionary<string, bool>? GetPlayerPreferencesFromJson(string json)
+        public static Dictionary<string, object>? GetPlayerPreferencesFromJson(string json)
         {
             try
             {
-                return JsonConvert.DeserializeObject<Dictionary<string, bool>>(json);
+                return JsonConvert.DeserializeObject<Dictionary<string, object>>(json);
             }
             catch (Exception ex)
             {
@@ -93,23 +93,23 @@ namespace Deathmatch
                                             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
                                             if (primaryWeapons == null || secondaryWeapons == null)
                                             {
-                                                SetupDefaultWeapons(player, data, IsVIP);
+                                                SetupDefaultWeapons(data, player.Team, IsVIP);
                                             }
                                             else
                                             {
                                                 data.PrimaryWeapon = primaryWeapons;
                                                 data.SecondaryWeapon = secondaryWeapons;
-                                                SetupDefaultWeapons(player, data, IsVIP);
+                                                SetupDefaultWeapons(data, player.Team, IsVIP);
                                             }
 
                                             if (preferences == null)
                                             {
-                                                SetupDefaultPreferences(player, data, IsVIP);
+                                                SetupDefaultPreferences(data, IsVIP);
                                             }
                                             else
                                             {
                                                 data.Preferences = preferences;
-                                                SetupDefaultPreferences(player, data, IsVIP);
+                                                SetupDefaultPreferences(data, IsVIP);
                                             }
                                         }
                                     });

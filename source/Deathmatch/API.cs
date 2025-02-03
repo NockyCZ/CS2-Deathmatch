@@ -19,6 +19,14 @@ public partial class Deathmatch : IDeathmatchAPI
         Preferences.Add(preferencesData);
     }
 
+    public void ToggleSpawnsDisplay(bool visible)
+    {
+        if (visible)
+            ShowAllSpawnPoints();
+        else
+            RemoveSpawnModels();
+    }
+
     public void StartCustomMode(int modeId)
     {
         if (!Config.CustomModes.ContainsKey(modeId.ToString()))

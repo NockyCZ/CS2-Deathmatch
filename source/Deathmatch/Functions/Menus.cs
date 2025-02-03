@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
@@ -23,34 +24,55 @@ namespace Deathmatch
 
         public void OpenSubMenu(CCSPlayerController player, CategoryType menuType, bool solo = false)
         {
+            if (!playerData.TryGetValue(player.Slot, out var data))
+                return;
+
             var title = menuType == CategoryType.SOUNDS ? Localizer["Menu.SoundsTitle"] : Localizer["Menu.FunctionsTitle"];
 
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
             var Menu = new CenterHtmlMenu(title, this);
-            string Value;
+            //string Value;
 
             foreach (var option in Preferences.Where(x => x.Category == menuType))
             {
-                Value = GetPrefsValue(player.Slot, option.Name) ? "ON" : "OFF";
-                if (option.vipOnly)
-                {
-                    if (IsVIP)
-                        Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{Value}]", (player, opt) => OnSelectSwitchPref(player, menuType, option.Name, solo));
-                }
-                else
-                    Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{Value}]", (player, opt) => OnSelectSwitchPref(player, menuType, option.Name, solo));
+                bool canSee = option.vipOnly ? IsVIP : true;
+                if (!canSee)
+                    continue;
 
+                switch (option.defaultValue)
+                {
+                    case bool value:
+                        var boolValue = GetPrefsValue(data, option.Name, value) ? "ON" : "OFF";
+
+                        Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{boolValue}]", (player, opt) =>
+                        {
+                            SwitchBooleanPrefsValue(player, option.Name);
+                            OpenSubMenu(player, menuType, solo);
+                        });
+                        break;
+                    case string value:
+                        if (!int.TryParse(GetPrefsValue(data, option.Name, value), out var intValue))
+                            break;
+
+                        var Value = intValue == 2 ? Localizer["Prefs.Secondary"] : Localizer["Prefs.Primary"];
+                        Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{Value}]", (player, opt) =>
+                        {
+                            if (intValue == 2)
+                                intValue = 1;
+                            else
+                                intValue = 2;
+                            var Value = intValue == 2 ? Localizer["Prefs.Secondary"] : Localizer["Prefs.Primary"];
+
+                            SwitchStringPrefsValue(player, option.Name, intValue.ToString(), Value);
+                            OpenSubMenu(player, menuType, solo);
+                        });
+                        break;
+                }
             }
             if (!solo)
                 Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
 
             Menu.Open(player);
-        }
-
-        public void OnSelectSwitchPref(CCSPlayerController player, CategoryType menuType, string preference, bool solo = false)
-        {
-            SwitchPrefsValue(player, preference);
-            OpenSubMenu(player, menuType, solo);
         }
 
         public void OnSelectSubMenu(CCSPlayerController player, CategoryType menuType)
@@ -113,6 +135,19 @@ namespace Deathmatch
                     defaultValue = Config.PlayersPreferences.HitSound.DefaultValue,
                     vipOnly = Config.PlayersPreferences.HitSound.OnlyVIP,
                     CommandShortcuts = Config.PlayersPreferences.HitSound.Shotcuts
+                };
+                Preferences.Add(data);
+            }
+
+            if (Config.PlayersPreferences.EquipSlot.Enabled)
+            {
+                var data = new PreferencesData()
+                {
+                    Name = "EquipSlot",
+                    Category = CategoryType.FUNCTIONS,
+                    defaultValue = Config.PlayersPreferences.EquipSlot.DefaultValue,
+                    vipOnly = Config.PlayersPreferences.EquipSlot.OnlyVIP,
+                    CommandShortcuts = Config.PlayersPreferences.EquipSlot.Shotcuts
                 };
                 Preferences.Add(data);
             }

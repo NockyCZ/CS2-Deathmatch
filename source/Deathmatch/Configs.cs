@@ -154,6 +154,7 @@ public class Gameplay
     [JsonPropertyName("Map Start Custom Mode")] public int MapStartMode { get; set; } = 0;
     [JsonPropertyName("New Mode Countdown")] public int NewModeCountdown { get; set; } = 10;
     [JsonPropertyName("Hud Type")] public int HudType { get; set; } = 1;
+    [JsonPropertyName("Team Spawns Separation")] public bool TeamSpawnsSeparation { get; set; } = true;
     [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
     [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
@@ -186,15 +187,24 @@ public class CustomCommands
 }
 public class PlayersPreferences
 {
-    [JsonPropertyName("Kill Sound")] public KillSound KillSound { get; set; } = new KillSound();
-    [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new HSKillSound();
-    [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new KnifeKillSound();
-    [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new HitSound();
-    [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new OnlyHS();
-    [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new HudMessages();
-    [JsonPropertyName("Damage Info")] public DamageInfo DamageInfo { get; set; } = new DamageInfo();
+    [JsonPropertyName("Kill Sound")] public KillSound KillSound { get; set; } = new();
+    [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new();
+    [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new();
+    [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new();
+    [JsonPropertyName("Equip Slot")] public EquipSlot EquipSlot { get; set; } = new();
+    [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new();
+    [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new();
+    [JsonPropertyName("Damage Info")] public DamageInfo DamageInfo { get; set; } = new();
 }
 // sounds/ui/beepclear.vsnd_c
+
+public class EquipSlot
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Default value")] public string DefaultValue { get; set; } = "1";
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "noprimary", "primary" };
+}
 
 public class OnlyHS
 {

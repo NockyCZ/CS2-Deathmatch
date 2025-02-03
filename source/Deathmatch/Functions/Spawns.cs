@@ -18,7 +18,10 @@ namespace Deathmatch
             if (team == CsTeam.None || team == CsTeam.Spectator)
                 return;
 
-            var spawnsDictionary = team == CsTeam.Terrorist ? new Dictionary<Vector, QAngle>(spawnPositionsT) : new Dictionary<Vector, QAngle>(spawnPositionsCT);
+            var spawnsDictionary = Config.Gameplay.TeamSpawnsSeparation
+                ? new Dictionary<Vector, QAngle>(team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT)
+                : spawnPositionsT.Concat(spawnPositionsCT).ToDictionary(spawn => spawn.Key, spawn => spawn.Value);
+
             if (blockedSpawns.TryGetValue(player.Slot, out var lastSpawn))
                 spawnsDictionary.Remove(lastSpawn);
 
@@ -30,32 +33,40 @@ namespace Deathmatch
             }
 
             (Vector position, QAngle angle) selectedSpawn;
-            if (GameRules().WarmupPeriod || !Config.Gameplay.CheckDistance)
+            if (GameRules != null)
             {
-                var randomSpawn = spawnsDictionary.ElementAt(Random.Next(spawnsDictionary.Count));
-                selectedSpawn = (randomSpawn.Key, randomSpawn.Value);
+                if (GameRules.WarmupPeriod || !Config.Gameplay.CheckDistance)
+                {
+                    var randomSpawn = spawnsDictionary.ElementAt(Random.Next(spawnsDictionary.Count));
+                    selectedSpawn = (randomSpawn.Key, randomSpawn.Value);
+                }
+                else
+                {
+                    selectedSpawn = GetAvailableSpawn(player, spawnsDictionary.ToList());
+                }
             }
             else
             {
-                selectedSpawn = GetAvailableSpawn(player, new List<KeyValuePair<Vector, QAngle>>(spawnsDictionary));
+                SetGameRules();
+                selectedSpawn = GetAvailableSpawn(player, spawnsDictionary.ToList());
             }
-
+            
             blockedSpawns[player.Slot] = selectedSpawn.position;
             //player.Respawn();
             player.Pawn.Value?.Teleport(selectedSpawn.position, selectedSpawn.angle, new Vector());
         }
 
-        public (Vector, QAngle) GetAvailableSpawn(CCSPlayerController player, List<KeyValuePair<Vector, QAngle>> spawnsList)
+        public (Vector, QAngle) GetAvailableSpawn(CCSPlayerController player, IReadOnlyList<KeyValuePair<Vector, QAngle>> spawnsList)
         {
             var playerPositions = Utilities.GetPlayers()
                 .Where(p => !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
                 .Select(p => p.PlayerPawn.Value!.AbsOrigin)
                 .ToList();
 
-            var availableSpawns = new Dictionary<Vector, QAngle>();
+            List<KeyValuePair<Vector, QAngle>> availableSpawns = new();
             foreach (var spawn in spawnsList)
             {
-                double minDistance = 10000;
+                var minDistance = double.MaxValue;
                 foreach (var playerPos in playerPositions)
                 {
                     if (playerPos == null)
@@ -68,13 +79,13 @@ namespace Deathmatch
                     }
                 }
                 if (minDistance > CheckedEnemiesDistance)
-                    availableSpawns[spawn.Key] = spawn.Value;
+                    availableSpawns.Add(spawn);
             }
 
             if (availableSpawns.Any())
             {
-                var spawn = availableSpawns.ElementAt(Random.Next(availableSpawns.Count));
-                return (spawn.Key, spawn.Value);
+                var randomSpawn = availableSpawns[Random.Next(availableSpawns.Count)];
+                return (randomSpawn.Key, randomSpawn.Value);
             }
             else
             {
@@ -231,7 +242,7 @@ namespace Deathmatch
                 textAngle.Y += 90f;
                 textVector.Teleport(textPos, textAngle);
                 textVector.DispatchSpawn();
-                savedSpawnsVectorText.Add(textVector);
+                savedSpawnsModel.Add(textVector);
             }
 
             foreach (var spawn in spawnPositionsT)
@@ -275,7 +286,7 @@ namespace Deathmatch
                 textAngle.Y += 90f;
                 textVector.Teleport(textPos, textAngle);
                 textVector.DispatchSpawn();
-                savedSpawnsVectorText.Add(textVector);
+                savedSpawnsModel.Add(textVector);
             }
         }
         public static void RemoveMapDefaulSpawns()

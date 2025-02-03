@@ -15,6 +15,7 @@ public interface IDeathmatchAPI
     public int GetActiveModeId();
     public int GetActiveModeRemainingTime();
     public int GetDefaultCheckDistance();
+    public void ToggleSpawnsDisplay(bool visible);
     public Dictionary<string, ModeData> GetCustomModes();
     public event EventHandler<IDeathmatchEventsAPI> DeathmatchEventHandlers;
     public void TriggerEvent(IDeathmatchEventsAPI @event);

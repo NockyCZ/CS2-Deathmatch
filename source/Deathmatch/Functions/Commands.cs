@@ -80,7 +80,7 @@ namespace Deathmatch
                         if (onlyVIP && !AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
                             return;
 
-                        SwitchPrefsValue(player, weapon_name);
+                        SwitchBooleanPrefsValue(player, weapon_name);
                     });
                     break;
             }

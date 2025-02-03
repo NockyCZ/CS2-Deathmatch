@@ -13,6 +13,7 @@ namespace Deathmatch
         public static PluginCapability<IDeathmatchAPI> DeathmatchAPI { get; } = new("deathmatch");
         public DeathmatchConfig Config { get; set; } = new();
         public static CCSPlayerController? ActiveEditor = null;
+        private CCSGameRules? GameRules;
         public static int NextMode;
         public static string ModeCenterMessage = "";
         public static string ActiveCustomMode = "";

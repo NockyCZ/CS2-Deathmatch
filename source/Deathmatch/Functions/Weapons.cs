@@ -93,11 +93,6 @@ namespace Deathmatch
                     : (restrictDataNonVIP.T, restrictDataVIP.T);
         }
 
-        public CBasePlayerWeapon? GetActiveWeapon(CCSPlayerPawn pawn)
-        {
-            return pawn.WeaponServices?.ActiveWeapon.Value;
-        }
-
         public string GetWeaponRestrictLozalizer(int bullets)
         {
             switch (bullets)

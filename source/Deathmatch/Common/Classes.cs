@@ -9,7 +9,7 @@ namespace Deathmatch
         {
             public Dictionary<string, string> PrimaryWeapon { get; set; } = new();
             public Dictionary<string, string> SecondaryWeapon { get; set; } = new();
-            public Dictionary<string, bool> Preferences { get; set; } = new();
+            public Dictionary<string, object> Preferences { get; set; } = new();
             public Dictionary<int, DamageData> DamageInfo { get; set; } = new();
             public bool SpawnProtection { get; set; } = false;
             public int KillStreak { get; set; } = 0;

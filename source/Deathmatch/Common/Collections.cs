@@ -14,8 +14,7 @@ namespace Deathmatch
         public static Dictionary<int, Vector> blockedSpawns = new();
         public static Dictionary<int, DeathmatchPlayerData> playerData = new();
         public static List<PreferencesData> Preferences = new();
-        public static List<CDynamicProp> savedSpawnsModel = new();
-        public static List<CPointWorldText> savedSpawnsVectorText = new();
+        public static HashSet<CBaseEntity> savedSpawnsModel = new();
 
         readonly Dictionary<string, string> weaponSelectMapping = new()
         {

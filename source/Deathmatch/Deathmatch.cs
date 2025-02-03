@@ -18,7 +18,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.5";
+    public override string ModuleVersion => "1.2.6";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -137,7 +137,10 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     }
                     else
                     {
-                        if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(p.Slot, "HudMessages")) || MenuManager.GetActiveMenu(p) != null)
+                        if (!playerData.TryGetValue(p.Slot, out var data))
+                            continue;
+
+                        if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(data, "HudMessages", Config.PlayersPreferences.HudMessages.DefaultValue)) || MenuManager.GetActiveMenu(p) != null)
                             continue;
 
                         if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
@@ -355,12 +358,12 @@ sv_cheats 0
 
         var iHideSecond = Config.General.HideRoundSeconds ? 1 : 0;
         var iFFA = Config.Gameplay.IsFFA ? 1 : 0;
-        Server.ExecuteCommand($"mp_maxrounds 0;mp_timelimit {Config.Gameplay.GameLength};mp_teammates_are_enemies {iFFA};sv_hide_roundtime_until_seconds {iHideSecond};mp_roundtime_defuse {Config.Gameplay.GameLength};mp_roundtime {Config.Gameplay.GameLength};mp_roundtime_deployment {Config.Gameplay.GameLength};mp_roundtime_hostage {Config.Gameplay.GameLength};mp_respawn_on_death_ct 1;mp_respawn_on_death_t 1");
+        Server.ExecuteCommand($"mp_buy_anywhere 1;mp_maxrounds 0;mp_timelimit {Config.Gameplay.GameLength};mp_teammates_are_enemies {iFFA};sv_hide_roundtime_until_seconds {iHideSecond};mp_roundtime_defuse {Config.Gameplay.GameLength};mp_roundtime {Config.Gameplay.GameLength};mp_roundtime_deployment {Config.Gameplay.GameLength};mp_roundtime_hostage {Config.Gameplay.GameLength};mp_respawn_on_death_ct 1;mp_respawn_on_death_t 1");
 
         if (Config.Gameplay.AllowBuyMenu)
-            Server.ExecuteCommand("mp_buy_anywhere 1;mp_buytime 60000;mp_buy_during_immunity 0");
+            Server.ExecuteCommand("mp_buytime 60000;mp_buy_during_immunity 0");
         else
-            Server.ExecuteCommand("mp_buy_anywhere 0;mp_buytime 0;mp_buy_during_immunity 0");
+            Server.ExecuteCommand("mp_buytime 0;mp_buy_during_immunity 0");
 
         if (!IsCasualGamemode)
         {
