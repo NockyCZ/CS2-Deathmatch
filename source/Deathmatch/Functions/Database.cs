@@ -144,7 +144,8 @@ namespace Deathmatch
                 UserID = Config.Database.User,
                 Database = Config.Database.DatabaseName,
                 Password = Config.Database.Password,
-                Pooling = true
+                Pooling = true,
+                SslMode = (Enum.TryParse(Config.Database.SslMode, true, out MySqlSslMode sslMode)) ? sslMode : MySqlSslMode.Preferred
             };
 
             return new MySqlConnection(builder.ConnectionString);

@@ -60,7 +60,8 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     "Port": 3306,
     "User": "",
     "Database": "",
-    "Password": ""
+    "Password": "",
+    "SslMode": "Preferred"
   },
   "Gameplay Settings": {
     "Free For All": true,
