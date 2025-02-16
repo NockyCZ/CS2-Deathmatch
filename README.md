@@ -71,17 +71,21 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     "Map Start Custom Mode": 0,
     "New Mode Countdown": 10,
     "Hud Type": 1,
-    "Check Enemies Distance": true,
-    "Distance From Enemies for Respawn": 500,
     "Default Weapons": 2,
     "Switch Weapons": true,
     "Allow Buymenu": true,
-    "Use Default Spawns": false,
     "Respawn Players After New Mode": false,
     "Fast Weapon Equip": true,
     "Spawn Protection Color": ""
   },
+  "Spawn System": {
+    "Spawns Method": 0,
+    "Team Spawns Separation": true,
+    "Check Spawn Visibility": true,
+    "Distance From Enemies": 500
+  },
   "General Settings": {
+    "Display Spawns Editor In Menu": true,
     "Hide Round Seconds": true,
     "Hide New Mode Countdown": false,
     "Block Radio Messages": true,
@@ -108,20 +112,20 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     "Non VIP Players": {
       "Respawn Time": 1.5,
       "Spawn Protection Time": 1.1,
-      "Reffil Ammo Kill": false,
-      "Reffil Ammo Headshot": false,
-      "Reffil Ammo in All Weapons": false,
-      "Reffil Health Kill": 20,
-      "Reffil Health Headshot": 40
+      "Refill Ammo Kill": false,
+      "Refill Ammo Headshot": false,
+      "Refill Ammo in All Weapons": false,
+      "Refill Health Kill": 20,
+      "Refill Health Headshot": 40
     },
     "VIP Players": {
       "Respawn Time": 1.1,
       "Spawn Protection Time": 1.2,
-      "Reffil Ammo Kill": false,
-      "Reffil Ammo Headshot": false,
-      "Reffil Ammo in All Weapons": false,
-      "Reffil Health Kill": 25,
-      "Reffil Health Headshot": 50
+      "Refill Ammo Kill": false,
+      "Refill Ammo Headshot": false,
+      "Refill Ammo in All Weapons": false,
+      "Refill Health Kill": 25,
+      "Refill Health Headshot": 50
     }
   },
   "Client Preferences": {
@@ -153,6 +157,15 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
       "Only for VIP": false,
       "Command Shortcuts": []
     },
+    "No Primary": {
+      "Enabled": true,
+      "Default value": false,
+      "Only for VIP": false,
+      "Command Shortcuts": [
+        "noprimary",
+        "primary"
+      ]
+    },
     "Only Headshot": {
       "Enabled": true,
       "Default value": false,
@@ -172,7 +185,7 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     },
     "Damage Info": {
       "Enabled": true,
-      "Default value": false,
+      "Default value": true,
       "Only for VIP": false,
       "Command Shortcuts": [
         "damage",

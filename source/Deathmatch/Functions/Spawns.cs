@@ -18,12 +18,14 @@ namespace Deathmatch
             if (team == CsTeam.None || team == CsTeam.Spectator)
                 return;
 
-            var spawnsDictionary = Config.Gameplay.TeamSpawnsSeparation
-                ? new Dictionary<Vector, QAngle>(team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT)
-                : spawnPositionsT.Concat(spawnPositionsCT).ToDictionary(spawn => spawn.Key, spawn => spawn.Value);
+            IEnumerable<KeyValuePair<Vector, QAngle>> spawnsDictionary = Config.SpawnSystem.TeamSpawnsSeparation
+                ? (team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT)
+                : spawnPositionsT.Concat(spawnPositionsCT);
 
             if (blockedSpawns.TryGetValue(player.Slot, out var lastSpawn))
-                spawnsDictionary.Remove(lastSpawn);
+            {
+                spawnsDictionary = spawnsDictionary.Where(spawn => spawn.Key != lastSpawn);
+            }
 
             if (!spawnsDictionary.Any())
             {
@@ -32,67 +34,71 @@ namespace Deathmatch
                 return;
             }
 
-            (Vector position, QAngle angle) selectedSpawn;
-            if (GameRules != null)
+            var selectedSpawn = GetAvailableSpawn(player, spawnsDictionary);
+            if (selectedSpawn.HasValue)
             {
-                if (GameRules.WarmupPeriod || !Config.Gameplay.CheckDistance)
-                {
-                    var randomSpawn = spawnsDictionary.ElementAt(Random.Next(spawnsDictionary.Count));
-                    selectedSpawn = (randomSpawn.Key, randomSpawn.Value);
-                }
-                else
-                {
-                    selectedSpawn = GetAvailableSpawn(player, spawnsDictionary.ToList());
-                }
+                blockedSpawns[player.Slot] = selectedSpawn.Value.Key;
+                player.Pawn.Value?.Teleport(selectedSpawn.Value.Key, selectedSpawn.Value.Value, null);
             }
-            else
-            {
-                SetGameRules();
-                selectedSpawn = GetAvailableSpawn(player, spawnsDictionary.ToList());
-            }
-            
-            blockedSpawns[player.Slot] = selectedSpawn.position;
-            //player.Respawn();
-            player.Pawn.Value?.Teleport(selectedSpawn.position, selectedSpawn.angle, new Vector());
         }
 
-        public (Vector, QAngle) GetAvailableSpawn(CCSPlayerController player, IReadOnlyList<KeyValuePair<Vector, QAngle>> spawnsList)
+        public KeyValuePair<Vector, QAngle>? GetAvailableSpawn(CCSPlayerController player, IEnumerable<KeyValuePair<Vector, QAngle>> spawnsList)
         {
-            var playerPositions = Utilities.GetPlayers()
-                .Where(p => !p.IsHLTV && p.Connected == PlayerConnectedState.PlayerConnected && p.PlayerPawn.IsValid && p.PawnIsAlive && p != player)
-                .Select(p => p.PlayerPawn.Value!.AbsOrigin)
-                .ToList();
+            var playerPawns = Utilities.GetPlayers()
+                .Where(p => !p.IsHLTV && p.LifeState == (byte)LifeState_t.LIFE_ALIVE && p != player)
+                .Select(p => p.PlayerPawn.Value);
 
-            List<KeyValuePair<Vector, QAngle>> availableSpawns = new();
-            foreach (var spawn in spawnsList)
+            var shuffledSpawns = spawnsList.ToList();
+            for (int i = shuffledSpawns.Count - 1; i > 0; i--)
             {
-                var minDistance = double.MaxValue;
-                foreach (var playerPos in playerPositions)
+                int j = Random.Shared.Next(i + 1);
+                var temp = shuffledSpawns[i];
+                shuffledSpawns[i] = shuffledSpawns[j];
+                shuffledSpawns[j] = temp;
+            }
+
+            foreach (var spawn in shuffledSpawns)
+            {
+                bool isValidSpawn = true;
+                foreach (var pawn in playerPawns)
                 {
-                    if (playerPos == null)
-                        continue;
-
-                    double distance = GetDistance(playerPos, spawn.Key);
-                    if (distance < minDistance)
+                    var distance = GetDistance(pawn?.AbsOrigin, spawn.Key);
+                    if (distance < CheckedEnemiesDistance)
                     {
-                        minDistance = distance;
+                        isValidSpawn = false;
+                        break;
                     }
+
+                    /*if (CheckedEnemiesDistance >= 100)
+                    {
+                        if (distance < CheckedEnemiesDistance)
+                        {
+                            isValidSpawn = false;
+                            break;
+                        }
+
+                        if (CheckSpawnVisibility && distance <= 3000 && CanSeeSpawn(pawn, spawn.Key))
+                        {
+                            isValidSpawn = false;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (distance < 67 && CanSeeSpawn(pawn, spawn.Key))
+                        {
+                            isValidSpawn = false;
+                            break;
+                        }
+                    }*/
                 }
-                if (minDistance > CheckedEnemiesDistance)
-                    availableSpawns.Add(spawn);
+
+                if (isValidSpawn)
+                    return spawn;
             }
 
-            if (availableSpawns.Any())
-            {
-                var randomSpawn = availableSpawns[Random.Next(availableSpawns.Count)];
-                return (randomSpawn.Key, randomSpawn.Value);
-            }
-            else
-            {
-                SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found!", ConsoleColor.DarkYellow);
-                var spawn = spawnsList.ElementAt(Random.Next(spawnsList.Count));
-                return (spawn.Key, spawn.Value);
-            }
+            SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found!", ConsoleColor.DarkYellow);
+            return null;
         }
 
         public void SaveSpawnsFile()
@@ -156,9 +162,6 @@ namespace Deathmatch
                     spawnPositionsCT[newPosition] = newAngle;
                     break;
             }
-
-            RemoveSpawnModels();
-            ShowAllSpawnPoints();
         }
 
         public void RemoveNearestSpawnPoint(Vector? playerPos)
@@ -192,9 +195,6 @@ namespace Deathmatch
 
             spawnPositionsCT.Remove(nearestSpawn);
             spawnPositionsT.Remove(nearestSpawn);
-
-            RemoveSpawnModels();
-            ShowAllSpawnPoints();
         }
 
         public void ShowAllSpawnPoints()
@@ -352,6 +352,7 @@ namespace Deathmatch
                 }
                 entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
+                //spawnPositionsCTEntity.Add(entity);
             }
 
             foreach (var spawn in spawnPositionsT)
@@ -364,6 +365,7 @@ namespace Deathmatch
                 }
                 entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
+                //spawnPositionsTEntity.Add(entity);
             }
         }
 
@@ -371,7 +373,7 @@ namespace Deathmatch
         {
             spawnPositionsCT.Clear();
             spawnPositionsT.Clear();
-            if (Config.Gameplay.DefaultSpawns)
+            if (Config.SpawnSystem.SpawnsMethod >= 1)
             {
                 addDefaultSpawnsToList();
             }
@@ -464,8 +466,11 @@ namespace Deathmatch
             return new QAngle(0, 0, 0);
         }
 
-        private static double GetDistance(Vector v1, Vector v2)
+        private static double GetDistance(Vector? v1, Vector? v2)
         {
+            if (v1 == null || v2 == null)
+                return 100;
+
             double X = v1.X - v2.X;
             double Y = v1.Y - v2.Y;
 
@@ -483,12 +488,15 @@ namespace Deathmatch
                         continue;
 
                     spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
+                    //spawnPositionsCTEntity.Add(spawn);
                 }
                 foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist"))
                 {
                     if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                         continue;
+
                     spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
+                    //spawnPositionsTEntity.Add(spawn);
                 }
             }
             else
@@ -503,12 +511,14 @@ namespace Deathmatch
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             continue;
                         spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
+                        //spawnPositionsTEntity.Add(spawn);
                     }
                     else
                     {
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             continue;
                         spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
+                        //spawnPositionsCTEntity.Add(spawn);
                     }
                 }
             }

@@ -4,6 +4,8 @@ using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
 using System.Drawing;
 using CounterStrikeSharp.API;
+using DeathmatchAPI;
+using static DeathmatchAPI.Preferences;
 
 namespace Deathmatch
 {
@@ -13,81 +15,46 @@ namespace Deathmatch
         {
             if (string.IsNullOrEmpty(weaponName))
             {
-                string primaryWeapons = "";
-                string secondaryWeapons = "";
                 if (ActiveMode.PrimaryWeapons.Any())
                 {
-                    foreach (string weapon in ActiveMode.PrimaryWeapons)
-                    {
-                        if (string.IsNullOrEmpty(primaryWeapons))
-                            primaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
-                        else
-                            primaryWeapons = $"{primaryWeapons}{ChatColors.Default}, {ChatColors.Green}{Localizer[weapon]}";
-                    }
+                    var weapons = string.Join($"{ChatColors.Default}, {ChatColors.Green}", ActiveMode.PrimaryWeapons.Select(w => Localizer[w]));
                     info.ReplyToCommand($"{Localizer["Chat.ListOfAllowedWeapons"]}");
-                    info.ReplyToCommand($"{ChatColors.DarkRed}• {primaryWeapons.ToUpper()}");
+                    info.ReplyToCommand($"{ChatColors.DarkRed}• {weapons.ToUpper()}");
                 }
                 if (ActiveMode.SecondaryWeapons.Any())
                 {
-                    foreach (string weapon in ActiveMode.SecondaryWeapons)
-                    {
-                        if (string.IsNullOrEmpty(secondaryWeapons))
-                            secondaryWeapons = $"{ChatColors.Green} {Localizer[weapon]}";
-                        else
-                            secondaryWeapons = $"{secondaryWeapons}{ChatColors.Default}, {ChatColors.Green}{Localizer[weapon]}";
-                    }
+                    var weapons = string.Join($"{ChatColors.Default}, {ChatColors.Green}", ActiveMode.SecondaryWeapons.Select(w => Localizer[w]));
                     info.ReplyToCommand($"{Localizer["Chat.ListOfAllowedSecondaryWeapons"]}");
-                    info.ReplyToCommand($"{ChatColors.DarkRed}• {secondaryWeapons.ToUpper()}");
+                    info.ReplyToCommand($"{ChatColors.DarkRed}• {weapons.ToUpper()}");
                 }
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} /gun <weapon name>");
                 return;
             }
 
-            string replacedweaponName = "";
-            string matchingValues = "";
-            int matchingCount = 0;
             if (weaponSelectMapping.TryGetValue(weaponName, out var name))
             {
                 weaponName = name;
-                matchingCount = 1;
             }
             else
             {
-                foreach (string weapon in PrimaryWeaponsList.Concat(SecondaryWeaponsList))
-                {
-                    if (weapon.Contains(weaponName))
-                    {
-                        replacedweaponName = weapon;
-                        matchingCount++;
-                        string localizerWeaponName = Localizer[replacedweaponName];
-                        if (matchingCount == 1)
-                        {
-                            matchingValues = $"{ChatColors.Green}{localizerWeaponName}";
-                        }
-                        else if (matchingCount > 1)
-                        {
-                            matchingValues = $"{matchingValues}{ChatColors.Default}, {ChatColors.Green}{localizerWeaponName}";
-                        }
-                    }
-                }
+                var matches = PrimaryWeaponsList.Concat(SecondaryWeaponsList)
+                    .Where(w => w.Contains(weaponName))
+                    .ToList();
 
-                if (matchingCount != 0)
+                if (matches.Count > 1)
                 {
-                    weaponName = replacedweaponName;
+                    var matchingValues = string.Join($"{ChatColors.Default}, {ChatColors.Green}", matches.Select(w => Localizer[w]));
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.MultipleWeaponsSelected"]} {ChatColors.Default}( {matchingValues} {ChatColors.Default})");
+                    return;
                 }
-            }
-
-            if (matchingCount > 1)
-            {
-                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.MultipleWeaponsSelected"]} {ChatColors.Default}( {matchingValues} {ChatColors.Default})");
-                return;
-            }
-            else if (matchingCount == 0)
-            {
-                if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                    player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
-                info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponNotFound", weaponName]}");
-                return;
+                else if (!matches.Any())
+                {
+                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
+                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponNotFound", weaponName]}");
+                    return;
+                }
+                weaponName = matches[0];
             }
 
             if (!playerData.TryGetValue(player.Slot, out var data))
@@ -118,7 +85,7 @@ namespace Deathmatch
                 data.PrimaryWeapon[ActiveCustomMode] = weaponName;
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.PrimaryWeaponSet", localizerWeaponName]}");
 
-                var primaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE) : null;
+                var primaryWeapon = pawn?.GetWeaponFromSlot(gear_slot_t.GEAR_SLOT_RIFLE);
                 if (player.PawnIsAlive)
                 {
                     if (primaryWeapon == null)
@@ -127,7 +94,7 @@ namespace Deathmatch
                     }
                     else if (Config.Gameplay.SwitchWeapons)
                     {
-                        var secondaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL) : null;
+                        var secondaryWeapon = pawn?.GetWeaponFromSlot(gear_slot_t.GEAR_SLOT_PISTOL);
                         player.RemoveWeapons();
                         player.GiveNamedItem("weapon_knife");
                         player.GiveNamedItem(weaponName);
@@ -166,7 +133,7 @@ namespace Deathmatch
                 data.SecondaryWeapon[ActiveCustomMode] = weaponName;
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.SecondaryWeaponSet", localizerWeaponName]}");
 
-                var secondaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL) : null;
+                var secondaryWeapon = pawn?.GetWeaponFromSlot(gear_slot_t.GEAR_SLOT_PISTOL);
                 if (player.PawnIsAlive)
                 {
                     if (secondaryWeapon == null)
@@ -175,7 +142,7 @@ namespace Deathmatch
                     }
                     else if (Config.Gameplay.SwitchWeapons)
                     {
-                        var primaryWeapon = pawn != null ? GetWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE) : null;
+                        var primaryWeapon = pawn?.GetWeaponFromSlot(gear_slot_t.GEAR_SLOT_RIFLE);
                         player.RemoveWeapons();
                         player.GiveNamedItem("weapon_knife");
                         player.GiveNamedItem(weaponName);
@@ -222,18 +189,7 @@ namespace Deathmatch
                             Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
                         }
                         data.SpawnProtection = true;
-                        AddTimer(timer, () =>
-                        {
-                            if (player != null && player.IsValid && playerData.TryGetValue(player.Slot, out data))
-                            {
-                                data.SpawnProtection = false;
-                                if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
-                                {
-                                    pawn.Render = Color.White;
-                                    Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
-                                }
-                            }
-                        });
+                        playersWithSpawnProtection[player] = (timer, Server.CurrentTime);
                     }
 
                     if (!IsCasualGamemode)
@@ -252,7 +208,8 @@ namespace Deathmatch
                     }
                     else if (data.PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && !string.IsNullOrEmpty(weapon))
                     {
-                        player.GiveNamedItem(weapon);
+                        if (ActiveMode.SecondaryWeapons.Any() && !GetPrefsValue(data, "NoPrimary", Config.PlayersPreferences.NoPrimary.DefaultValue))
+                            player.GiveNamedItem(weapon);
                     }
                 }
 
@@ -285,31 +242,9 @@ namespace Deathmatch
 
                 Server.NextFrame(() =>
                 {
-                    if (Config.PlayersPreferences.EquipSlot.Enabled)
+                    if (Config.Gameplay.FastWeaponEquip)
                     {
-                        var equipSlot = GetPrefsValue(data, "EquipSlot", "-1");
-                        if (equipSlot == "2")
-                        {
-                            var weapon = player.PlayerPawn.Value?.SetActiveWeapon(player, gear_slot_t.GEAR_SLOT_PISTOL);
-                            if (Config.Gameplay.FastWeaponEquip && weapon != null && weapon.IsValid)
-                            {
-                                weapon.NextPrimaryAttackTick = Server.TickCount + 1;
-                                Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
-                            }
-                        }
-                        else if (Config.Gameplay.FastWeaponEquip)
-                        {
-                            var activeWeapon = player.PlayerPawn.Value?.GetActiveWeapon();
-                            if (activeWeapon != null && activeWeapon.IsValid)
-                            {
-                                activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
-                                Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
-                            }
-                        }
-                    }
-                    else if (Config.Gameplay.FastWeaponEquip)
-                    {
-                        var activeWeapon = player.PlayerPawn.Value?.GetActiveWeapon();
+                        var activeWeapon = pawn.GetActiveWeapon();
                         if (activeWeapon != null && activeWeapon.IsValid)
                         {
                             activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
@@ -327,7 +262,7 @@ namespace Deathmatch
             {
                 if (ActiveMode.PrimaryWeapons.Any())
                 {
-                    if (!IsHaveWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_RIFLE))
+                    if (!pawn.IsHaveWeaponFromSlot(gear_slot_t.GEAR_SLOT_RIFLE))
                     {
                         var PrimaryWeapon = ActiveMode.PrimaryWeapons.Count switch
                         {
@@ -344,7 +279,7 @@ namespace Deathmatch
                 }
                 if (ActiveMode.SecondaryWeapons.Any())
                 {
-                    if (!IsHaveWeaponFromSlot(pawn, gear_slot_t.GEAR_SLOT_PISTOL))
+                    if (!pawn.IsHaveWeaponFromSlot(gear_slot_t.GEAR_SLOT_PISTOL))
                     {
                         var SecondaryWeapon = ActiveMode.SecondaryWeapons.Count switch
                         {
@@ -365,25 +300,20 @@ namespace Deathmatch
 
         public void SetupDefaultPreferences(DeathmatchPlayerData data, bool IsVIP)
         {
-            foreach (var pref in Preferences)
+            var preferences = data.Preferences;
+            foreach (var pref in Preference.GetAllPreferences())
             {
-                if (data.Preferences.ContainsKey(pref.Name))
+                if (preferences.ContainsKey(pref.Name))
                     continue;
 
-                if (pref.vipOnly)
+                if (pref.BooleanData != null)
                 {
-                    if (IsVIP)
-                        data.Preferences[pref.Name] = pref.defaultValue;
-                    else
-                    {
-                        if (pref.defaultValue is bool)
-                            data.Preferences[pref.Name] = false;
-                        else if (pref.defaultValue is int)
-                            data.Preferences[pref.Name] = -1;
-                    }
+                    preferences[pref.Name] = pref.VipOnly && !IsVIP ? false : pref.BooleanData.DefaultValue;
                 }
-                else
-                    data.Preferences[pref.Name] = pref.defaultValue;
+                else if (pref.Data != null)
+                {
+                    preferences[pref.Name] = pref.VipOnly && !IsVIP ? "-1" : pref.Data.Options[0];
+                }
             }
         }
 
@@ -399,14 +329,14 @@ namespace Deathmatch
                     case 1:
                         if (mode.Value.PrimaryWeapons.Any())
                         {
-                            var primary = mode.Value.PrimaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
+                            var primary = mode.Value.PrimaryWeapons.First(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
                             data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
                             data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
-                            var secondary = mode.Value.SecondaryWeapons.Where(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w)).FirstOrDefault();
+                            var secondary = mode.Value.SecondaryWeapons.First(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
                             data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else
@@ -471,15 +401,24 @@ namespace Deathmatch
             player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueChanged", Preference, changedValue]}");
         }
 
-        private void SwitchStringPrefsValue(CCSPlayerController player, string preference, string value, string valueName)
+        private void SwitchStringPrefsValue(CCSPlayerController player, string preference, List<string> values, string? currentValue)
         {
             if (!playerData.TryGetValue(player.Slot, out var data))
                 return;
 
-            data.Preferences[preference] = value;
+            if (currentValue == null || !values.Contains(currentValue))
+            {
+                data.Preferences[preference] = values[0];
+            }
+            else
+            {
+                int index = values.IndexOf(currentValue);
+                var newValue = (index == -1 || index == values.Count - 1) ? values[0] : values[index + 1];
+                data.Preferences[preference] = newValue;
+            }
 
             var Preference = Localizer[$"Prefs.{preference}"];
-            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueSet", Preference, valueName]}");
+            player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Prefs.ValueSet", Preference, data.Preferences[preference]]}");
         }
 
         public bool IsHaveBlockedRandomWeaponsIntegration(CCSPlayerController player)

@@ -11,7 +11,7 @@ namespace Deathmatch
         public bool CheckIsWeaponRestricted(string weaponName, bool isVIP, CsTeam team, bool bPrimary)
         {
             var players = Utilities.GetPlayers().Where(p => playerData.ContainsKey(p.Slot)).ToList();
-            if (players == null || players.Count < 2)
+            if (players.Count < 2)
                 return false;
 
             var weaponsList = bPrimary ? ActiveMode.PrimaryWeapons : ActiveMode.SecondaryWeapons;
@@ -36,37 +36,16 @@ namespace Deathmatch
             return matchingCount >= restrictValue;
         }
 
-        public CBasePlayerWeapon? GetWeaponFromSlot(CCSPlayerPawn pawn, gear_slot_t slot)
-        {
-            if (pawn.WeaponServices == null)
-                return null;
-
-            return pawn.WeaponServices.MyWeapons
-                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .FirstOrDefault(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
-        }
-
-        public bool IsHaveWeaponFromSlot(CCSPlayerPawn pawn, gear_slot_t slot)
-        {
-            if (pawn.WeaponServices == null)
-                return false;
-
-            return pawn.WeaponServices.MyWeapons
-                .Select(weapon => weapon.Value?.As<CCSWeaponBase>())
-                .Any(weaponBase => weaponBase != null && weaponBase.VData != null && weaponBase.VData.GearSlot == slot);
-        }
-
         private string GetRandomWeaponFromList(List<string> weaponsList, ModeData modeData, bool isVIP, CsTeam team, bool bPrimary)
         {
-            if (weaponsList.Any())
-            {
-                if (!modeData.RandomWeapons && (Config.Gameplay.DefaultModeWeapons != 1 || Config.Gameplay.DefaultModeWeapons != 2))
-                    weaponsList.RemoveAll(weapon => CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary));
+            if (!weaponsList.Any())
+                return "";
 
-                int index = Random.Next(weaponsList.Count);
-                return weaponsList[index];
-            }
-            return "";
+            var filteredWeapons = !modeData.RandomWeapons && Config.Gameplay.DefaultModeWeapons != 1 && Config.Gameplay.DefaultModeWeapons != 2
+                ? weaponsList.Where(weapon => !CheckIsWeaponRestricted(weapon, isVIP, team, bPrimary)).ToList()
+                : weaponsList;
+
+            return filteredWeapons.Any() ? filteredWeapons[Random.Shared.Next(filteredWeapons.Count)] : "";
         }
 
         public int GetWeaponRestrict(string weaponName, bool isVIP, CsTeam team)
@@ -95,15 +74,12 @@ namespace Deathmatch
 
         public string GetWeaponRestrictLozalizer(int bullets)
         {
-            switch (bullets)
+            return bullets switch
             {
-                case -1:
-                    return Localizer["Chat.Disabled"];
-                case 0:
-                    return Localizer["Chat.Unlimited"];
-                default:
-                    return bullets.ToString();
-            }
+                -1 => Localizer["Chat.Disabled"],
+                0 => Localizer["Chat.Unlimited"],
+                _ => bullets.ToString()
+            };
         }
     }
 }

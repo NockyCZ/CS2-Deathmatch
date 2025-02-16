@@ -10,6 +10,7 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("Save Players Weapons")] public bool SaveWeapons { get; set; } = false;
     [JsonPropertyName("Database Connection")] public Database Database { get; set; } = new Database();
     [JsonPropertyName("Gameplay Settings")] public Gameplay Gameplay { get; set; } = new Gameplay();
+    [JsonPropertyName("Spawn System")] public SpawnSystem SpawnSystem { get; set; } = new();
     [JsonPropertyName("General Settings")] public General General { get; set; } = new General();
     [JsonPropertyName("Sounds Settings")] public SoundSettings SoundSettings { get; set; } = new SoundSettings();
     [JsonPropertyName("Custom Commands")] public CustomCommands CustomCommands { get; set; } = new CustomCommands();
@@ -129,6 +130,17 @@ public class DeathmatchConfig : BasePluginConfig
     [JsonPropertyName("Weapons Restrict")] public WeaponsRestrict RestrictedWeapons { get; set; } = new WeaponsRestrict();
 }
 
+public class SpawnSystem
+{
+    [JsonPropertyName("Spawns Method")] public int SpawnsMethod { get; set; } = 0;
+    // 0 = Custom Spawns
+    // 1 - Default Spawns with all features (separation, visbility, distance)
+    // 2 = Default Spawns without any features
+    [JsonPropertyName("Team Spawns Separation")] public bool TeamSpawnsSeparation { get; set; } = true;
+    [JsonPropertyName("Check Spawn Visibility")] public bool CheckVisible { get; set; } = true;
+    [JsonPropertyName("Distance From Enemies")] public int DistanceRespawn { get; set; } = 500;
+}
+
 public class Database
 {
     [JsonPropertyName("Host")] public string Host { get; set; } = "";
@@ -155,19 +167,16 @@ public class Gameplay
     [JsonPropertyName("Map Start Custom Mode")] public int MapStartMode { get; set; } = 0;
     [JsonPropertyName("New Mode Countdown")] public int NewModeCountdown { get; set; } = 10;
     [JsonPropertyName("Hud Type")] public int HudType { get; set; } = 1;
-    [JsonPropertyName("Team Spawns Separation")] public bool TeamSpawnsSeparation { get; set; } = true;
-    [JsonPropertyName("Check Enemies Distance")] public bool CheckDistance { get; set; } = true;
-    [JsonPropertyName("Distance From Enemies for Respawn")] public int DistanceRespawn { get; set; } = 500;
     [JsonPropertyName("Default Weapons")] public int DefaultModeWeapons { get; set; } = 2;
     [JsonPropertyName("Switch Weapons")] public bool SwitchWeapons { get; set; } = true;
     [JsonPropertyName("Allow Buymenu")] public bool AllowBuyMenu { get; set; } = true;
-    [JsonPropertyName("Use Default Spawns")] public bool DefaultSpawns { get; set; } = false;
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
     [JsonPropertyName("Fast Weapon Equip")] public bool FastWeaponEquip { get; set; } = true;
     [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "";
 }
 public class General
 {
+    [JsonPropertyName("Display Spawns Editor In Menu")] public bool DisplayZonesEditorInMenu { get; set; } = true;
     [JsonPropertyName("Hide Round Seconds")] public bool HideRoundSeconds { get; set; } = true;
     [JsonPropertyName("Hide New Mode Countdown")] public bool HideModeRemainingTime { get; set; } = false;
     [JsonPropertyName("Block Radio Messages")] public bool BlockRadioMessage { get; set; } = true;
@@ -192,17 +201,17 @@ public class PlayersPreferences
     [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new();
     [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new();
     [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new();
-    [JsonPropertyName("Equip Slot")] public EquipSlot EquipSlot { get; set; } = new();
+    [JsonPropertyName("No Primary")] public NoPrimary NoPrimary { get; set; } = new();
     [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new();
     [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new();
     [JsonPropertyName("Damage Info")] public DamageInfo DamageInfo { get; set; } = new();
 }
 // sounds/ui/beepclear.vsnd_c
 
-public class EquipSlot
+public class NoPrimary
 {
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-    [JsonPropertyName("Default value")] public string DefaultValue { get; set; } = "1";
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
     [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "noprimary", "primary" };
 }
@@ -273,7 +282,7 @@ public class HSKillSound
 public class DamageInfo
 {
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
-    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = true;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
     [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new() { "damage", "dmg" };
 }
@@ -289,22 +298,22 @@ public class NonVIP
 {
     [JsonPropertyName("Respawn Time")] public float RespawnTime { get; set; } = 1.5f;
     [JsonPropertyName("Spawn Protection Time")] public float ProtectionTime { get; set; } = 1.1f;
-    [JsonPropertyName("Reffil Ammo Kill")] public bool RefillAmmo { get; set; } = false;
-    [JsonPropertyName("Reffil Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
-    [JsonPropertyName("Reffil Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
-    [JsonPropertyName("Reffil Health Kill")] public int KillHealth { get; set; } = 20;
-    [JsonPropertyName("Reffil Health Headshot")] public int HeadshotHealth { get; set; } = 40;
+    [JsonPropertyName("Refill Ammo Kill")] public bool RefillAmmo { get; set; } = false;
+    [JsonPropertyName("Refill Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
+    [JsonPropertyName("Refill Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
+    [JsonPropertyName("Refill Health Kill")] public int KillHealth { get; set; } = 20;
+    [JsonPropertyName("Refill Health Headshot")] public int HeadshotHealth { get; set; } = 40;
 }
 
 public class VIP
 {
     [JsonPropertyName("Respawn Time")] public float RespawnTime { get; set; } = 1.1f;
     [JsonPropertyName("Spawn Protection Time")] public float ProtectionTime { get; set; } = 1.2f;
-    [JsonPropertyName("Reffil Ammo Kill")] public bool RefillAmmo { get; set; } = false;
-    [JsonPropertyName("Reffil Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
-    [JsonPropertyName("Reffil Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
-    [JsonPropertyName("Reffil Health Kill")] public int KillHealth { get; set; } = 25;
-    [JsonPropertyName("Reffil Health Headshot")] public int HeadshotHealth { get; set; } = 50;
+    [JsonPropertyName("Refill Ammo Kill")] public bool RefillAmmo { get; set; } = false;
+    [JsonPropertyName("Refill Ammo Headshot")] public bool RefillAmmoHS { get; set; } = false;
+    [JsonPropertyName("Refill Ammo in All Weapons")] public bool ReffilAllWeapons { get; set; } = false;
+    [JsonPropertyName("Refill Health Kill")] public int KillHealth { get; set; } = 25;
+    [JsonPropertyName("Refill Health Headshot")] public int HeadshotHealth { get; set; } = 50;
 }
 
 public class WeaponsRestrict

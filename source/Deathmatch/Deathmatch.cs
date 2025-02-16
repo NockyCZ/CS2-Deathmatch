@@ -1,8 +1,6 @@
 ﻿using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
-using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Timers;
-using CounterStrikeSharp.API.Core.Attributes;
 using CounterStrikeSharp.API.Modules.Memory;
 using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Entities.Constants;
@@ -11,6 +9,10 @@ using CounterStrikeSharp.API.Core.Capabilities;
 using DeathmatchAPI.Helpers;
 using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
 using static CounterStrikeSharp.API.Core.Listeners;
+using CounterStrikeSharp.API.Modules.Utils;
+using System.Drawing;
+using System.Data;
+using DeathmatchAPI;
 
 namespace Deathmatch;
 
@@ -23,7 +25,8 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
     public void OnConfigParsed(DeathmatchConfig config)
     {
         Config = config;
-        CheckedEnemiesDistance = Config.Gameplay.DistanceRespawn;
+        CheckedEnemiesDistance = Config.SpawnSystem.DistanceRespawn;
+        CheckSpawnVisibility = Config.SpawnSystem.CheckVisible;
     }
     public override void Load(bool hotReload)
     {
@@ -35,7 +38,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         if (Config.SaveWeapons)
             _ = CreateDatabaseConnection();
 
-        SetupDeathmatchMenus();
         string[] Shortcuts = Config.CustomCommands.CustomShortcuts.Split(',');
         string[] WSelect = Config.CustomCommands.WeaponSelectCmds.Split(',');
         string[] DeathmatchMenus = Config.CustomCommands.DeatmatchMenuCmds.Split(',');
@@ -51,11 +53,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             AddCustomCommands(cmd, "", 2);
         foreach (var cmd in DeathmatchMenus)
             AddCustomCommands(cmd, "", 3);
-        foreach (var preference in Preferences.Where(x => x.CommandShortcuts.Any()))
-        {
-            foreach (var cmd in preference.CommandShortcuts)
-                AddCustomCommands(cmd, preference.Name, 4, preference.vipOnly);
-        }
         foreach (string radioName in RadioMessagesList)
             AddCommandListener(radioName, OnPlayerRadioMessage);
 
@@ -63,20 +60,20 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         AddCommandListener("player_ping", OnPlayerPing);
         AddCommandListener("autobuy", OnRandomWeapons);
 
-        AddCommandListener("say", OnPlayerSay);
-        AddCommandListener("say_team", OnPlayerSay);
-
         bool mapLoaded = false;
         RegisterListener<OnMapEnd>(() => { mapLoaded = false; });
         RegisterListener<OnMapStart>(mapName =>
         {
             blockedSpawns.Clear();
+            savedSpawnsModel.Clear();
+            playerData.Clear();
+            playersWaitingForRespawn.Clear();
+            playersWithSpawnProtection.Clear();
             if (!mapLoaded)
             {
                 mapLoaded = true;
                 bool RoundTerminated = false;
                 DefaultMapSpawnDisabled = false;
-                playerData.Clear();
                 AddTimer(3.0f, () =>
                 {
                     LoadCustomConfigFile();
@@ -84,43 +81,92 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     SetupDeathMatchConfigValues();
                     RemoveEntities();
                     LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
-                });
+                }, TimerFlags.STOP_ON_MAPCHANGE);
 
-                if (Config.Gameplay.IsCustomModes)
+                double secTimer = 0;
+                AddTimer(0.1f, () =>
                 {
-                    AddTimer(1.0f, () =>
+                    if (playersWaitingForRespawn.Any())
                     {
-                        if (!GameRules().WarmupPeriod)
+                        foreach (var data in playersWaitingForRespawn)
                         {
-                            ModeTimer++;
-                            RemainingTime = ActiveMode.Interval - ModeTimer;
-
-                            if (RemainingTime == 0)
+                            var time = Server.CurrentTime - data.Value.currentTime;
+                            if (time >= data.Value.timer)
                             {
-                                if (Config.General.ForceMapEnd)
+                                var player = data.Key;
+                                if (player != null && player.IsValid && !player.PawnIsAlive && (player.Team == CsTeam.Terrorist || player.Team == CsTeam.CounterTerrorist))
                                 {
-                                    var timelimit = Config.Gameplay.GameLength * 60;
-                                    var gameStart = GameRules().GameStartTime;
-                                    var currentTime = Server.CurrentTime;
-                                    var timeleft = timelimit - (currentTime - gameStart);
-                                    if (timeleft <= 0 && !RoundTerminated)
-                                    {
-                                        GameRules().TerminateRound(0.1f, RoundEndReason.RoundDraw);
-                                    }
+                                    player.Respawn();
+                                    playersWaitingForRespawn.Remove(player);
                                 }
-                                SetupCustomMode(NextMode.ToString());
-                            }
-                            if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.TryGetValue(NextMode.ToString(), out var modeData))
-                            {
-                                var time = TimeSpan.FromSeconds(RemainingTime);
-                                var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";//RemainingTime > 60 ? $"{time.Minutes}:{time.Seconds:D2}" : $"{time.Seconds}";
-
-                                ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{REMAININGTIME}", formattedTime);
-                                ModeCenterMessage = ModeCenterMessage.Replace("{NEXTMODE}", modeData.Name);
                             }
                         }
-                    }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
-                }
+                    }
+                    if (playersWithSpawnProtection.Any())
+                    {
+                        foreach (var data in playersWithSpawnProtection)
+                        {
+                            var time = Server.CurrentTime - data.Value.currentTime;
+                            if (time >= data.Value.timer)
+                            {
+                                var player = data.Key;
+                                if (player != null && player.IsValid && player.PlayerPawn.Value != null && playerData.TryGetValue(player.Slot, out var pData))
+                                {
+                                    pData.SpawnProtection = false;
+                                    playersWithSpawnProtection.Remove(data.Key);
+                                    if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
+                                    {
+                                        player.PlayerPawn.Value.Render = Color.White;
+                                        Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    if (Config.Gameplay.IsCustomModes)
+                    {
+                        secTimer += 0.1;
+                        if (secTimer >= 1)
+                        {
+                            secTimer = 0;
+                            if (GameRules == null)
+                            {
+                                SetGameRules();
+                                return;
+                            }
+                            if (!GameRules.WarmupPeriod)
+                            {
+                                ModeTimer++;
+                                RemainingTime = ActiveMode.Interval - ModeTimer;
+
+                                if (RemainingTime == 0)
+                                {
+                                    if (Config.General.ForceMapEnd)
+                                    {
+                                        var timelimit = Config.Gameplay.GameLength * 60;
+                                        var gameStart = GameRules.GameStartTime;
+                                        var currentTime = Server.CurrentTime;
+                                        var timeleft = timelimit - (currentTime - gameStart);
+                                        if (timeleft <= 0 && !RoundTerminated)
+                                        {
+                                            GameRules.TerminateRound(1.0f, RoundEndReason.RoundDraw);
+                                        }
+                                        return;
+                                    }
+                                    SetupCustomMode(NextMode.ToString());
+                                }
+                                if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText) && Config.CustomModes.TryGetValue(NextMode.ToString(), out var modeData))
+                                {
+                                    var time = TimeSpan.FromSeconds(RemainingTime);
+                                    var formattedTime = $"{time.Minutes}:{time.Seconds:D2}";
+
+                                    ModeCenterMessage = ActiveMode.CenterMessageText.Replace("{REMAININGTIME}", formattedTime);
+                                    ModeCenterMessage = ModeCenterMessage.Replace("{NEXTMODE}", modeData.Name);
+                                }
+                            }
+                        }
+                    }
+                }, TimerFlags.REPEAT | TimerFlags.STOP_ON_MAPCHANGE);
             }
         });
         RegisterListener<OnTick>(() =>
@@ -129,45 +175,35 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             {
                 foreach (var p in Utilities.GetPlayers())
                 {
-                    if (ActiveEditor == p)
-                    {
-                        var ctSpawns = DefaultMapSpawnDisabled ? spawnPositionsCT.Count : 0;
-                        var tSpawns = DefaultMapSpawnDisabled ? spawnPositionsT.Count : 0;
-                        p.PrintToCenterHtml($"<font class='fontSize-l' color='red'>Spawns Editor</font><br><font class='fontSize-m' color='green'>!1</font> Add CT Spawn (Total: <font color='lime'>{ctSpawns}</font>)<br><font class='fontSize-m' color='green'>!2</font> Add T Spawn (Total: <font color='lime'>{tSpawns}</font>)<br><font class='fontSize-m' color='green'>!3</font> Remove the Nearest Spawn<br><br><font class='fontSize-m' color='green'>!4</font> <font class='fontSize-m' color='cyan'>Save Spawns</font><br> ");
-                    }
-                    else
-                    {
-                        if (!playerData.TryGetValue(p.Slot, out var data))
-                            continue;
+                    if (!playerData.TryGetValue(p.Slot, out var data))
+                        continue;
 
-                        if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(data, "HudMessages", Config.PlayersPreferences.HudMessages.DefaultValue)) || MenuManager.GetActiveMenu(p) != null)
-                            continue;
+                    if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(data, "HudMessages", Config.PlayersPreferences.HudMessages.DefaultValue)) || MenuManager.GetActiveMenu(p) != null)
+                        continue;
 
-                        if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+                    if (RemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
+                    {
+                        if (RemainingTime == 0)
                         {
                             if (Config.Gameplay.HudType == 1)
-                                p.PrintToCenterHtml(ModeCenterMessage);
+                                p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
                             else
-                                p.PrintToCenter(ModeCenterMessage);
+                                p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
                         }
-                        if (Config.General.HideModeRemainingTime && RemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
+                        else if (!Config.General.HideModeRemainingTime && Config.CustomModes.TryGetValue(NextMode.ToString(), out var NextModeData))
                         {
-                            if (RemainingTime == 0)
-                            {
-                                if (Config.Gameplay.HudType == 1)
-                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
-                                else
-                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
-                            }
+                            if (Config.Gameplay.HudType == 1)
+                                p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                             else
-                            {
-                                var NextModeData = Config.CustomModes[NextMode.ToString()];
-                                if (Config.Gameplay.HudType == 1)
-                                    p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
-                                else
-                                    p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
-                            }
+                                p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                         }
+                    }
+                    else if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+                    {
+                        if (Config.Gameplay.HudType == 1)
+                            p.PrintToCenterHtml(ModeCenterMessage);
+                        else
+                            p.PrintToCenter(ModeCenterMessage);
                     }
                 }
             }
@@ -199,7 +235,6 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             return HookResult.Stop;
                         }
                     }
-
                 }
                 return HookResult.Continue;
             }, HookMode.Pre);
@@ -220,12 +255,36 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             }, HookMode.Pre);
         }
 
+        HookUserMessage(323, um =>
+        {
+            if (IsCasualGamemode)
+                return HookResult.Continue;
+
+            for (int i = 0; i < um.GetRepeatedFieldCount("param"); i++)
+            {
+                var message = um.ReadString("param", i);
+                foreach (var msg in HudMessagesArray)
+                {
+                    if (message.Contains(msg))
+                    {
+                        return HookResult.Stop;
+                    }
+                }
+            }
+            return HookResult.Continue;
+        }, HookMode.Pre);
+
         if (hotReload)
         {
+            Preferences.Categorie.RemoveAllCategories();
+            Preferences.Menu.RemoveAllOptions();
+            Preferences.Preference.RemoveAllPreferences();
+            SetupDeathmatchMenus();
             Server.ExecuteCommand($"map {Server.MapName}");
         }
         else
         {
+            SetupDeathmatchMenus();
             if (Config.General.RestartMapOnPluginLoad)
                 Server.ExecuteCommand($"map {Server.MapName}");
         }
@@ -381,7 +440,7 @@ sv_cheats 0
                 int iRandomMode;
                 do
                 {
-                    iRandomMode = Random.Next(0, Config.CustomModes.Count);
+                    iRandomMode = Random.Shared.Next(0, Config.CustomModes.Count);
                 } while (iRandomMode == modeId);
                 return iRandomMode;
             }

@@ -43,8 +43,9 @@ namespace Deathmatch
             {
                 if (model == null || !model.IsValid)
                     continue;
-                model.Remove();
+                model.AcceptInput("Kill");
             }
+            savedSpawnsModel.Clear();
         }
         public void SetGameRules()
         {

@@ -12,6 +12,7 @@
     <PackageReference Include="MysqlConnector" Version="2.3.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
     <ProjectReference Include="..\DeathmatchAPI\DeathmatchAPI.csproj" />
+    <Compile Remove="RayTrace\**\*.cs" />
   </ItemGroup>
 
 </Project>

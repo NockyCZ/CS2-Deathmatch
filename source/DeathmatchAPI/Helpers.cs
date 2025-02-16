@@ -2,12 +2,6 @@ using CounterStrikeSharp.API.Modules.Utils;
 
 namespace DeathmatchAPI.Helpers;
 
-public enum CategoryType
-{
-    FUNCTIONS,
-    SOUNDS
-}
-
 public class ModeData
 {
     public string Name { get; set; } = "Default Mode";
@@ -21,15 +15,6 @@ public class ModeData
     public List<string> SecondaryWeapons { get; set; } = new();
     public List<string> Utilities { get; set; } = new();
     public List<string> ExecuteCommands { get; set; } = new();
-}
-
-public class PreferencesData
-{
-    public required string Name { get; set; }
-    public required CategoryType Category { get; set; }
-    public required object defaultValue { get; set; }
-    public required bool vipOnly { get; set; }
-    public List<string> CommandShortcuts { get; set; } = new();
 }
 
 public class SpawnData

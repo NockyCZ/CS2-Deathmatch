@@ -7,13 +7,16 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        //public static Dictionary<string, ModeData> CustomModes = new();
-        //public static Dictionary<string, Dictionary<string, Dictionary<RestrictType, RestrictData>>> RestrictedWeapons = new();
         public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         public static Dictionary<Vector, QAngle> spawnPositionsT = new();
+
+        //public static HashSet<CBaseEntity> spawnPositionsCTEntity = new();
+        //public static HashSet<CBaseEntity> spawnPositionsTEntity = new();
+
         public static Dictionary<int, Vector> blockedSpawns = new();
         public static Dictionary<int, DeathmatchPlayerData> playerData = new();
-        public static List<PreferencesData> Preferences = new();
+        public Dictionary<CCSPlayerController, (float timer, float currentTime)> playersWaitingForRespawn = new();
+        public Dictionary<CCSPlayerController, (float timer, float currentTime)> playersWithSpawnProtection = new();
         public static HashSet<CBaseEntity> savedSpawnsModel = new();
 
         readonly Dictionary<string, string> weaponSelectMapping = new()
@@ -61,6 +64,17 @@ namespace Deathmatch
             "Player_Point_Award_Killed_Enemy_Noweapon_Plural",
             "Player_Point_Award_Picked_Up_Dogtag",
             "Player_Point_Award_Picked_Up_Dogtag_Plural"
+        };
+
+        readonly string[] HudMessagesArray =
+        {
+            "SFUI_Notice_DM_BuyMenu_RandomON",
+            "SFUI_Notice_DM_BuyMenu_RandomOFF",
+            "SFUI_Notice_DM_BuyMenuExpire_RandomON",
+            "SFUI_Notice_DM_BuyMenuExpire_RandomOFF",
+            "SFUI_Notice_DM_InvulnExpire_RandomON",
+            "SFUI_Notice_DM_InvulnExpire_RandomOFF",
+            "SFUI_DMPoints_BonusWeapon"
         };
     };
 }

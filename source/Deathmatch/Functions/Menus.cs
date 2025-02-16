@@ -1,192 +1,284 @@
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Menu;
 using CounterStrikeSharp.API.Modules.Utils;
+using DeathmatchAPI;
 using DeathmatchAPI.Helpers;
+using static DeathmatchAPI.Preferences;
 
 namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public void OpenMainMenu(CCSPlayerController player)
+        public void OpenEditorMenu(CCSPlayerController? player)
         {
-            var Menu = new CenterHtmlMenu($"{Localizer["Menu.Title"]}", this);
-            if (Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() > 0)
-                Menu.AddMenuOption($"{Localizer["Menu.Functions"]}", (player, opt) => OnSelectSubMenu(player, CategoryType.FUNCTIONS));
+            RemoveSpawnModels();
+            ShowAllSpawnPoints();
 
-            if (Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() > 0)
-                Menu.AddMenuOption($"{Localizer["Menu.Sounds"]}", (player, opt) => OnSelectSubMenu(player, CategoryType.SOUNDS));
+            if (player == null || !player.IsValid || player.PlayerPawn.Value == null)
+                return;
 
+            if (!player.PawnIsAlive)
+            {
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} You have to be alive to use Spawns Editor!");
+                return;
+            }
+
+            var Menu = new CenterHtmlMenu("<font class='fontSize-l' color='red'>Spawns Editor</font><br> ", this);
+
+            var ctSpawns = DefaultMapSpawnDisabled ? spawnPositionsCT.Count : 0;
+            var tSpawns = DefaultMapSpawnDisabled ? spawnPositionsT.Count : 0;
+
+            Menu.AddMenuOption($"Add CT Spawn ({ctSpawns})", (player, opt) =>
+            {
+                AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.CounterTerrorist);
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsCT.Count}{ChatColors.Default})");
+                OpenEditorMenu(player);
+            });
+            Menu.AddMenuOption($"Add T Spawn ({tSpawns})", (player, opt) =>
+            {
+                AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.Terrorist);
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsT.Count}{ChatColors.Default})");
+                OpenEditorMenu(player);
+            });
+
+            Menu.AddMenuOption("Remove the Nearest Spawn", (player, opt) =>
+            {
+                RemoveNearestSpawnPoint(player.PlayerPawn.Value!.AbsOrigin);
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} The nearest spawn point has been removed!");
+                OpenEditorMenu(player);
+            });
+
+            Menu.AddMenuOption("<font class='fontSize-m' color='cyan'>Save Spawns</font>", (player, opt) =>
+            {
+                SaveSpawnsFile();
+                LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json", false);
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawns have been successfully saved!");
+                RemoveSpawnModels();
+                MenuManager.CloseActiveMenu(player);
+            });
+
+            Menu.ExitButton = false;
             Menu.Open(player);
         }
 
-        public void OpenSubMenu(CCSPlayerController player, CategoryType menuType, bool solo = false)
+        public void OpenMainMenu(CCSPlayerController player)
+        {
+            var Menu = new CenterHtmlMenu($"{Localizer["Menu.Title"]}", this);
+            foreach (var category in Categorie.GetAllCategories().Where(c => Preferences.Menu.GetOptionsByCategory(c).Any()))
+            {
+                Menu.AddMenuOption($"{Localizer[category.MenuOption]}", (player, opt) => OpenCategoryMenu(player, category));
+            }
+
+            foreach (var option in Preferences.Menu.GetAllOptions().Where(x => !string.IsNullOrEmpty(x.Name) && x.Category == null && x.OnChoose != null))
+            {
+                if (option.Permission != null && !AdminManager.PlayerHasPermissions(player, option.Permission))
+                    continue;
+
+                Menu.AddMenuOption($"{Localizer[option.Name!]}", (player, opt) =>
+                {
+                    //if (option.OnChoose != null)
+                    option.OnChoose!(player, option);
+                });
+            }
+
+            Menu.ExitButton = true;
+            Menu.Open(player);
+        }
+
+        public void OpenCategoryMenu(CCSPlayerController player, Categorie category)
         {
             if (!playerData.TryGetValue(player.Slot, out var data))
                 return;
 
-            var title = menuType == CategoryType.SOUNDS ? Localizer["Menu.SoundsTitle"] : Localizer["Menu.FunctionsTitle"];
+            var title = category.MenuTitle;
+            if (category.UseLocalizer)
+                title = Localizer[category.MenuTitle];
 
             bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
             var Menu = new CenterHtmlMenu(title, this);
-            //string Value;
 
-            foreach (var option in Preferences.Where(x => x.Category == menuType))
+            foreach (var option in Preferences.Menu.GetOptionsByCategory(category))
             {
-                bool canSee = option.vipOnly ? IsVIP : true;
+                bool canSee = option.Preference.VipOnly ? IsVIP : true;
                 if (!canSee)
                     continue;
 
-                switch (option.defaultValue)
+                if (option.Preference.BooleanData != null)
                 {
-                    case bool value:
-                        var boolValue = GetPrefsValue(data, option.Name, value) ? "ON" : "OFF";
 
-                        Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{boolValue}]", (player, opt) =>
-                        {
-                            SwitchBooleanPrefsValue(player, option.Name);
-                            OpenSubMenu(player, menuType, solo);
-                        });
-                        break;
-                    case string value:
-                        if (!int.TryParse(GetPrefsValue(data, option.Name, value), out var intValue))
-                            break;
-
-                        var Value = intValue == 2 ? Localizer["Prefs.Secondary"] : Localizer["Prefs.Primary"];
-                        Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{Value}]", (player, opt) =>
-                        {
-                            if (intValue == 2)
-                                intValue = 1;
-                            else
-                                intValue = 2;
-                            var Value = intValue == 2 ? Localizer["Prefs.Secondary"] : Localizer["Prefs.Primary"];
-
-                            SwitchStringPrefsValue(player, option.Name, intValue.ToString(), Value);
-                            OpenSubMenu(player, menuType, solo);
-                        });
-                        break;
+                    var boolValue = GetPrefsValue(data, option.Preference.Name, option.Preference.BooleanData.DefaultValue) ? "ON" : "OFF";
+                    Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Preference.Name}"]} [{boolValue}]", (player, opt) =>
+                    {
+                        SwitchBooleanPrefsValue(player, option.Preference.Name);
+                        OpenCategoryMenu(player, category);
+                    });
+                }
+                else if (option.Preference.Data != null)
+                {
+                    var currentValue = GetPrefsValue(data, option.Preference.Name, option.Preference.Data.DefaultValue) as string;
+                    Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{currentValue}]", (player, opt) =>
+                    {
+                        SwitchStringPrefsValue(player, option.Preference.Name, option.Preference.Data.Options, currentValue);
+                        OpenCategoryMenu(player, category);
+                    });
+                }
+                else if (option.OnChoose != null && !string.IsNullOrEmpty(option.Name))
+                {
+                    Menu.AddMenuOption(option.Name, (player, opt) =>
+                    {
+                        option.OnChoose(player, option);
+                    });
                 }
             }
-            if (!solo)
-                Menu.AddMenuOption($"{Localizer["Menu.Back"]}", OnSelectBack);
+            if (Categorie.GetAllCategories().Count > 1)
+                Menu.AddMenuOption($"{Localizer["Menu.Back"]}", (player, opt) => OpenMainMenu(player));
 
             Menu.Open(player);
         }
 
-        public void OnSelectSubMenu(CCSPlayerController player, CategoryType menuType)
-        {
-            OpenSubMenu(player, menuType);
-        }
-
-        public void OnSelectBack(CCSPlayerController player, ChatMenuOption option)
-        {
-            OpenMainMenu(player);
-        }
 
         private void SetupDeathmatchMenus()
         {
-            Preferences.Clear();
+            SoundsMenu();
+            FunctionsMenu();
+            if (Config.General.DisplayZonesEditorInMenu)
+            {
+                Menu.AddOption("Spawns Editor", null, (player, option) =>
+                {
+                    if (Config.SpawnSystem.SpawnsMethod != 0)
+                    {
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
+                        return;
+                    }
+                    if (player.IsValid && !player.PawnIsAlive)
+                    {
+                        player.PrintToChat($"{Localizer["Chat.Prefix"]} You have to be alive to use Spawns Editor!");
+                        return;
+                    }
+                    OpenEditorMenu(player);
+                }, "@css/root");
+            }
+        }
+
+        public void SoundsMenu()
+        {
+            if (!Config.PlayersPreferences.KillSound.Enabled && !Config.PlayersPreferences.HSKillSound.Enabled && !Config.PlayersPreferences.KnifeKillSound.Enabled && !Config.PlayersPreferences.HitSound.Enabled)
+            {
+                return;
+            }
+
+            var soundsMenu = RegisterMenuCategory("SOUNDS", "Sounds", "Sounds Menu");
+            if (soundsMenu == null)
+                return;
+
             if (Config.PlayersPreferences.KillSound.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "KillSound",
-                    Category = CategoryType.SOUNDS,
-                    defaultValue = Config.PlayersPreferences.KillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.KillSound.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.KillSound.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.KillSound.Shotcuts
                 };
-                Preferences.Add(data);
+
+                var preference = RegisterPreference("KillSound", data, Config.PlayersPreferences.KillSound.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(soundsMenu, preference);
             }
 
             if (Config.PlayersPreferences.HSKillSound.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "HeadshotKillSound",
-                    Category = CategoryType.SOUNDS,
-                    defaultValue = Config.PlayersPreferences.HSKillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HSKillSound.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.HSKillSound.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.HSKillSound.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("HeadshotKillSound", data, Config.PlayersPreferences.HSKillSound.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(soundsMenu, preference);
             }
 
             if (Config.PlayersPreferences.KnifeKillSound.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "KnifeKillSound",
-                    Category = CategoryType.SOUNDS,
-                    defaultValue = Config.PlayersPreferences.KnifeKillSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.KnifeKillSound.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.KnifeKillSound.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.KnifeKillSound.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("KnifeKillSound", data, Config.PlayersPreferences.KnifeKillSound.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(soundsMenu, preference);
             }
             if (Config.PlayersPreferences.HitSound.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "HitSound",
-                    Category = CategoryType.SOUNDS,
-                    defaultValue = Config.PlayersPreferences.HitSound.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HitSound.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.HitSound.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.HitSound.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("HitSound", data, Config.PlayersPreferences.HitSound.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(soundsMenu, preference);
+            }
+        }
+
+        public void FunctionsMenu()
+        {
+            if (!Config.PlayersPreferences.NoPrimary.Enabled && !Config.PlayersPreferences.OnlyHS.Enabled && !Config.PlayersPreferences.HudMessages.Enabled && !Config.PlayersPreferences.DamageInfo.Enabled)
+            {
+                return;
             }
 
-            if (Config.PlayersPreferences.EquipSlot.Enabled)
+            var functionsMenu = RegisterMenuCategory("FUNCTIONS", "Functions", "Functions Menu");
+            if (functionsMenu == null)
+                return;
+
+            if (Config.PlayersPreferences.NoPrimary.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "EquipSlot",
-                    Category = CategoryType.FUNCTIONS,
-                    defaultValue = Config.PlayersPreferences.EquipSlot.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.EquipSlot.OnlyVIP,
-                    CommandShortcuts = Config.PlayersPreferences.EquipSlot.Shotcuts
+                    DefaultValue = Config.PlayersPreferences.NoPrimary.DefaultValue,
+                    CommandShortcuts = Config.PlayersPreferences.NoPrimary.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("NoPrimary", data, Config.PlayersPreferences.NoPrimary.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(functionsMenu, preference);
             }
 
             if (Config.PlayersPreferences.OnlyHS.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "OnlyHS",
-                    Category = CategoryType.FUNCTIONS,
-                    defaultValue = Config.PlayersPreferences.OnlyHS.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.OnlyHS.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.OnlyHS.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.OnlyHS.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("OnlyHS", data, Config.PlayersPreferences.OnlyHS.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(functionsMenu, preference);
             }
             if (Config.PlayersPreferences.HudMessages.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "HudMessages",
-                    Category = CategoryType.FUNCTIONS,
-                    defaultValue = Config.PlayersPreferences.HudMessages.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.HudMessages.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.HudMessages.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.HudMessages.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("HudMessages", data, Config.PlayersPreferences.HudMessages.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(functionsMenu, preference);
             }
             if (Config.PlayersPreferences.DamageInfo.Enabled)
             {
-                var data = new PreferencesData()
+                var data = new PreferencesBooleanData()
                 {
-                    Name = "DamageInfo",
-                    Category = CategoryType.FUNCTIONS,
-                    defaultValue = Config.PlayersPreferences.DamageInfo.DefaultValue,
-                    vipOnly = Config.PlayersPreferences.DamageInfo.OnlyVIP,
+                    DefaultValue = Config.PlayersPreferences.DamageInfo.DefaultValue,
                     CommandShortcuts = Config.PlayersPreferences.DamageInfo.Shotcuts
                 };
-                Preferences.Add(data);
+                var preference = RegisterPreference("DamageInfo", data, Config.PlayersPreferences.DamageInfo.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(functionsMenu, preference);
             }
         }
     }

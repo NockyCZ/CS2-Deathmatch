@@ -12,7 +12,6 @@ namespace Deathmatch
         private static readonly Random Random = new Random();
         public static PluginCapability<IDeathmatchAPI> DeathmatchAPI { get; } = new("deathmatch");
         public DeathmatchConfig Config { get; set; } = new();
-        public static CCSPlayerController? ActiveEditor = null;
         private CCSGameRules? GameRules;
         public static int NextMode;
         public static string ModeCenterMessage = "";
@@ -21,6 +20,7 @@ namespace Deathmatch
         public static int RemainingTime = 500;
         public static bool VisibleHud = true;
         public static int CheckedEnemiesDistance = 500;
+        public static bool CheckSpawnVisibility;
         public static bool IsCasualGamemode;
         public static bool DefaultMapSpawnDisabled = false;
         public static ModeData ActiveMode = new();

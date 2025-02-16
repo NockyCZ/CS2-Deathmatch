@@ -7,6 +7,8 @@ using CounterStrikeSharp.API.Modules.Utils;
 using CounterStrikeSharp.API.Modules.Timers;
 using System.Drawing;
 using DeathmatchAPI.Helpers;
+using DeathmatchAPI;
+using static DeathmatchAPI.Preferences;
 
 namespace Deathmatch
 {
@@ -53,34 +55,32 @@ namespace Deathmatch
                         if (player == null || !player.IsValid || !playerData.ContainsKey(player.Slot))
                             return;
 
-                        if (!Preferences.Any())
+                        if (!Menu.GetAllOptions().Any())
                             return;
 
-                        if (Preferences.Where(x => x.Category == CategoryType.SOUNDS).Any() && Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Count() == 0)
+                        if (Categorie.GetAllCategories().Count > 1)
                         {
-                            OpenSubMenu(player, CategoryType.SOUNDS, true);
-                            return;
+                            OpenMainMenu(player);
                         }
-                        if (Preferences.Where(x => x.Category == CategoryType.FUNCTIONS).Any() && Preferences.Where(x => x.Category == CategoryType.SOUNDS).Count() == 0)
+                        else if (Categorie.GetAllCategories().Count == 1)
                         {
-                            OpenSubMenu(player, CategoryType.FUNCTIONS, true);
-                            return;
+                            if (Menu.GetAllOptions().Any(x => x.Category == null))
+                            {
+                                OpenMainMenu(player);
+                            }
+                            else
+                            {
+                                var subMenu = Categorie.GetAllCategories().First();
+                                OpenCategoryMenu(player, subMenu);
+                            }
                         }
-                        OpenMainMenu(player);
-
-                    });
-                    break;
-
-                case 4:
-                    AddCommand(cmdName, "Switch Player Preferences", (player, info) =>
-                    {
-                        if (player == null || !player.IsValid || !playerData.ContainsKey(player.Slot))
-                            return;
-
-                        if (onlyVIP && !AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag))
-                            return;
-
-                        SwitchBooleanPrefsValue(player, weapon_name);
+                        else
+                        {
+                            if (Menu.GetAllOptions().Any(x => x.Category == null))
+                            {
+                                OpenMainMenu(player);
+                            }
+                        }
                     });
                     break;
             }
@@ -135,7 +135,7 @@ namespace Deathmatch
             {
                 if (!Config.CustomModes.ContainsKey(modeid))
                 {
-                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} A mod with a number doesn't exist!");
+                    info.ReplyToCommand($"{Localizer["Chat.Prefix"]} A mod with a number {modeid} doesn't exist!");
                     return;
                 }
             }
@@ -154,7 +154,7 @@ namespace Deathmatch
         [RequiresPermissions("@css/root")]
         public void OnEditor_CMD(CCSPlayerController player, CommandInfo info)
         {
-            if (Config.Gameplay.DefaultSpawns)
+            if (Config.SpawnSystem.SpawnsMethod != 0)
             {
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} The Spawn Editor cannot be used if you are using the default spawns!");
                 return;
@@ -164,8 +164,23 @@ namespace Deathmatch
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} You have to be alive to use Spawns Editor!");
                 return;
             }
-            ShowAllSpawnPoints();
-            ActiveEditor = player;
+            OpenEditorMenu(player);
         }
+
+        /*[ConsoleCommand("css_test", "")]
+        [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
+        public void test_CMD(CCSPlayerController player, CommandInfo info)
+        {
+            var targetString = info.GetArg(1);
+            var target = Utilities.GetPlayers().FirstOrDefault(p => p.PlayerName.Contains(targetString));
+            if (target == null)
+            {
+                info.ReplyToCommand("null");
+                return;
+            }
+
+            var result = CanSeeSpawn(player.PlayerPawn.Value, target.PlayerPawn.Value.AbsOrigin);
+            info.ReplyToCommand($"result {target.PlayerName}: {result}");
+        }*/
     }
 }
