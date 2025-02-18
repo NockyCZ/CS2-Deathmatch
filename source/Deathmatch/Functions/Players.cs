@@ -204,11 +204,24 @@ namespace Deathmatch
                     {
                         var weapon = GetRandomWeaponFromList(ActiveMode.PrimaryWeapons, ActiveMode, IsVIP, player.Team, true);
                         if (!string.IsNullOrEmpty(weapon))
-                            player.GiveNamedItem(weapon);
+                        {
+                            if (GetPrefsValue(data, "NoPrimary", Config.PlayersPreferences.NoPrimary.DefaultValue))
+                            {
+                                if (!ActiveMode.SecondaryWeapons.Any())
+                                    player.GiveNamedItem(weapon);
+                            }
+                            else
+                                player.GiveNamedItem(weapon);
+                        }
                     }
                     else if (data.PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && !string.IsNullOrEmpty(weapon))
                     {
-                        if (ActiveMode.SecondaryWeapons.Any() && !GetPrefsValue(data, "NoPrimary", Config.PlayersPreferences.NoPrimary.DefaultValue))
+                        if (GetPrefsValue(data, "NoPrimary", Config.PlayersPreferences.NoPrimary.DefaultValue))
+                        {
+                            if (!ActiveMode.SecondaryWeapons.Any())
+                                player.GiveNamedItem(weapon);
+                        }
+                        else
                             player.GiveNamedItem(weapon);
                     }
                 }
@@ -329,14 +342,14 @@ namespace Deathmatch
                     case 1:
                         if (mode.Value.PrimaryWeapons.Any())
                         {
-                            var primary = mode.Value.PrimaryWeapons.First(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
+                            var primary = mode.Value.PrimaryWeapons.FirstOrDefault(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
                             data.PrimaryWeapon[mode.Key] = string.IsNullOrEmpty(primary) ? "" : primary;
                         }
                         else
                             data.PrimaryWeapon[mode.Key] = "";
                         if (mode.Value.SecondaryWeapons.Any())
                         {
-                            var secondary = mode.Value.SecondaryWeapons.First(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
+                            var secondary = mode.Value.SecondaryWeapons.FirstOrDefault(w => !Config.RestrictedWeapons.Restrictions.ContainsKey(w));
                             data.SecondaryWeapon[mode.Key] = string.IsNullOrEmpty(secondary) ? "" : secondary;
                         }
                         else

@@ -81,6 +81,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     SetupDeathMatchConfigValues();
                     RemoveEntities();
                     LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
+                    SetGameRules();
                 }, TimerFlags.STOP_ON_MAPCHANGE);
 
                 double secTimer = 0;
@@ -434,6 +435,9 @@ sv_cheats 0
     {
         if (Config.Gameplay.IsCustomModes)
         {
+            if (Config.CustomModes.Count <= 1)
+                return 0;
+
             var modeId = int.Parse(ActiveCustomMode);
             if (Config.Gameplay.RandomSelectionOfModes)
             {

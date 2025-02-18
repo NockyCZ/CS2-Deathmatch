@@ -67,6 +67,9 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Post)]
         public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
         {
+            if (GameRules == null)
+                SetGameRules();
+
             var player = @event.Userid;
             if (player != null && player.IsValid)
             {
