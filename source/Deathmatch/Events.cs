@@ -364,7 +364,7 @@ namespace Deathmatch
                 bool IsVIP = AdminManager.PlayerHasPermissions(player, Config.PlayersSettings.VIPFlag);
 
                 bool IsPrimary = PrimaryWeaponsList.Contains(vdata.Name);
-                if (CheckIsWeaponRestricted(vdata.Name, IsVIP, player.Team, IsPrimary))
+                if (CheckIsWeaponRestricted(vdata.Name, IsVIP, player.Team, ActiveMode.PrimaryWeapons, ActiveCustomMode, IsPrimary))
                 {
                     if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
                         player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);

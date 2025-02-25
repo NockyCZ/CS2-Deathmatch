@@ -20,7 +20,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.7";
+    public override string ModuleVersion => "1.2.8";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -140,7 +140,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                                 ModeTimer++;
                                 RemainingTime = ActiveMode.Interval - ModeTimer;
 
-                                if (RemainingTime == 0)
+                                if (RemainingTime <= 0)
                                 {
                                     if (Config.General.ForceMapEnd)
                                     {
@@ -188,23 +188,23 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                         {
                             if (Config.Gameplay.HudType == 1)
                                 p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarted"]}");
-                            else
-                                p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
+                            //else
+                            //    p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
                         }
                         else if (!Config.General.HideModeRemainingTime && Config.CustomModes.TryGetValue(NextMode.ToString(), out var NextModeData))
                         {
                             if (Config.Gameplay.HudType == 1)
                                 p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
-                            else
-                                p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
+                            //else
+                             //   p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                         }
                     }
                     else if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
                     {
                         if (Config.Gameplay.HudType == 1)
                             p.PrintToCenterHtml(ModeCenterMessage);
-                        else
-                            p.PrintToCenter(ModeCenterMessage);
+                        //else
+                        //    p.PrintToCenter(ModeCenterMessage);
                     }
                 }
             }
@@ -261,17 +261,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             if (IsCasualGamemode)
                 return HookResult.Continue;
 
-            for (int i = 0; i < um.GetRepeatedFieldCount("param"); i++)
-            {
-                var message = um.ReadString("param", i);
-                foreach (var msg in HudMessagesArray)
-                {
-                    if (message.Contains(msg))
-                    {
-                        return HookResult.Stop;
-                    }
-                }
-            }
+            var message = um.ReadString("message");
+            message = message.Replace("#", "");
+            if (HudMessagesArray.Contains(message))
+                return HookResult.Stop;
+
             return HookResult.Continue;
         }, HookMode.Pre);
 
