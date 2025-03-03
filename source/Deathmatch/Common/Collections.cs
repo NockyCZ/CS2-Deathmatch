@@ -7,11 +7,9 @@ namespace Deathmatch
 {
     public partial class Deathmatch
     {
-        public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
-        public static Dictionary<Vector, QAngle> spawnPositionsT = new();
-
-        //public static HashSet<CBaseEntity> spawnPositionsCTEntity = new();
-        //public static HashSet<CBaseEntity> spawnPositionsTEntity = new();
+        //public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
+        //public static Dictionary<Vector, QAngle> spawnPositionsT = new();
+        public static List<SpawnData> spawnPoints = new();
 
         public static Dictionary<int, Vector> blockedSpawns = new();
         public static Dictionary<int, DeathmatchPlayerData> playerData = new();

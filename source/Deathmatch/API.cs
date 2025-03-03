@@ -54,7 +54,7 @@ public partial class Deathmatch : IDeathmatchAPI
         CheckedEnemiesDistance = distance;
     }
 
-     public void SetCheckSpawnVisibility(bool value)
+    public void SetCheckSpawnVisibility(bool value)
     {
         CheckSpawnVisibility = value;
     }
@@ -93,22 +93,18 @@ public partial class Deathmatch : IDeathmatchAPI
     {
         if (clearSpawnsDictionary)
         {
-            spawnPositionsCT.Clear();
-            spawnPositionsT.Clear();
+            /*foreach (var data in spawnPoints)
+            {
+                var entity = data.Entity;
+                if (entity != null && entity.IsValid)
+                    entity.AcceptInput("Kill");
+
+            }*/
+            spawnPoints.Clear();
         }
 
-        foreach (var data in spawns)
-        {
-            switch (data.Team)
-            {
-                case CsTeam.CounterTerrorist:
-                    spawnPositionsCT[data.Position] = data.Angle;
-                    break;
-                case CsTeam.Terrorist:
-                    spawnPositionsT[data.Position] = data.Angle;
-                    break;
-            }
-        }
+        spawnPoints = spawns;
+        RemoveUnusedSpawns();
     }
 
     public Preference? RegisterPreference(string name, PreferencesBooleanData data, bool vipOnly = false)

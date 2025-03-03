@@ -38,17 +38,10 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         if (Config.SaveWeapons)
             _ = CreateDatabaseConnection();
 
-        string[] Shortcuts = Config.CustomCommands.CustomShortcuts.Split(',');
         string[] WSelect = Config.CustomCommands.WeaponSelectCmds.Split(',');
         string[] DeathmatchMenus = Config.CustomCommands.DeatmatchMenuCmds.Split(',');
-        foreach (var weapon in Shortcuts)
-        {
-            string[] Value = weapon.Split(':');
-            if (Value.Length == 2)
-            {
-                AddCustomCommands(Value[1], Value[0], 1);
-            }
-        }
+        foreach (var weapon in Config.CustomCommands.CustomShortcuts)
+            AddCustomCommands(weapon.Key, weapon.Value, 1);
         foreach (var cmd in WSelect)
             AddCustomCommands(cmd, "", 2);
         foreach (var cmd in DeathmatchMenus)
@@ -80,7 +73,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                     SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
                     SetupDeathMatchConfigValues();
                     RemoveEntities();
-                    LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json", true);
+                    LoadMapSpawns(ModuleDirectory + $"/spawns/{mapName}.json");
                     SetGameRules();
                 }, TimerFlags.STOP_ON_MAPCHANGE);
 
@@ -196,7 +189,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             if (Config.Gameplay.HudType == 1)
                                 p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                             //else
-                             //   p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
+                            //   p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                         }
                     }
                     else if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))

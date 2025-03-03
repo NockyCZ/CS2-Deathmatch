@@ -1,3 +1,4 @@
+using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Modules.Utils;
 
 namespace DeathmatchAPI.Helpers;
@@ -22,4 +23,5 @@ public class SpawnData
     public required CsTeam Team { get; set; }
     public required Vector Position { get; set; }
     public required QAngle Angle { get; set; }
+    public SpawnPoint? Entity { get; set; }
 }

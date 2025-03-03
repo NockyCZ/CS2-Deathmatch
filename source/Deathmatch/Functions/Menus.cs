@@ -29,19 +29,19 @@ namespace Deathmatch
 
             var Menu = new CenterHtmlMenu("<font class='fontSize-l' color='red'>Spawns Editor</font><br> ", this);
 
-            var ctSpawns = DefaultMapSpawnDisabled ? spawnPositionsCT.Count : 0;
-            var tSpawns = DefaultMapSpawnDisabled ? spawnPositionsT.Count : 0;
+            var ctSpawns = DefaultMapSpawnDisabled ? spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist) : 0;
+            var tSpawns = DefaultMapSpawnDisabled ? spawnPoints.Count(x => x.Team == CsTeam.Terrorist) : 0;
 
             Menu.AddMenuOption($"Add CT Spawn ({ctSpawns})", (player, opt) =>
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.CounterTerrorist);
-                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsCT.Count}{ChatColors.Default})");
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)}{ChatColors.Default})");
                 OpenEditorMenu(player);
             });
             Menu.AddMenuOption($"Add T Spawn ({tSpawns})", (player, opt) =>
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.Terrorist);
-                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPositionsT.Count}{ChatColors.Default})");
+                player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}{ChatColors.Default})");
                 OpenEditorMenu(player);
             });
 
@@ -55,7 +55,7 @@ namespace Deathmatch
             Menu.AddMenuOption("<font class='fontSize-m' color='cyan'>Save Spawns</font>", (player, opt) =>
             {
                 SaveSpawnsFile();
-                LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json", false);
+                LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json");
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawns have been successfully saved!");
                 RemoveSpawnModels();
                 MenuManager.CloseActiveMenu(player);

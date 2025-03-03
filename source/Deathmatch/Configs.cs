@@ -193,7 +193,17 @@ public class CustomCommands
 {
     [JsonPropertyName("Deatmatch Menu Commands")] public string DeatmatchMenuCmds { get; set; } = "dm,deathmatch";
     [JsonPropertyName("Weapons Select Commands")] public string WeaponSelectCmds { get; set; } = "gun,weapon,w,g";
-    [JsonPropertyName("Weapons Select Shortcuts")] public string CustomShortcuts { get; set; } = "weapon_ak47:ak,weapon_m4a1:m4,weapon_m4a1_silencer:m4a1,weapon_awp:awp,weapon_usp_silencer:usp,weapon_glock:glock,weapon_deagle:deagle";
+    [JsonPropertyName("Weapons Select Shortcuts")]
+    public Dictionary<string, string> CustomShortcuts { get; set; } = new()
+    {
+        { "ak", "weapon_ak47" },
+        { "m4", "weapon_m4a1" },
+        { "m4a1", "weapon_m4a1_silencer" },
+        { "awp", "weapon_awp" },
+        { "usp", "weapon_usp_silencer" },
+        { "glock", "weapon_glock" },
+        { "deagle", "weapon_deagle" }
+    };
 }
 public class PlayersPreferences
 {

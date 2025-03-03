@@ -18,9 +18,14 @@ namespace Deathmatch
             if (team == CsTeam.None || team == CsTeam.Spectator)
                 return;
 
+            //IEnumerable<KeyValuePair<Vector, QAngle>> spawnsDictionary = Config.SpawnSystem.TeamSpawnsSeparation
+            //    ? (team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT)
+            //    : spawnPositionsT.Concat(spawnPositionsCT);
+
             IEnumerable<KeyValuePair<Vector, QAngle>> spawnsDictionary = Config.SpawnSystem.TeamSpawnsSeparation
-                ? (team == CsTeam.Terrorist ? spawnPositionsT : spawnPositionsCT)
-                : spawnPositionsT.Concat(spawnPositionsCT);
+                ? spawnPoints.Where(spawn => spawn.Team == team)
+                            .Select(spawn => new KeyValuePair<Vector, QAngle>(spawn.Position, spawn.Angle))
+                : spawnPoints.Select(spawn => new KeyValuePair<Vector, QAngle>(spawn.Position, spawn.Angle));
 
             if (blockedSpawns.TryGetValue(player.Slot, out var lastSpawn))
             {
@@ -113,24 +118,13 @@ namespace Deathmatch
                 spawnpoints = new List<object>()
             };
 
-            foreach (var spawn in spawnPositionsCT)
+            foreach (var spawnData in spawnPoints)
             {
                 var data = new
                 {
-                    team = "ct",
-                    pos = $"{FormatValue(spawn.Key.X)} {FormatValue(spawn.Key.Y)} {FormatValue(spawn.Key.Z)}",
-                    angle = $"{FormatValue(spawn.Value.X)} {FormatValue(spawn.Value.Y)} {FormatValue(spawn.Value.Z)}"
-                };
-                spawnpointsWrapper.spawnpoints.Add(data);
-            }
-
-            foreach (var spawn in spawnPositionsT)
-            {
-                var data = new
-                {
-                    team = "t",
-                    pos = $"{FormatValue(spawn.Key.X)} {FormatValue(spawn.Key.Y)} {FormatValue(spawn.Key.Z)}",
-                    angle = $"{FormatValue(spawn.Value.X)} {FormatValue(spawn.Value.Y)} {FormatValue(spawn.Value.Z)}"
+                    team = spawnData.Team == CsTeam.Terrorist ? "t" : "ct",
+                    pos = $"{FormatValue(spawnData.Position.X)} {FormatValue(spawnData.Position.Y)} {FormatValue(spawnData.Position.Z)}",
+                    angle = $"{FormatValue(spawnData.Angle.X)} {FormatValue(spawnData.Angle.Y)} {FormatValue(spawnData.Angle.Z)}"
                 };
                 spawnpointsWrapper.spawnpoints.Add(data);
             }
@@ -140,28 +134,25 @@ namespace Deathmatch
             File.WriteAllText(filePath, jsonContent);
         }
 
-
         public void AddNewSpawnPoint(Vector posValue, QAngle angleValue, CsTeam team)
         {
             if (!DefaultMapSpawnDisabled)
             {
                 DefaultMapSpawnDisabled = true;
-                spawnPositionsT.Clear();
-                spawnPositionsCT.Clear();
+                spawnPoints.Clear();
             }
 
             var newPosition = new Vector(posValue.X, posValue.Y, posValue.Z);
             var newAngle = new QAngle(angleValue.X, angleValue.Y, angleValue.Z);
 
-            switch (team)
+            var data = new SpawnData()
             {
-                case CsTeam.Terrorist:
-                    spawnPositionsT[newPosition] = newAngle;
-                    break;
-                case CsTeam.CounterTerrorist:
-                    spawnPositionsCT[newPosition] = newAngle;
-                    break;
-            }
+                Team = team,
+                Position = newPosition,
+                Angle = newAngle
+            };
+
+            spawnPoints.Add(data);
         }
 
         public void RemoveNearestSpawnPoint(Vector? playerPos)
@@ -170,37 +161,27 @@ namespace Deathmatch
                 return;
 
             double lowestDistance = float.MaxValue;
-            Vector? nearestSpawn = null;
-            foreach (var ctSpawn in spawnPositionsCT.Keys)
+            SpawnData? nearestSpawn = null;
+            foreach (var spawn in spawnPoints)
             {
-                double distance = GetDistance(playerPos, ctSpawn);
+                double distance = GetDistance(playerPos, spawn.Position);
                 if (distance < lowestDistance)
                 {
                     lowestDistance = distance;
-                    nearestSpawn = ctSpawn;
-                }
-            }
-            foreach (var tSpawn in spawnPositionsT.Keys)
-            {
-                double distance = GetDistance(playerPos, tSpawn);
-                if (distance < lowestDistance)
-                {
-                    lowestDistance = distance;
-                    nearestSpawn = tSpawn;
+                    nearestSpawn = spawn;
                 }
             }
 
             if (nearestSpawn == null)
                 return;
 
-            spawnPositionsCT.Remove(nearestSpawn);
-            spawnPositionsT.Remove(nearestSpawn);
+            spawnPoints.Remove(nearestSpawn);
         }
 
         public void ShowAllSpawnPoints()
         {
             savedSpawnsModel.Clear();
-            foreach (var spawn in spawnPositionsCT)
+            foreach (var spawn in spawnPoints)
             {
                 var textVector = Utilities.CreateEntityByName<CPointWorldText>("point_worldtext");
                 var model = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
@@ -209,7 +190,7 @@ namespace Deathmatch
 
                 //model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
                 //model.SetModel("characters/models/ctm_fbi/ctm_fbi_variantf.vmdl");
-                model.SetModel("characters/models/ctm_sas/ctm_sas.vmdl");
+                model.SetModel(spawn.Team == CsTeam.CounterTerrorist ? "characters/models/ctm_sas/ctm_sas.vmdl" : "characters/models/tm_leet/tm_leet_variantb.vmdl");
                 //
                 model.UseAnimGraph = false;
                 model.AcceptInput("SetAnimation", value: "tools_preview");
@@ -221,10 +202,10 @@ namespace Deathmatch
                 model.Glow.GlowTeam = -1;
                 model.Glow.GlowType = 3;
                 model.Glow.GlowRangeMin = 25;
-                model.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
+                model.Teleport(spawn.Position, spawn.Angle, new Vector(0, 0, 0));
                 savedSpawnsModel.Add(model);
 
-                textVector.MessageText = $"{spawn.Key.X}  {spawn.Key.Y}  {spawn.Key.Z}";
+                textVector.MessageText = $"{spawn.Position.X}  {spawn.Position.Y}  {spawn.Position.Z}";
                 textVector.Enabled = true;
                 textVector.FontSize = 40f;
                 textVector.Color = Color.Black;
@@ -235,52 +216,8 @@ namespace Deathmatch
                 textVector.JustifyVertical = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
                 textVector.ReorientMode = PointWorldTextReorientMode_t.POINT_WORLD_TEXT_REORIENT_NONE;
 
-                var textPos = new Vector(spawn.Key.X, spawn.Key.Y, spawn.Key.Z);
-                var textAngle = new QAngle(spawn.Value.X, spawn.Value.Y, spawn.Value.Z);
-                textPos.Z += 80f;
-                textAngle.Z += 90f;
-                textAngle.Y += 90f;
-                textVector.Teleport(textPos, textAngle);
-                textVector.DispatchSpawn();
-                savedSpawnsModel.Add(textVector);
-            }
-
-            foreach (var spawn in spawnPositionsT)
-            {
-                var textVector = Utilities.CreateEntityByName<CPointWorldText>("point_worldtext");
-                var model = Utilities.CreateEntityByName<CDynamicProp>("prop_dynamic");
-                if (model == null || textVector == null)
-                    continue;
-
-                //model.SetModel("characters/models/shared/animsets/animset_uiplayer.vmdl");
-                model.SetModel("characters/models/tm_leet/tm_leet_variantb.vmdl");
-                //
-                model.UseAnimGraph = false;
-                model.AcceptInput("SetAnimation", value: "tools_preview");
-                //
-                model.DispatchSpawn();
-                model.Render = Color.FromArgb(255, 255, 0, 0);
-                model.Glow.GlowColorOverride = Color.Red;
-                model.Glow.GlowRange = 2000;
-                model.Glow.GlowTeam = -1;
-                model.Glow.GlowType = 3;
-                model.Glow.GlowRangeMin = 25;
-                model.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
-                savedSpawnsModel.Add(model);
-
-                textVector.MessageText = $"{spawn.Key.X}  {spawn.Key.Y}  {spawn.Key.Z}";
-                textVector.Enabled = true;
-                textVector.FontSize = 40f;
-                textVector.Color = Color.Black;
-                textVector.Fullbright = true;
-                textVector.WorldUnitsPerPx = 0.1f;
-                textVector.DepthOffset = 0.0f;
-                textVector.JustifyHorizontal = PointWorldTextJustifyHorizontal_t.POINT_WORLD_TEXT_JUSTIFY_HORIZONTAL_CENTER;
-                textVector.JustifyVertical = PointWorldTextJustifyVertical_t.POINT_WORLD_TEXT_JUSTIFY_VERTICAL_CENTER;
-                textVector.ReorientMode = PointWorldTextReorientMode_t.POINT_WORLD_TEXT_REORIENT_NONE;
-
-                var textPos = new Vector(spawn.Key.X, spawn.Key.Y, spawn.Key.Z);
-                var textAngle = new QAngle(spawn.Value.X, spawn.Value.Y, spawn.Value.Z);
+                var textPos = new Vector(spawn.Position.X, spawn.Position.Y, spawn.Position.Z);
+                var textAngle = new QAngle(spawn.Angle.X, spawn.Angle.Y, spawn.Angle.Z);
                 textPos.Z += 80f;
                 textAngle.Z += 90f;
                 textAngle.Y += 90f;
@@ -289,55 +226,30 @@ namespace Deathmatch
                 savedSpawnsModel.Add(textVector);
             }
         }
-        public static void RemoveMapDefaulSpawns()
+
+        public static void RemoveUnusedSpawns()
         {
             if (!DefaultMapSpawnDisabled)
             {
-                if (IsCasualGamemode)
+                var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist").Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist")).Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"));
+                int DMSpawns = 0;
+                foreach (var entity in spawns)
                 {
-                    int iDefaultCTSpawns = 0;
-                    int iDefaultTSpawns = 0;
-                    var ctSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_counterterrorist");
-                    foreach (var entity in ctSpawns)
-                    {
-                        if (entity.IsValid)
-                        {
-                            entity.AcceptInput("SetDisabled");
-                            iDefaultCTSpawns++;
-                        }
-                    }
-                    var tSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoPlayerTerrorist>("info_player_terrorist");
-                    foreach (var entity in tSpawns)
-                    {
-                        if (entity.IsValid)
-                        {
-                            entity.AcceptInput("SetDisabled");
-                            iDefaultTSpawns++;
-                        }
-                    }
-                    SendConsoleMessage($"[Deathmatch] Total {iDefaultTSpawns} T and {iDefaultCTSpawns} CT default Spawns disabled!", ConsoleColor.Green);
-                }
-                else
-                {
-                    int DMSpawns = 0;
-                    var dmSpawns = Utilities.FindAllEntitiesByDesignerName<CInfoDeathmatchSpawn>("info_deathmatch_spawn");
-                    foreach (var entity in dmSpawns)
-                    {
-                        if (entity.IsValid)
-                        {
-                            entity.AcceptInput("SetDisabled");
-                            DMSpawns++;
-                        }
-                    }
-                    SendConsoleMessage($"[Deathmatch] Total {DMSpawns} default Spawns disabled!", ConsoleColor.Green);
+                    if (entity == null || !entity.IsValid)
+                        continue;
 
+                    if (spawnPoints.Any(x => x.Entity == entity))
+                        continue;
+
+                    entity.AcceptInput("Kill");
+                    DMSpawns++;
                 }
+                SendConsoleMessage($"[Deathmatch] Total {DMSpawns} Spawns disabled!", ConsoleColor.Green);
                 DefaultMapSpawnDisabled = true;
-                CreateCustomMapSpawns();
             }
         }
 
-        public static void CreateCustomMapSpawns()
+        /*public static void CreateCustomMapSpawns()
         {
             string infoPlayerCT = IsCasualGamemode ? "info_player_counterterrorist" : "info_deathmatch_spawn";
             string infoPlayerT = IsCasualGamemode ? "info_player_terrorist" : "info_deathmatch_spawn";
@@ -352,7 +264,7 @@ namespace Deathmatch
                 }
                 entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
-                //spawnPositionsCTEntity.Add(entity);
+                spawnPointsEntities.Add(entity);
             }
 
             foreach (var spawn in spawnPositionsT)
@@ -365,14 +277,30 @@ namespace Deathmatch
                 }
                 entity.Teleport(spawn.Key, spawn.Value, new Vector(0, 0, 0));
                 entity.DispatchSpawn();
-                //spawnPositionsTEntity.Add(entity);
+                spawnPointsEntities.Add(entity);
             }
+        }*/
+
+        public SpawnPoint? CreateSpawnEntity(Vector Postion, QAngle Angle, CsTeam team)
+        {
+            var entityName = "info_deathmatch_spawn";
+            if (IsCasualGamemode)
+                entityName = team == CsTeam.CounterTerrorist ? "info_player_counterterrorist" : "info_player_terrorist";
+
+            var entity = Utilities.CreateEntityByName<SpawnPoint>(entityName);
+            if (entity == null)
+            {
+                SendConsoleMessage($"[Deathmatch] Failed to create spawn point!", ConsoleColor.DarkYellow);
+                return null;
+            }
+            entity.Teleport(Postion, Angle, new Vector(0, 0, 0));
+            entity.DispatchSpawn();
+            return entity;
         }
 
-        public void LoadMapSpawns(string filePath, bool mapstart)
+        public void LoadMapSpawns(string filePath)
         {
-            spawnPositionsCT.Clear();
-            spawnPositionsT.Clear();
+            spawnPoints.Clear();
             if (Config.SpawnSystem.SpawnsMethod >= 1)
             {
                 addDefaultSpawnsToList();
@@ -393,50 +321,31 @@ namespace Deathmatch
 
                     foreach (var teamData in jsonData["spawnpoints"]!)
                     {
-                        string teamType = teamData["team"]!.ToString();
-                        string pos = teamData["pos"]!.ToString();
-                        string angle = teamData["angle"]!.ToString();
+                        var team = teamData["team"]!.ToString() == "ct" ? CsTeam.CounterTerrorist : CsTeam.Terrorist;
+                        var pos = ParseVector(teamData["pos"]!.ToString());
+                        var angle = ParseQAngle(teamData["angle"]!.ToString());
 
-                        if (teamType == "ct")
+                        var spawn = new SpawnData()
                         {
-                            spawnPositionsCT.Add(ParseVector(pos), ParseQAngle(angle));
-                        }
-                        else if (teamType == "t")
-                        {
-                            spawnPositionsT.Add(ParseVector(pos), ParseQAngle(angle));
-                        }
+                            Team = team,
+                            Position = pos,
+                            Angle = angle,
+                            Entity = CreateSpawnEntity(pos, angle, team)
+                        };
+                        spawnPoints.Add(spawn);
                     }
 
-                    SendConsoleMessage($"[Deathmatch] Total Loaded Custom Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
-                    if (mapstart)
-                        RemoveMapDefaulSpawns();
+                    SendConsoleMessage($"[Deathmatch] Total Loaded Custom Spawns: CT {spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)} | T {spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}", ConsoleColor.Green);
+                    RemoveUnusedSpawns();
                 }
             }
 
             Server.NextFrame(() =>
             {
-                var spawns = new List<SpawnData>();
-                foreach (var spawn in spawnPositionsCT)
-                {
-                    spawns.Add(new()
-                    {
-                        Team = CsTeam.CounterTerrorist,
-                        Position = spawn.Key,
-                        Angle = spawn.Value
-                    });
-                }
-                foreach (var spawn in spawnPositionsT)
-                {
-                    spawns.Add(new()
-                    {
-                        Team = CsTeam.Terrorist,
-                        Position = spawn.Key,
-                        Angle = spawn.Value
-                    });
-                }
-                DeathmatchAPI.Get()?.TriggerEvent(new OnSpawnPointsLoaded(spawns));
+                DeathmatchAPI.Get()?.TriggerEvent(new OnSpawnPointsLoaded(spawnPoints));
             });
         }
+
         private static Vector ParseVector(string pos)
         {
             pos = pos.Replace(",", "");
@@ -487,16 +396,28 @@ namespace Deathmatch
                     if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                         continue;
 
-                    spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
-                    //spawnPositionsCTEntity.Add(spawn);
+                    var data = new SpawnData()
+                    {
+                        Position = spawn.AbsOrigin,
+                        Angle = spawn.AbsRotation,
+                        Team = CsTeam.CounterTerrorist,
+                        Entity = spawn
+                    };
+                    spawnPoints.Add(data);
                 }
                 foreach (var spawn in Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist"))
                 {
                     if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                         continue;
 
-                    spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
-                    //spawnPositionsTEntity.Add(spawn);
+                    var data = new SpawnData()
+                    {
+                        Position = spawn.AbsOrigin,
+                        Angle = spawn.AbsRotation,
+                        Team = CsTeam.Terrorist,
+                        Entity = spawn
+                    };
+                    spawnPoints.Add(data);
                 }
             }
             else
@@ -510,19 +431,31 @@ namespace Deathmatch
                     {
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             continue;
-                        spawnPositionsT.Add(spawn.AbsOrigin, spawn.AbsRotation);
-                        //spawnPositionsTEntity.Add(spawn);
+                        var data = new SpawnData()
+                        {
+                            Position = spawn.AbsOrigin,
+                            Angle = spawn.AbsRotation,
+                            Team = CsTeam.Terrorist,
+                            Entity = spawn
+                        };
+                        spawnPoints.Add(data);
                     }
                     else
                     {
                         if (spawn == null || spawn.AbsOrigin == null || spawn.AbsRotation == null)
                             continue;
-                        spawnPositionsCT.Add(spawn.AbsOrigin, spawn.AbsRotation);
-                        //spawnPositionsCTEntity.Add(spawn);
+                        var data = new SpawnData()
+                        {
+                            Position = spawn.AbsOrigin,
+                            Angle = spawn.AbsRotation,
+                            Team = CsTeam.CounterTerrorist,
+                            Entity = spawn
+                        };
+                        spawnPoints.Add(data);
                     }
                 }
             }
-            SendConsoleMessage($"[Deathmatch] Total Loaded Spawns: CT {spawnPositionsCT.Count} | T {spawnPositionsT.Count}", ConsoleColor.Green);
+            SendConsoleMessage($"[Deathmatch] Total Loaded Spawns: CT {spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)} | T {spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}", ConsoleColor.Green);
         }
     }
 }
