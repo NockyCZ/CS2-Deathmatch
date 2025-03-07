@@ -15,6 +15,8 @@ namespace Deathmatch
         [GameEventHandler(HookMode.Post)]
         public HookResult OnPlayerConnectFull(EventPlayerConnectFull @event, GameEventInfo info)
         {
+            //var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist").Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist")).Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"));
+            //SendConsoleMessage($"spawns entities: {spawns.Count()}", ConsoleColor.DarkCyan);
             var player = @event.Userid;
             if (player != null && player.IsValid && !player.IsBot && !player.IsHLTV && player.SteamID.ToString().Length == 17 && !playerData.ContainsKey(player.Slot))
             {

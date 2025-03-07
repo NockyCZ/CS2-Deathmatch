@@ -36,12 +36,14 @@ namespace Deathmatch
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.CounterTerrorist);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)}{ChatColors.Default})");
+                RemoveUnusedSpawns();
                 OpenEditorMenu(player);
             });
             Menu.AddMenuOption($"Add T Spawn ({tSpawns})", (player, opt) =>
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.Terrorist);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}{ChatColors.Default})");
+                RemoveUnusedSpawns();
                 OpenEditorMenu(player);
             });
 
@@ -49,6 +51,7 @@ namespace Deathmatch
             {
                 RemoveNearestSpawnPoint(player.PlayerPawn.Value!.AbsOrigin);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} The nearest spawn point has been removed!");
+                RemoveUnusedSpawns();
                 OpenEditorMenu(player);
             });
 

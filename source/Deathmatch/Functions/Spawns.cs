@@ -227,24 +227,27 @@ namespace Deathmatch
             }
         }
 
-        public static void RemoveUnusedSpawns()
+        public static void RemoveUnusedSpawns(bool defaultSpawns = false)
         {
-            if (!DefaultMapSpawnDisabled)
+            var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist").Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist")).Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"));
+            int DMSpawns = 0;
+            foreach (var entity in spawns)
             {
-                var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist").Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist")).Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"));
-                int DMSpawns = 0;
-                foreach (var entity in spawns)
+                if (entity == null || !entity.IsValid)
+                    continue;
+
+                if (spawnPoints.Any(x => x.Entity == entity))
+                    entity.AcceptInput("SetEnabled");
+                else
                 {
-                    if (entity == null || !entity.IsValid)
-                        continue;
-
-                    if (spawnPoints.Any(x => x.Entity == entity))
-                        continue;
-
-                    entity.AcceptInput("Kill");
+                    entity.AcceptInput("SetDisabled");
                     DMSpawns++;
                 }
-                SendConsoleMessage($"[Deathmatch] Total {DMSpawns} Spawns disabled!", ConsoleColor.Green);
+            }
+
+            if (defaultSpawns)
+            {
+                SendConsoleMessage($"[Deathmatch] Total {DMSpawns} Default Spawns disabled!", ConsoleColor.Green);
                 DefaultMapSpawnDisabled = true;
             }
         }
@@ -336,7 +339,7 @@ namespace Deathmatch
                     }
 
                     SendConsoleMessage($"[Deathmatch] Total Loaded Custom Spawns: CT {spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)} | T {spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}", ConsoleColor.Green);
-                    RemoveUnusedSpawns();
+                    RemoveUnusedSpawns(true);
                 }
             }
 

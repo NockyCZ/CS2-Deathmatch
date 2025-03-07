@@ -62,14 +62,19 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             playerData.Clear();
             playersWaitingForRespawn.Clear();
             playersWithSpawnProtection.Clear();
+
             if (!mapLoaded)
             {
                 mapLoaded = true;
                 bool RoundTerminated = false;
                 DefaultMapSpawnDisabled = false;
-                AddTimer(3.0f, () =>
+                AddTimer(0.2f, () =>
                 {
                     LoadCustomConfigFile();
+                });
+
+                AddTimer(3.0f, () =>
+                {
                     SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
                     SetupDeathMatchConfigValues();
                     RemoveEntities();
@@ -123,12 +128,42 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                         if (secTimer >= 1)
                         {
                             secTimer = 0;
+                            if (VisibleHud)
+                            {
+                                foreach (var p in Utilities.GetPlayers())
+                                {
+                                    if (!playerData.TryGetValue(p.Slot, out var data))
+                                        continue;
+
+                                    if ((Config.PlayersPreferences.HudMessages.Enabled && !GetPrefsValue(data, "HudMessages", Config.PlayersPreferences.HudMessages.DefaultValue)) || MenuManager.GetActiveMenu(p) != null)
+                                        continue;
+
+                                    if (RemainingTime <= Config.Gameplay.NewModeCountdown && Config.Gameplay.NewModeCountdown > 0)
+                                    {
+                                        if (RemainingTime == 0)
+                                        {
+                                            if (Config.Gameplay.HudType == 0)
+                                                p.PrintToCenter($"{Localizer["Hud.NewModeStarted"]}");
+                                        }
+                                        else if (!Config.General.HideModeRemainingTime && Config.CustomModes.TryGetValue(NextMode.ToString(), out var NextModeData))
+                                        {
+                                            if (Config.Gameplay.HudType == 1)
+                                                p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
+                                        }
+                                    }
+                                    else if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))
+                                    {
+                                        if (Config.Gameplay.HudType == 0)
+                                            p.PrintToCenter(ModeCenterMessage);
+                                    }
+                                }
+                            }
+
                             if (GameRules == null)
                             {
                                 SetGameRules();
-                                return;
                             }
-                            if (!GameRules.WarmupPeriod)
+                            else if (!GameRules.WarmupPeriod)
                             {
                                 ModeTimer++;
                                 RemainingTime = ActiveMode.Interval - ModeTimer;
@@ -186,10 +221,8 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                         }
                         else if (!Config.General.HideModeRemainingTime && Config.CustomModes.TryGetValue(NextMode.ToString(), out var NextModeData))
                         {
-                            if (Config.Gameplay.HudType == 1)
-                                p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
-                            //else
-                            //   p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
+                            if (Config.Gameplay.HudType == 0)
+                                p.PrintToCenterHtml($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                         }
                     }
                     else if (!string.IsNullOrEmpty(ActiveMode.CenterMessageText))

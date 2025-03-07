@@ -104,6 +104,12 @@ public partial class Deathmatch : IDeathmatchAPI
         }
 
         spawnPoints = spawns;
+        foreach (var data in spawnPoints)
+        {
+            if (data.Entity != null && data.Entity.IsValid)
+                continue;
+            data.Entity = CreateSpawnEntity(data.Position, data.Angle, data.Team);
+        }
         RemoveUnusedSpawns();
     }
 

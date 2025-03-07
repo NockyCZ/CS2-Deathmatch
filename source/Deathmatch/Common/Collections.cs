@@ -10,7 +10,6 @@ namespace Deathmatch
         //public static Dictionary<Vector, QAngle> spawnPositionsCT = new();
         //public static Dictionary<Vector, QAngle> spawnPositionsT = new();
         public static List<SpawnData> spawnPoints = new();
-
         public static Dictionary<int, Vector> blockedSpawns = new();
         public static Dictionary<int, DeathmatchPlayerData> playerData = new();
         public Dictionary<CCSPlayerController, (float timer, float currentTime)> playersWaitingForRespawn = new();

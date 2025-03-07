@@ -167,11 +167,12 @@ namespace Deathmatch
             OpenEditorMenu(player);
         }
 
-        /*[ConsoleCommand("css_test", "")]
+        [ConsoleCommand("css_test", "")]
         [CommandHelper(whoCanExecute: CommandUsage.CLIENT_ONLY)]
         public void test_CMD(CCSPlayerController player, CommandInfo info)
         {
-            var targetString = info.GetArg(1);
+            player.PrintToCenter("čus");
+            /*var targetString = info.GetArg(1);
             var target = Utilities.GetPlayers().FirstOrDefault(p => p.PlayerName.Contains(targetString));
             if (target == null)
             {
@@ -180,7 +181,7 @@ namespace Deathmatch
             }
 
             var result = CanSeeSpawn(player.PlayerPawn.Value, target.PlayerPawn.Value.AbsOrigin);
-            info.ReplyToCommand($"result {target.PlayerName}: {result}");
-        }*/
+            info.ReplyToCommand($"result {target.PlayerName}: {result}");*/
+        }
     }
 }
