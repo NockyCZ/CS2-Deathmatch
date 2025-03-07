@@ -20,7 +20,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.8";
+    public override string ModuleVersion => "1.2.8a";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -179,8 +179,8 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                                         if (timeleft <= 0 && !RoundTerminated)
                                         {
                                             GameRules.TerminateRound(1.0f, RoundEndReason.RoundDraw);
+                                            return;
                                         }
-                                        return;
                                     }
                                     SetupCustomMode(NextMode.ToString());
                                 }
