@@ -84,6 +84,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }, TimerFlags.STOP_ON_MAPCHANGE);
 
                 double secTimer = 0;
+                double lastUpdate = Server.CurrentTime;
                 AddTimer(0.1f, () =>
                 {
                     if (playersWaitingForRespawn.Any())
@@ -123,9 +124,14 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                             }
                         }
                     }
+
                     if (Config.Gameplay.IsCustomModes)
                     {
-                        secTimer += 0.1;
+                        double now = Server.CurrentTime;
+                        double timer = now - lastUpdate;
+                        lastUpdate = now;
+
+                        secTimer += timer;
                         if (secTimer >= 1)
                         {
                             secTimer = 0;
