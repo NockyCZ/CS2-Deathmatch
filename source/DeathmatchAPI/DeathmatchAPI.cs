@@ -30,6 +30,8 @@ public interface IDeathmatchAPI
     public int GetDefaultCheckDistance();
     public bool GetDefaultCheckSpawnVisibility();
     public void ToggleSpawnsDisplay(bool visible);
+    public List<SpawnData> GetActiveSpawns();
+    public List<SpawnData> GetDefaultSpawns();
     public Dictionary<string, ModeData> GetCustomModes();
     public event EventHandler<IDeathmatchEventsAPI> DeathmatchEventHandlers;
     public void TriggerEvent(IDeathmatchEventsAPI @event);

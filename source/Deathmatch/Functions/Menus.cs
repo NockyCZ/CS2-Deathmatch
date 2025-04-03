@@ -36,14 +36,14 @@ namespace Deathmatch
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.CounterTerrorist);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.DarkBlue}CT team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)}{ChatColors.Default})");
-                RemoveUnusedSpawns();
+                DisableDefaultSpawns();
                 OpenEditorMenu(player);
             });
             Menu.AddMenuOption($"Add T Spawn ({tSpawns})", (player, opt) =>
             {
                 AddNewSpawnPoint(player.PlayerPawn.Value?.AbsOrigin!, player.PlayerPawn.Value?.AbsRotation!, CsTeam.Terrorist);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawn for the {ChatColors.Orange}T team{ChatColors.Default} has been added. (Total: {ChatColors.Green}{spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}{ChatColors.Default})");
-                RemoveUnusedSpawns();
+                DisableDefaultSpawns();
                 OpenEditorMenu(player);
             });
 
@@ -51,14 +51,13 @@ namespace Deathmatch
             {
                 RemoveNearestSpawnPoint(player.PlayerPawn.Value!.AbsOrigin);
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} The nearest spawn point has been removed!");
-                RemoveUnusedSpawns();
+                DisableDefaultSpawns();
                 OpenEditorMenu(player);
             });
 
             Menu.AddMenuOption("<font class='fontSize-m' color='cyan'>Save Spawns</font>", (player, opt) =>
             {
                 SaveSpawnsFile();
-                LoadMapSpawns(ModuleDirectory + $"/spawns/{Server.MapName}.json");
                 player.PrintToChat($"{Localizer["Chat.Prefix"]} Spawns have been successfully saved!");
                 RemoveSpawnModels();
                 MenuManager.CloseActiveMenu(player);

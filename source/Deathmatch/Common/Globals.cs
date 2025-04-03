@@ -23,6 +23,7 @@ namespace Deathmatch
         public static bool CheckSpawnVisibility;
         public static bool IsCasualGamemode;
         public static bool DefaultMapSpawnDisabled = false;
+        public static string SpawnsPath = "";
         public static ModeData ActiveMode = new();
     }
 }

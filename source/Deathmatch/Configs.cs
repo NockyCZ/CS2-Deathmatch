@@ -173,6 +173,7 @@ public class Gameplay
     [JsonPropertyName("Respawn Players After New Mode")] public bool RespawnPlayersAtNewMode { get; set; } = false;
     [JsonPropertyName("Fast Weapon Equip")] public bool FastWeaponEquip { get; set; } = true;
     [JsonPropertyName("Spawn Protection Color")] public string SpawnProtectionColor { get; set; } = "";
+    [JsonPropertyName("Display All Kill Feed")] public bool DisplayAllKillFeed { get; set; } = false;
 }
 public class General
 {

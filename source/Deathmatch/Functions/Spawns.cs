@@ -103,7 +103,7 @@ namespace Deathmatch
             }
 
             SendConsoleMessage($"[Deathmatch] Player {player.PlayerName} was respawned, but no available spawn point was found!", ConsoleColor.DarkYellow);
-            return null;
+            return spawnsList.FirstOrDefault();
         }
 
         public void SaveSpawnsFile()
@@ -138,7 +138,6 @@ namespace Deathmatch
         {
             if (!DefaultMapSpawnDisabled)
             {
-                DefaultMapSpawnDisabled = true;
                 spawnPoints.Clear();
             }
 
@@ -227,8 +226,11 @@ namespace Deathmatch
             }
         }
 
-        public static void RemoveUnusedSpawns(bool defaultSpawns = false)
+        public static void DisableDefaultSpawns()
         {
+            if (DefaultMapSpawnDisabled)
+                return;
+
             var spawns = Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_counterterrorist").Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_player_terrorist")).Concat(Utilities.FindAllEntitiesByDesignerName<SpawnPoint>("info_deathmatch_spawn"));
             int DMSpawns = 0;
             foreach (var entity in spawns)
@@ -236,20 +238,12 @@ namespace Deathmatch
                 if (entity == null || !entity.IsValid)
                     continue;
 
-                if (spawnPoints.Any(x => x.Entity == entity))
-                    entity.AcceptInput("SetEnabled");
-                else
-                {
-                    entity.AcceptInput("SetDisabled");
-                    DMSpawns++;
-                }
+                entity.AcceptInput("SetDisabled");
+                DMSpawns++;
             }
 
-            if (defaultSpawns)
-            {
-                SendConsoleMessage($"[Deathmatch] Total {DMSpawns} Default Spawns disabled!", ConsoleColor.Green);
-                DefaultMapSpawnDisabled = true;
-            }
+            SendConsoleMessage($"[Deathmatch] Total {DMSpawns} Default Spawns disabled!", ConsoleColor.Green);
+            DefaultMapSpawnDisabled = true;
         }
 
         /*public static void CreateCustomMapSpawns()
@@ -284,7 +278,7 @@ namespace Deathmatch
             }
         }*/
 
-        public SpawnPoint? CreateSpawnEntity(Vector Postion, QAngle Angle, CsTeam team)
+        public void CreateSpawnEntity(Vector Postion, QAngle Angle, CsTeam team)
         {
             var entityName = "info_deathmatch_spawn";
             if (IsCasualGamemode)
@@ -294,11 +288,10 @@ namespace Deathmatch
             if (entity == null)
             {
                 SendConsoleMessage($"[Deathmatch] Failed to create spawn point!", ConsoleColor.DarkYellow);
-                return null;
+                return;
             }
             entity.Teleport(Postion, Angle, new Vector(0, 0, 0));
             entity.DispatchSpawn();
-            return entity;
         }
 
         public void LoadMapSpawns(string filePath)
@@ -317,6 +310,7 @@ namespace Deathmatch
                 }
                 else
                 {
+                    DisableDefaultSpawns();
                     SendConsoleMessage($"[Deathmatch] Loading Custom Map Spawns..", ConsoleColor.DarkYellow);
 
                     var jsonContent = File.ReadAllText(filePath);
@@ -333,13 +327,13 @@ namespace Deathmatch
                             Team = team,
                             Position = pos,
                             Angle = angle,
-                            Entity = CreateSpawnEntity(pos, angle, team)
                         };
+
                         spawnPoints.Add(spawn);
+                        CreateSpawnEntity(pos, angle, team);
                     }
 
                     SendConsoleMessage($"[Deathmatch] Total Loaded Custom Spawns: CT {spawnPoints.Count(x => x.Team == CsTeam.CounterTerrorist)} | T {spawnPoints.Count(x => x.Team == CsTeam.Terrorist)}", ConsoleColor.Green);
-                    RemoveUnusedSpawns(true);
                 }
             }
 
@@ -403,8 +397,7 @@ namespace Deathmatch
                     {
                         Position = spawn.AbsOrigin,
                         Angle = spawn.AbsRotation,
-                        Team = CsTeam.CounterTerrorist,
-                        Entity = spawn
+                        Team = CsTeam.CounterTerrorist
                     };
                     spawnPoints.Add(data);
                 }
@@ -417,8 +410,7 @@ namespace Deathmatch
                     {
                         Position = spawn.AbsOrigin,
                         Angle = spawn.AbsRotation,
-                        Team = CsTeam.Terrorist,
-                        Entity = spawn
+                        Team = CsTeam.Terrorist
                     };
                     spawnPoints.Add(data);
                 }
@@ -438,8 +430,7 @@ namespace Deathmatch
                         {
                             Position = spawn.AbsOrigin,
                             Angle = spawn.AbsRotation,
-                            Team = CsTeam.Terrorist,
-                            Entity = spawn
+                            Team = CsTeam.Terrorist
                         };
                         spawnPoints.Add(data);
                     }
@@ -451,8 +442,7 @@ namespace Deathmatch
                         {
                             Position = spawn.AbsOrigin,
                             Angle = spawn.AbsRotation,
-                            Team = CsTeam.CounterTerrorist,
-                            Entity = spawn
+                            Team = CsTeam.CounterTerrorist
                         };
                         spawnPoints.Add(data);
                     }

@@ -20,7 +20,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky";
-    public override string ModuleVersion => "1.2.8a";
+    public override string ModuleVersion => "1.2.9";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -75,6 +75,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 
                 AddTimer(3.0f, () =>
                 {
+                    SpawnsPath = ModuleDirectory + $"/spawns/{mapName}.json";
                     SetupCustomMode(Config.Gameplay.MapStartMode.ToString());
                     SetupDeathMatchConfigValues();
                     RemoveEntities();

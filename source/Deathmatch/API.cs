@@ -5,6 +5,8 @@ using CounterStrikeSharp.API.Modules.Utils;
 using DeathmatchAPI;
 using DeathmatchAPI.Events;
 using DeathmatchAPI.Helpers;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using static DeathmatchAPI.Preferences;
 
 namespace Deathmatch;
@@ -92,25 +94,11 @@ public partial class Deathmatch : IDeathmatchAPI
     public void SetupCustomSpawns(List<SpawnData> spawns, bool clearSpawnsDictionary)
     {
         if (clearSpawnsDictionary)
-        {
-            /*foreach (var data in spawnPoints)
-            {
-                var entity = data.Entity;
-                if (entity != null && entity.IsValid)
-                    entity.AcceptInput("Kill");
+            spawnPoints = spawns;
+        else
+            spawnPoints = spawnPoints.Concat(spawns).ToList();
 
-            }*/
-            spawnPoints.Clear();
-        }
-
-        spawnPoints = spawns;
-        foreach (var data in spawnPoints)
-        {
-            if (data.Entity != null && data.Entity.IsValid)
-                continue;
-            data.Entity = CreateSpawnEntity(data.Position, data.Angle, data.Team);
-        }
-        RemoveUnusedSpawns();
+        DisableDefaultSpawns();
     }
 
     public Preference? RegisterPreference(string name, PreferencesBooleanData data, bool vipOnly = false)
@@ -210,5 +198,46 @@ public partial class Deathmatch : IDeathmatchAPI
     public void AddMenuOption(string name, Categorie? category, Action<CCSPlayerController, Menu> onChoose, string? flag = null)
     {
         Menu.AddOption(name, category, onChoose);
+    }
+
+    public List<SpawnData> GetActiveSpawns()
+    {
+        return spawnPoints;
+    }
+
+    public List<SpawnData> GetDefaultSpawns()
+    {
+        if (Config.SpawnSystem.SpawnsMethod >= 1)
+        {
+            return spawnPoints;
+        }
+        else if (!File.Exists(SpawnsPath))
+        {
+            return spawnPoints;
+        }
+        else
+        {
+            var jsonContent = File.ReadAllText(SpawnsPath);
+            JObject jsonData = JsonConvert.DeserializeObject<JObject>(jsonContent)!;
+
+            var spawns = new List<SpawnData>();
+            foreach (var teamData in jsonData["spawnpoints"]!)
+            {
+                var team = teamData["team"]?.ToString() == "ct" ? CsTeam.CounterTerrorist : CsTeam.Terrorist;
+                var pos = ParseVector(teamData["pos"]!.ToString());
+                var angle = ParseQAngle(teamData["angle"]!.ToString());
+
+                var spawn = new SpawnData()
+                {
+                    Team = team,
+                    Position = pos,
+                    Angle = angle,
+                };
+
+                CreateSpawnEntity(pos, angle, team);
+                spawns.Add(spawn);
+            }
+            return spawns;
+        }
     }
 }

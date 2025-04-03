@@ -5,7 +5,7 @@ namespace DeathmatchAPI.Helpers;
 
 public class ModeData
 {
-    public string Name { get; set; } = "Default Mode";
+    public string Name { get; set; } = "";
     public int Interval { get; set; } = 300;
     public int Armor { get; set; } = 1;
     public bool OnlyHS { get; set; } = false;
@@ -23,5 +23,4 @@ public class SpawnData
     public required CsTeam Team { get; set; }
     public required Vector Position { get; set; }
     public required QAngle Angle { get; set; }
-    public SpawnPoint? Entity { get; set; }
 }

@@ -90,7 +90,8 @@ namespace Deathmatch
         {
             var player = @event.Userid;
             var attacker = @event.Attacker;
-            info.DontBroadcast = true;
+            if (Config.Gameplay.DisplayAllKillFeed)
+                info.DontBroadcast = true;
 
             if (player == null || !player.IsValid)
                 return HookResult.Continue;
@@ -126,7 +127,9 @@ namespace Deathmatch
                     }
                 }
                 timer = IsVIP ? Config.PlayersSettings.VIP.RespawnTime : Config.PlayersSettings.NonVIP.RespawnTime;
-                @event.FireEventToClient(player);
+
+                if (Config.Gameplay.DisplayAllKillFeed)
+                    @event.FireEventToClient(player);
             }
 
             playersWaitingForRespawn[player] = (timer, Server.CurrentTime);
@@ -205,7 +208,9 @@ namespace Deathmatch
                     string armor = ActiveMode.Armor == 1 ? "item_kevlar" : "item_assaultsuit";
                     attacker.GiveNamedItem(armor);
                 }
-                @event.FireEventToClient(attacker);
+
+                if (Config.Gameplay.DisplayAllKillFeed)
+                    @event.FireEventToClient(attacker);
             }
             return HookResult.Continue;
         }

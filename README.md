@@ -76,7 +76,8 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     "Allow Buymenu": true,
     "Respawn Players After New Mode": false,
     "Fast Weapon Equip": true,
-    "Spawn Protection Color": ""
+    "Spawn Protection Color": "",
+    "Display All Kill Feed": false
   },
   "Spawn System": {
     "Spawns Method": 0,
@@ -105,7 +106,15 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
   "Custom Commands": {
     "Deatmatch Menu Commands": "dm,deathmatch",
     "Weapons Select Commands": "gun,weapon,w,g",
-    "Weapons Select Shortcuts": "weapon_ak47:ak,weapon_m4a1:m4,weapon_m4a1_silencer:m4a1,weapon_awp:awp,weapon_usp_silencer:usp,weapon_glock:glock,weapon_deagle:deagle"
+    "Weapons Select Shortcuts": {
+      "ak": "weapon_ak47",
+      "m4": "weapon_m4a1",
+      "m4a1": "weapon_m4a1_silencer",
+      "awp": "weapon_awp",
+      "usp": "weapon_usp_silencer",
+      "glock": "weapon_glock",
+      "deagle": "weapon_deagle"
+    }
   },
   "Players Gameplay Settings": {
     "VIP Flag": "@css/vip",
