@@ -4,7 +4,7 @@ Use gamemodes like <b>Custom</b> , <b>Casual</b> or <b>Deathmatch</b> for the pl
 Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterStrikeSharp</a> framework<br>
 <br>
 <a href="https://buymeacoffee.com/sourcefactory">
-<img src="https://img.buymeacoffee.com/button-api/?text=Support Me&emoji=🚀&slug=sourcefactory&button_colour=e6005c&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" />
+<img src="https://img.buymeacoffee.com/button-api/?text=Support%20Me&emoji=%F0%9F%9A%80&slug=sourcefactory&button_colour=e6005c&font_colour=ffffff&font_family=Lato&outline_colour=000000&coffee_colour=FFDD00" />
 </a>
 </p>
 
