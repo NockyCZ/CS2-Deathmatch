@@ -49,8 +49,7 @@ namespace Deathmatch
                 }
                 else if (!matches.Any())
                 {
-                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    PlaySound(player, Config.SoundSettings.CantEquipSound);
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponNotFound", weaponName]}");
                     return;
                 }
@@ -67,15 +66,13 @@ namespace Deathmatch
                 string localizerWeaponName = Localizer[weaponName];
                 if (data.PrimaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
-                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    PlaySound(player, Config.SoundSettings.CantEquipSound);
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                     return;
                 }
                 if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team, ActiveMode.PrimaryWeapons, ActiveCustomMode, true))
                 {
-                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    PlaySound(player, Config.SoundSettings.CantEquipSound);
 
                     (int NonVIP, int VIP) restrictInfo = GetRestrictData(weaponName, player.Team);
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, GetWeaponRestrictLozalizer(restrictInfo.NonVIP), GetWeaponRestrictLozalizer(restrictInfo.VIP)]}");
@@ -115,15 +112,13 @@ namespace Deathmatch
                 string localizerWeaponName = Localizer[weaponName];
                 if (data.SecondaryWeapon.TryGetValue(ActiveCustomMode, out var weapon) && weaponName == weapon)
                 {
-                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    PlaySound(player, Config.SoundSettings.CantEquipSound);
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsIsAlreadySet", localizerWeaponName]}");
                     return;
                 }
                 if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team, ActiveMode.SecondaryWeapons, ActiveCustomMode, false))
                 {
-                    if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                        player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                    PlaySound(player, Config.SoundSettings.CantEquipSound);
 
                     (int NonVIP, int VIP) restrictInfo = GetRestrictData(weaponName, player.Team);
                     info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, GetWeaponRestrictLozalizer(restrictInfo.NonVIP), GetWeaponRestrictLozalizer(restrictInfo.VIP)]}");
@@ -160,8 +155,7 @@ namespace Deathmatch
             }
             else
             {
-                if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-                    player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+                PlaySound(player, Config.SoundSettings.CantEquipSound);
                 string localizerWeaponName = Localizer[weaponName];
                 info.ReplyToCommand($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", localizerWeaponName]}");
                 return;
@@ -186,7 +180,7 @@ namespace Deathmatch
                         {
                             Color transparentColor = ColorTranslator.FromHtml(Config.Gameplay.SpawnProtectionColor);
                             pawn.Render = transparentColor;
-                            Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
+                            Utilities.SetStateChanged(pawn, "CBaseModelEntity", "m_clrRender");
                         }
                         data.SpawnProtection = true;
                         playersWithSpawnProtection[player.Slot] = (timer, Server.CurrentTime);
@@ -261,7 +255,7 @@ namespace Deathmatch
                         if (activeWeapon != null && activeWeapon.IsValid)
                         {
                             activeWeapon.NextPrimaryAttackTick = Server.TickCount + 1;
-                            Utilities.SetStateChanged(player, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
+                            Utilities.SetStateChanged(activeWeapon, "CBasePlayerWeapon", "m_nNextPrimaryAttackTick");
                         }
                     }
                 });
@@ -400,6 +394,23 @@ namespace Deathmatch
                         break;
                 }
             }
+        }
+
+        // Accepts a file path ("sounds/....vsnd_c", played client-side via `play`) or a soundevent name
+        // ("Music.BombTenSecCount.3kliksphilip_01", emitted server-side so it can be stopped).
+        // Returns the soundevent guid, or 0 when nothing stoppable was started.
+        public uint PlaySound(CCSPlayerController player, string? sound)
+        {
+            if (!Config.SoundSettings.Enabled || string.IsNullOrEmpty(sound))
+                return 0;
+
+            if (sound.Contains('/') || sound.EndsWith(".vsnd_c") || sound.EndsWith(".vsnd"))
+            {
+                player.ExecuteClientCommand("play " + sound);
+                return 0;
+            }
+
+            return player.EmitSound(sound, new RecipientFilter { player });
         }
 
         public static T GetPrefsValue<T>(DeathmatchPlayerData data, string preference, T defaultValue)

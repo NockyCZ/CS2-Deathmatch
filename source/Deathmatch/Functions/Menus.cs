@@ -122,7 +122,7 @@ namespace Deathmatch
                 else if (option.Preference.Data != null)
                 {
                     var currentValue = GetPrefsValue(data, option.Preference.Name, option.Preference.Data.DefaultValue) as string;
-                    Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Name}"]} [{currentValue}]", (player, opt) =>
+                    Menu.AddMenuOption($"{Localizer[$"Prefs.{option.Preference.Name}"]} [{currentValue}]", (player, opt) =>
                     {
                         SwitchStringPrefsValue(player, option.Preference.Name, option.Preference.Data.Options, currentValue);
                         OpenCategoryMenu(player, category);
@@ -168,7 +168,7 @@ namespace Deathmatch
 
         public void SoundsMenu()
         {
-            if (!Config.PlayersPreferences.KillSound.Enabled && !Config.PlayersPreferences.HSKillSound.Enabled && !Config.PlayersPreferences.KnifeKillSound.Enabled && !Config.PlayersPreferences.HitSound.Enabled)
+            if (!Config.PlayersPreferences.KillSound.Enabled && !Config.PlayersPreferences.HSKillSound.Enabled && !Config.PlayersPreferences.KnifeKillSound.Enabled && !Config.PlayersPreferences.HitSound.Enabled && !Config.PlayersPreferences.NewModeSound.Enabled)
             {
                 return;
             }
@@ -221,6 +221,17 @@ namespace Deathmatch
                     CommandShortcuts = Config.PlayersPreferences.HitSound.Shotcuts
                 };
                 var preference = RegisterPreference("HitSound", data, Config.PlayersPreferences.HitSound.OnlyVIP);
+                if (preference != null)
+                    Menu.AddPreferenceOption(soundsMenu, preference);
+            }
+            if (Config.PlayersPreferences.NewModeSound.Enabled)
+            {
+                var data = new PreferencesBooleanData()
+                {
+                    DefaultValue = Config.PlayersPreferences.NewModeSound.DefaultValue,
+                    CommandShortcuts = Config.PlayersPreferences.NewModeSound.Shotcuts
+                };
+                var preference = RegisterPreference("NewModeSound", data, Config.PlayersPreferences.NewModeSound.OnlyVIP);
                 if (preference != null)
                     Menu.AddPreferenceOption(soundsMenu, preference);
             }

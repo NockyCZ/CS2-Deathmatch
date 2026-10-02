@@ -25,6 +25,7 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     - [x] Headshot Kill Sound
     - [x] Knife Kill Sound
     - [x] Hit Sound
+    - [x] New Mode Sound
     - [x] Only Headshot
     - [x] Hud Messages
     - [x] Damage Info
@@ -38,6 +39,23 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
 3. Restart the server
 4. Configure the config files and custom modes
 <h1></h1>
+
+<details>
+<summary><h2>Sounds</h2></summary>
+
+**Global settings** (`Sounds Settings`)
+- `Sounds Enabled` - turns every sound of the plugin on/off.
+
+**Sound values** - every sound (`Weapon Cant Equip Sound`, `New Mode Sound` and each `Sound path` in `Client Preferences`) accepts either:
+- a **file path**, e.g. `sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c` - played on the client with `play`. The sound cannot be stopped.
+- a **soundevent name**, e.g. `Music.BombTenSecCount.3kliksphilip_01` - emitted by the server. The `New Mode Sound` is stopped when a new mode starts (no overlapping tracks) or when the server switches game mode or map.
+
+**Individual sounds** - each sound in `Client Preferences` has its own `Enabled` (server side) and `Default value` (player default). Set `Enabled` to `false` to remove the sound and its menu toggle, or set a sound value to `""` to disable it.
+
+**New Mode Sound** - plays when a custom mode starts (map start, match start and every mode change), only in the Casual, Deathmatch and Custom game modes (never in e.g. Competitive). Players can toggle it in `!dm` -> Sounds.
+
+**Volume** - music soundevents (like the default `New Mode Sound`) follow each player's own CS2 settings: *Settings -> Audio -> Music -> Ten Second Warning Volume* (`snd_tensecondwarning_volume`) and the music master volume. Players can also turn the sound off in `!dm` -> Sounds.
+</details>
 
 <details>
 <summary><h2>Configuration</h2></summary>
@@ -91,8 +109,9 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
     "Restart Map On Plugin Load": false
   },
   "Sounds Settings": {
+    "Sounds Enabled": true,
     "Weapon Cant Equip Sound": "sounds/ui/weapon_cant_buy.vsnd_c",
-    "New Mode Sound": "sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c"
+    "New Mode Sound": "Music.BombTenSecCount.3kliksphilip_01"
   },
   "Custom Commands": {
     "Deatmatch Menu Commands": "dm,deathmatch",
@@ -154,6 +173,12 @@ Designed for <a href="https://github.com/roflmuffin/CounterStrikeSharp">CounterS
       "Enabled": true,
       "Sound path": "sounds/ui/csgo_ui_contract_type2.vsnd_c",
       "Default value": false,
+      "Only for VIP": false,
+      "Command Shortcuts": []
+    },
+    "New Mode Sound": {
+      "Enabled": true,
+      "Default value": true,
       "Only for VIP": false,
       "Command Shortcuts": []
     },

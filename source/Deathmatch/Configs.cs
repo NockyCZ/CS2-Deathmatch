@@ -153,9 +153,11 @@ public class Database
 
 public class SoundSettings
 {
+    [JsonPropertyName("Sounds Enabled")] public bool Enabled { get; set; } = true;
     [JsonPropertyName("Weapon Cant Equip Sound")] public string CantEquipSound { get; set; } = "sounds/ui/weapon_cant_buy.vsnd_c";
-    [JsonPropertyName("New Mode Sound")] public string NewModeSound { get; set; } = "sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c";
-    //sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c
+    [JsonPropertyName("New Mode Sound")] public string NewModeSound { get; set; } = "Music.BombTenSecCount.3kliksphilip_01";
+    //Music.BombTenSecCount.3kliksphilip_01 (soundevent: stopped on mode/map change, follows the client's music volume settings)
+    //sounds/music/3kliksphilip_01/bombtenseccount.vsnd_c (file path: played via `play`, cannot be stopped)
     //sounds/music/halflife_alyx_01/bombplanted.vsnd_c
 }
 public class Gameplay
@@ -213,6 +215,7 @@ public class PlayersPreferences
     [JsonPropertyName("Headshot Kill Sound")] public HSKillSound HSKillSound { get; set; } = new();
     [JsonPropertyName("Knife Kill Sound")] public KnifeKillSound KnifeKillSound { get; set; } = new();
     [JsonPropertyName("Hit Sound")] public HitSound HitSound { get; set; } = new();
+    [JsonPropertyName("New Mode Sound")] public NewModeSoundPref NewModeSound { get; set; } = new();
     [JsonPropertyName("No Primary")] public NoPrimary NoPrimary { get; set; } = new();
     [JsonPropertyName("Only Headshot")] public OnlyHS OnlyHS { get; set; } = new();
     [JsonPropertyName("Hud Messages")] public HudMessages HudMessages { get; set; } = new();
@@ -279,6 +282,13 @@ public class KillSound
     [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
     [JsonPropertyName("Sound path")] public string Path { get; set; } = "sounds/ui/armsrace_kill_01.vsnd_c";
     [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = false;
+    [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
+    [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
+}
+public class NewModeSoundPref
+{
+    [JsonPropertyName("Enabled")] public bool Enabled { get; set; } = true;
+    [JsonPropertyName("Default value")] public bool DefaultValue { get; set; } = true;
     [JsonPropertyName("Only for VIP")] public bool OnlyVIP { get; set; } = false;
     [JsonPropertyName("Command Shortcuts")] public List<string> Shotcuts { get; set; } = new();
 }

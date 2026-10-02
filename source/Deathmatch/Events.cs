@@ -154,12 +154,12 @@ namespace Deathmatch
 				bool IsHeadshot = @event.Headshot;
 				bool IsKnifeKill = @event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet");
 
-				if (IsHeadshot && GetPrefsValue(attackerData, "HeadshotKillSound", Config.PlayersPreferences.HSKillSound.DefaultValue))
-					attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HSKillSound.Path);
-				else if (IsKnifeKill && GetPrefsValue(attackerData, "KnifeKillSound", Config.PlayersPreferences.KnifeKillSound.DefaultValue))
-					attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KnifeKillSound.Path);
-				else if (GetPrefsValue(attackerData, "KillSound", Config.PlayersPreferences.KillSound.DefaultValue))
-					attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.KillSound.Path);
+				if (IsHeadshot && Config.PlayersPreferences.HSKillSound.Enabled && GetPrefsValue(attackerData, "HeadshotKillSound", Config.PlayersPreferences.HSKillSound.DefaultValue))
+					PlaySound(attacker, Config.PlayersPreferences.HSKillSound.Path);
+				else if (IsKnifeKill && Config.PlayersPreferences.KnifeKillSound.Enabled && GetPrefsValue(attackerData, "KnifeKillSound", Config.PlayersPreferences.KnifeKillSound.DefaultValue))
+					PlaySound(attacker, Config.PlayersPreferences.KnifeKillSound.Path);
+				else if (Config.PlayersPreferences.KillSound.Enabled && GetPrefsValue(attackerData, "KillSound", Config.PlayersPreferences.KillSound.DefaultValue))
+					PlaySound(attacker, Config.PlayersPreferences.KillSound.Path);
 
 				var Health = IsHeadshot
 				? (IsVIP ? Config.PlayersSettings.VIP.HeadshotHealth : Config.PlayersSettings.NonVIP.HeadshotHealth)
@@ -230,6 +230,7 @@ namespace Deathmatch
 
 			if (attacker != null && attacker.IsValid && playerData.TryGetValue(attacker.Slot, out var attackerData))
 			{
+				bool isKnife = @event.Weapon.Contains("knife") || @event.Weapon.Contains("bayonet");
 				if (ActiveMode.OnlyHS)
 				{
 					if (@event.Hitgroup == 1)
@@ -244,23 +245,23 @@ namespace Deathmatch
 							damageInfo.Damage += @event.DmgHealth;
 							damageInfo.Hits++;
 						}
-						if (GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue) && (!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")))
-							attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
+						if (Config.PlayersPreferences.HitSound.Enabled && GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue) && !isKnife)
+							PlaySound(attacker, Config.PlayersPreferences.HitSound.Path);
 					}
 				}
 				else
 				{
 					if (@event.Hitgroup != 1)
 					{
-						if ((!@event.Weapon.Contains("knife") || !@event.Weapon.Contains("bayonet")) && GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
+						if (!isKnife && Config.PlayersPreferences.HitSound.Enabled && GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
 						{
 							if (!GetPrefsValue(attackerData, "OnlyHS", Config.PlayersPreferences.OnlyHS.DefaultValue))
-								attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
+								PlaySound(attacker, Config.PlayersPreferences.HitSound.Path);
 						}
 					}
-					else if (GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
+					else if (!isKnife && Config.PlayersPreferences.HitSound.Enabled && GetPrefsValue(attackerData, "HitSound", Config.PlayersPreferences.HitSound.DefaultValue))
 					{
-						attacker.ExecuteClientCommand("play " + Config.PlayersPreferences.HitSound.Path);
+						PlaySound(attacker, Config.PlayersPreferences.HitSound.Path);
 					}
 
 					if (Config.PlayersPreferences.DamageInfo.Enabled && GetPrefsValue(attackerData, "DamageInfo", Config.PlayersPreferences.DamageInfo.DefaultValue))
@@ -410,8 +411,7 @@ namespace Deathmatch
 
 			if (ActiveMode.RandomWeapons)
 			{
-				if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-					player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+				PlaySound(player, Config.SoundSettings.CantEquipSound);
 				player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponsSelectIsDisabled"]}");
 				hook.SetReturn(AcquireResult.AlreadyPurchased);
 				return HookResult.Handled;
@@ -421,8 +421,7 @@ namespace Deathmatch
 			{
 				if (!player.IsBot)
 				{
-					if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-						player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+					PlaySound(player, Config.SoundSettings.CantEquipSound);
 
 					string replacedweaponName = Localizer[weaponName];
 					player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsDisabled", replacedweaponName]}");
@@ -439,8 +438,7 @@ namespace Deathmatch
 				bool IsPrimary = PrimaryWeaponsList.Contains(weaponName);
 				if (CheckIsWeaponRestricted(weaponName, IsVIP, player.Team, ActiveMode.PrimaryWeapons, ActiveCustomMode, IsPrimary))
 				{
-					if (!string.IsNullOrEmpty(Config.SoundSettings.CantEquipSound))
-						player.ExecuteClientCommand("play " + Config.SoundSettings.CantEquipSound);
+					PlaySound(player, Config.SoundSettings.CantEquipSound);
 
 					(int NonVIP, int VIP) restrictInfo = GetRestrictData(weaponName, player.Team);
 					player.PrintToChat($"{Localizer["Chat.Prefix"]} {Localizer["Chat.WeaponIsRestricted", localizerWeaponName, GetWeaponRestrictLozalizer(restrictInfo.NonVIP), GetWeaponRestrictLozalizer(restrictInfo.VIP)]}");

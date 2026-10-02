@@ -11,6 +11,7 @@ using static DeathmatchAPI.Events.IDeathmatchEventsAPI;
 using static CounterStrikeSharp.API.Core.Listeners;
 using CounterStrikeSharp.API.Modules.Commands;
 using CounterStrikeSharp.API.Modules.Utils;
+using CounterStrikeSharp.API.Modules.UserMessages;
 using System.Drawing;
 using System.Data;
 using DeathmatchAPI;
@@ -24,7 +25,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
     public override string ModuleName => "Deathmatch Core";
     public override string ModuleAuthor => "Nocky & Miksen(Forked)";
-    public override string ModuleVersion => "1.3.4a";
+    public override string ModuleVersion => "1.3.5";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
@@ -170,9 +171,11 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
         RegisterTrackedCommandListener("playerchatwheel", OnPlayerChatwheel);
         RegisterTrackedCommandListener("player_ping", OnPlayerPing);
         RegisterTrackedCommandListener("autobuy", OnRandomWeapons);
+        foreach (string cmd in MapChangeCommands)
+            RegisterTrackedCommandListener(cmd, OnMapChangeCommand);
 
         bool mapLoaded = false;
-        _onMapEndDelegate = () => { mapLoaded = false; };
+        _onMapEndDelegate = () => { mapLoaded = false; StopNewModeSound(); };
         RegisterListener<OnMapEnd>(_onMapEndDelegate);
         _onMapStartDelegate = mapName =>
         {
@@ -203,9 +206,16 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 }, TimerFlags.STOP_ON_MAPCHANGE);
 
                 double secTimer = 0;
+                bool wasSupportedGamemode = IsSupportedGamemode();
                 double lastUpdate = Server.CurrentTime;
                 AddTimer(0.1f, () =>
                 {
+                    // game_mode / game_type changed to an unsupported mode (game_alias, exec, console) -> cut the music
+                    bool supported = IsSupportedGamemode();
+                    if (wasSupportedGamemode && !supported)
+                        StopNewModeSound();
+                    wasSupportedGamemode = supported;
+
                     if (playersWaitingForRespawn.Count > 0)
                     {
                         List<int>? toRemove = null;
@@ -241,7 +251,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                                 if (!string.IsNullOrEmpty(Config.Gameplay.SpawnProtectionColor))
                                 {
                                     player.PlayerPawn.Value.Render = Color.White;
-                                    Utilities.SetStateChanged(player, "CBaseModelEntity", "m_clrRender");
+                                    Utilities.SetStateChanged(player.PlayerPawn.Value, "CBaseModelEntity", "m_clrRender");
                                 }
                             }
                             (toRemove ??= new List<int>()).Add(kv.Key);
@@ -279,7 +289,7 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                                         }
                                         else if (!Config.General.HideModeRemainingTime && Config.CustomModes.TryGetValue(NextMode.ToString(), out var NextModeData))
                                         {
-                                            if (Config.Gameplay.HudType == 1)
+                                            if (Config.Gameplay.HudType == 0)
                                                 p.PrintToCenter($"{Localizer["Hud.NewModeStarting", RemainingTime, NextModeData.Name]}");
                                         }
                                     }
@@ -569,6 +579,8 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
                 Server.ExecuteCommand(cmd);
         }
 
+        // Cut the previous New Mode Sound so a quick mode change doesn't stack two tracks
+        StopNewModeSound();
         foreach (var p in Utilities.GetPlayers().Where(p => p.PawnIsAlive))
         {
             p.RemoveWeapons();
@@ -580,8 +592,12 @@ public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
             }
             if (!p.IsBot)
             {
-                if (!string.IsNullOrEmpty(Config.SoundSettings.NewModeSound))
-                    p.ExecuteClientCommand("play " + Config.SoundSettings.NewModeSound);
+                if (Config.PlayersPreferences.NewModeSound.Enabled && IsSupportedGamemode() && playerData.TryGetValue(p.Slot, out var pData) && GetPrefsValue(pData, "NewModeSound", Config.PlayersPreferences.NewModeSound.DefaultValue))
+                {
+                    var guid = PlaySound(p, Config.SoundSettings.NewModeSound);
+                    if (guid != 0)
+                        _newModeSoundGuids[p.Slot] = guid;
+                }
                 p.GiveNamedItem("weapon_knife");
             }
             if (Config.Gameplay.RespawnPlayersAtNewMode)
@@ -636,6 +652,47 @@ sv_cheats 0
             }
         }
         Server.ExecuteCommand("exec deathmatch/deathmatch.cfg");
+    }
+
+    // New Mode Sound only plays in supported modes: Casual (0/0), Deathmatch (1/2), Custom (3/0).
+    // Read live so a switch to competitive (game_alias / exec) is picked up the same frame.
+    private bool IsSupportedGamemode()
+    {
+        _gameTypeCvar ??= ConVar.Find("game_type");
+        _gameModeCvar ??= ConVar.Find("game_mode");
+        if (_gameTypeCvar == null || _gameModeCvar == null)
+            return true;
+
+        return (_gameTypeCvar.GetPrimitiveValue<int>(), _gameModeCvar.GetPrimitiveValue<int>()) is (0, 0) or (1, 2) or (3, 0);
+    }
+
+    private static readonly string[] MapChangeCommands = { "changelevel", "map", "host_workshop_map", "ds_workshop_changelevel", "game_alias" };
+
+    private HookResult OnMapChangeCommand(CCSPlayerController? player, CommandInfo info)
+    {
+        StopNewModeSound();
+        return HookResult.Continue;
+    }
+
+    // Stops a New Mode Sound that was emitted as a soundevent (CMsgSosStopSoundEvent).
+    // A .vsnd_c path is played client-side via `play` and cannot be stopped by the server.
+    private void StopNewModeSound()
+    {
+        if (_newModeSoundGuids.Count == 0)
+            return;
+
+        foreach (var (slot, guid) in _newModeSoundGuids)
+        {
+            var p = Utilities.GetPlayerFromSlot(slot);
+            if (p == null || !p.IsValid)
+                continue;
+
+            var msg = UserMessage.FromId(209);
+            msg.SetUInt("soundevent_guid", guid);
+            msg.Recipients.Add(p);
+            msg.Send();
+        }
+        _newModeSoundGuids.Clear();
     }
 
     public void SetupDeathMatchConfigValues()

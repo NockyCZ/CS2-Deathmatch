@@ -2,6 +2,7 @@ using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Cvars;
 using CounterStrikeSharp.API.Modules.Memory.DynamicFunctions;
 using DeathmatchAPI;
 using DeathmatchAPI.Helpers;
@@ -24,6 +25,10 @@ namespace Deathmatch
         public static int CheckedEnemiesDistance = 500;
         public static bool CheckSpawnVisibility;
         public static bool IsCasualGamemode;
+        private ConVar? _gameTypeCvar;
+        private ConVar? _gameModeCvar;
+        // Soundevent guids of the currently playing New Mode Sound per player slot, so it can be stopped
+        private readonly Dictionary<int, uint> _newModeSoundGuids = new();
         public static bool DefaultMapSpawnDisabled = false;
         public static string SpawnsPath = "";
         public static ModeData ActiveMode = new();
