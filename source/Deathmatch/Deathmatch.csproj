@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <PublishDir>./bin/Deathmatch/</PublishDir>
+    <PackageRoot>$(MSBuildProjectDirectory)/bin/package/</PackageRoot>
+    <CssRoot>$(PackageRoot)addons/counterstrikesharp/</CssRoot>
+    <PublishDir>$(CssRoot)plugins/Deathmatch/</PublishDir>
+    <PackageZip>$(MSBuildProjectDirectory)/bin/Deathmatch.zip</PackageZip>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -34,10 +37,21 @@
     <None Include="..\..\Spawns Locations\**\*.*" Link="spawns\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <!-- Wipe staging dir so stale files never end up in the zip -->
+  <Target Name="CleanPackageRoot" BeforeTargets="PrepareForPublish">
+    <RemoveDir Directories="$(PackageRoot)" />
+  </Target>
+
   <Target Name="PublishSharedApi" AfterTargets="Publish">
     <MSBuild Projects="..\DeathmatchAPI\DeathmatchAPI.csproj"
              Targets="Publish"
-             Properties="Configuration=$(Configuration);PublishDir=$(MSBuildProjectDirectory)/bin/_shared/DeathmatchAPI/" />
+             Properties="Configuration=$(Configuration);PublishDir=$(CssRoot)shared/DeathmatchAPI/" />
+  </Target>
+
+  <!-- Deathmatch.zip -> addons/counterstrikesharp/{plugins/Deathmatch,shared/DeathmatchAPI} -->
+  <Target Name="ZipPackage" AfterTargets="PublishSharedApi">
+    <ZipDirectory SourceDirectory="$(PackageRoot)" DestinationFile="$(PackageZip)" Overwrite="true" />
+    <Message Importance="high" Text="Deathmatch -> $(PackageZip)" />
   </Target>
 
 </Project>

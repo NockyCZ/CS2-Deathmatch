@@ -23,9 +23,9 @@ namespace Deathmatch;
 
 public partial class Deathmatch : BasePlugin, IPluginConfig<DeathmatchConfig>
 {
-    public override string ModuleName => "Deathmatch Core";
+    public override string ModuleName => "Deathmatch";
     public override string ModuleAuthor => "Nocky & Miksen(Forked)";
-    public override string ModuleVersion => "1.3.5";
+    public override string ModuleVersion => "1.3.6";
 
     public void OnConfigParsed(DeathmatchConfig config)
     {
